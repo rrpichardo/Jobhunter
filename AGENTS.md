@@ -48,10 +48,16 @@ probe results as historical evidence, not proof the current environment works.
   feedback as needed. Do not batch the entire V0 into a final PR. For Codex-built
   milestones, obtain Claude Code feedback, resolve actionable findings, and verify
   the current revision before merging and advancing dependent implementation.
-- Creating a PR does not authorize merging it. Follow the user's merge direction
-  and repository rules. Do not push implementation directly to main.
-  If merge authorization is missing, ask once and pause dependent implementation;
-  continue unrelated work rather than silently stacking on the unmerged milestone.
+- The user grants standing authorization to merge Codex-built milestone PRs into
+  main after all applicable tests and required CI checks pass, Claude Code has
+  reviewed the latest revision, and all actionable findings are resolved. Obtain
+  a fresh Claude review after substantive fixes and verify the revision being
+  merged. A green review job or an older review alone does not satisfy this gate.
+  Follow repository protection rules; never bypass a failed check or push
+  implementation directly to main. Once these conditions pass, merge and continue
+  dependent work without asking again. This authorization does not waive setup,
+  spending, deployment-verification, or review-only restrictions. Other merges
+  still follow the user's explicit direction.
 - Run all applicable tests before claiming completion. Add regression tests for
   real bugs, fix failures without weakening assertions, and record commands and
   results. Separate offline tests, live integration checks, and scheduled evidence.
