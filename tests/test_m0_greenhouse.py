@@ -60,6 +60,25 @@ def test_obviously_hidden_markup_is_excluded_from_source_excerpt_text():
     assert collect({"jobs": [item]}).jobs[0].text == "Build AI."
 
 
+def test_inconsistent_empty_response_is_failed_and_schema_failure_retains_attempts():
+    from jobhunter.fetch import JsonFetcher
+    from jobhunter.greenhouse import collect_board
+    assert collect({"jobs": [], "meta": {"total": 50}}).status == "failed"
+    calls = []
+    item = {"id": 101, "title": "PM", "content": "Build AI.",
+            "absolute_url": "https://example.com/jobs/101"}
+    def handler(request):
+        calls.append(1)
+        return (httpx.Response(503) if len(calls) == 1 else
+                httpx.Response(200, json={"jobs": [item, item]}))
+    result = collect_board(JsonFetcher(httpx.Client(transport=httpx.MockTransport(handler)),
+        sleep=lambda delay: None), board="example", company="Example", ai_company=True,
+        captured_at="2026-10-17T12:00:00+00:00")
+    assert result.status == "failed"
+    assert result.error == "duplicate_source_id"
+    assert result.attempts == 2 and result.http_status == 200
+
+
 @pytest.mark.parametrize("title,expected", [("Product Manager, AI", True),
     ("Group PM", True), ("Product Lead", True), ("Engineering Manager", False),
     ("Product Manager Intern", False), ("Summer Associate, Product Manager", False),

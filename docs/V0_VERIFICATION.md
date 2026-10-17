@@ -83,3 +83,15 @@ tests first reproduced the failures; the fixed full local suite passed **57 test
 10 subtests**. Changes are listed in ATTEMPTS.md. The earlier live cloud check
 above covers `f913601` only. Recheck the affected code using saved public payloads
 and current cloud tests; do not imply the old cloud result covers new code.
+
+Cloud recheck at `aaed72b23710873db4241fd6f8b048489b4a494c`: locked install and
+57 tests/10 subtests passed in JobHunterEnv; one fresh harvest returned 655 valid,
+0 rejected, 15 PM candidates, 1 selected, HTTP 200 after 1 attempt, complete-response.
+Claude selected an exact excerpt; validation with the printed harvest digest
+returned 1 complete record and exit 0. The actual command outputs were expanded
+and inspected. No Sheet/Gmail/social/credential/scheduling actions were performed.
+
+After review cycle 2, the full local suite passes **61 tests and 10 subtests**.
+Binary artifact publication now makes digest bytes portable to Windows; server
+schema/decode edge cases retain sanitized failure evidence. Final current-revision
+review, Linux/Windows CI and cloud replay evidence will be linked from PR #5.

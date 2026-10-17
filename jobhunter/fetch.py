@@ -37,7 +37,7 @@ class JsonFetcher:
                 if response.status_code == 200:
                     try:
                         return response.json()
-                    except ValueError:
+                    except (ValueError, RecursionError):
                         raise FetchError("invalid_json", attempts=attempt + 1, status=200) from None
                 error = f"http_{response.status_code}"
                 if response.status_code not in {429, 500, 502, 503, 504}:

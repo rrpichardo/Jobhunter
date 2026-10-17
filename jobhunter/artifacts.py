@@ -27,19 +27,19 @@ def new_artifact_path(path: str | Path) -> Path:
 
 def write_artifact(path: str | Path, payload: object) -> str:
     path = new_artifact_path(path)
-    content = json.dumps(payload, ensure_ascii=False, allow_nan=False, indent=2) + "\n"
+    content = (json.dumps(payload, ensure_ascii=True, allow_nan=False, indent=2) + "\n").encode("utf-8")
     # Publish a fully flushed file atomically, without replacing an existing name.
     # Private parent-directory permissions/ACLs are required, especially on Windows.
     fd, temporary = tempfile.mkstemp(prefix=".jobhunter-", dir=path.parent)
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+        with os.fdopen(fd, "wb") as stream:
             stream.write(content)
             stream.flush()
             os.fsync(stream.fileno())
         os.link(temporary, path)
     finally:
         Path(temporary).unlink(missing_ok=True)
-    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+    return hashlib.sha256(content).hexdigest()
 
 
 def read_artifact(path: str | Path, *, expected_sha256=None) -> object:

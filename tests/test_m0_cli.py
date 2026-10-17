@@ -123,3 +123,18 @@ def test_empty_extraction_records_partial_status_and_returns_nonzero(tmp_path):
                  "--extractions", str(facts), "--output", str(output)]) == 2
     assert json.loads(output.read_text())["extraction"] == {
         "selected": 1, "validated": 0, "status": "partial-or-empty"}
+
+
+def test_returned_digest_always_hashes_published_bytes_including_windows(tmp_path):
+    from jobhunter.artifacts import write_artifact
+    path = tmp_path / "unicode.json"
+    digest = write_artifact(path, {"text": "One\nTwo\nCafé"})
+    assert digest == hashlib.sha256(path.read_bytes()).hexdigest()
+    assert b"\r\n" not in path.read_bytes()
+
+
+def test_lone_unicode_surrogate_does_not_lose_source_evidence(tmp_path):
+    from jobhunter.artifacts import write_artifact, read_artifact
+    path = tmp_path / "escaped.json"
+    write_artifact(path, {"title": "Malformed \ud83d", "status": "OK"})
+    assert read_artifact(path)["title"] == "Malformed \ud83d"

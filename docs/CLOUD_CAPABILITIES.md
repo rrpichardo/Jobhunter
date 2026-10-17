@@ -13,7 +13,8 @@ Observed on October 17, 2026. This records readiness, not deployment success.
   explicitly says not to add secrets. Network secrets are described as letting
   sessions call APIs without seeing values; Add secret is disabled in the observed
   Full-network configuration. Neither mechanism has been proven to deliver a
-  Sheets service-account file to Python. Do not paste credential JSON there.
+  Sheets authentication to Python. Subsequent explicit user approval permits a
+  bounded environment-variable fallback described in SETUP.md; no key is present.
 - Local Claude Code is installed and subscription authentication is available;
   this supports code review, not proof of cloud execution or cloud credentials.
 
@@ -22,7 +23,7 @@ Observed on October 17, 2026. This records readiness, not deployment success.
 | Requirement | Status | Exact next action |
 | --- | --- | --- |
 | Cloud Python and network | Manual M0 code-path proven | Locked install, 43-test suite and one real code harvest passed at f913601 in JobHunterEnv; rerun affected checks after review fixes. Scheduled execution remains open. |
-| Python Google authentication | Needs setup | Establish a supported secure credential-file mechanism before creating/provisioning writer credentials. |
+| Python Google authentication | Approved fallback, not provisioned | Prefer a compatible GCP secret type; Add secret currently disabled, types unknown. If unavailable, use user-approved dedicated credential variable and in-memory loading, with workbook-only Editor and no project roles. Verify actual access. |
 | Destination workbook | Created, writer access pending | Empty private `Jobhunter V0` created and saved; see SETUP.md for its ID/link. Share only with the dedicated writer after secure cloud credential provisioning is established. |
 | Real Claude extraction | Manual M0 excerpt proven | Claude selected one exact excerpt and Python validated one record at f913601; this is not a full extraction-quality eval or Sheet delivery. |
 | Gmail connector | Needs verification | Inspect connector settings only to confirm connection; verify `JobHunter` label and scoped forwarding without reading unrelated mail. |
@@ -62,8 +63,9 @@ The [cloud environment documentation](https://code.claude.com/docs/en/cloud-envi
 describes proxy-injected network secret headers, not a Google private-key file.
 The [routine documentation](https://code.claude.com/docs/en/routines) describes
 new sessions per trigger. Neither establishes the plan's secure temporary-file
-authentication or durable session/recovery storage. A compatible supported
-mechanism must be proven; do not substitute plain environment variables or Git.
+authentication or durable session/recovery storage. These were initial unknowns;
+the later user-approved variable bootstrap and Sheet `_State` direction below
+supersede the storage assumptions. Never use Git for runtime secret/state storage.
 
 No cloud source-to-Sheet run, scheduled delivery, recovery, or authenticated social
 collection has been verified. The trial has not started; day-7/day-14 dates must
@@ -88,8 +90,9 @@ compatibility remains tool-specific and unverified.
 
 Non-secret daily allowances, markers and pending normalized work belong in Sheet
 `_State`. That tab is not an atomic lock; one-writer serialization is still a
-separate gate. Secure Google private-key-file delivery remains unresolved and is
-not covered by the cookie-variable permission. No new infrastructure is authorized.
+separate gate. The user subsequently approved the Google environment-variable
+fallback under the restrictions in SETUP.md; actual credential provisioning and
+Python Sheet access remain unverified. No new infrastructure is authorized.
 
 ## Source access inventory
 

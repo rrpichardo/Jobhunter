@@ -77,12 +77,16 @@ def collect_board(fetcher: JsonFetcher, *, board: str, company: str,
                     "complete-response" if total == fetched else "partial-response")
         if rejected:
             coverage += "-with-rejections"
-        status = "OK" if jobs else "failed" if rejected else "OK-zero-jobs"
+        inconsistent_empty = not fetched and type(total) is int and total > 0
+        status = "OK" if jobs else "failed" if rejected or inconsistent_empty else "OK-zero-jobs"
         return BoardResult(source_id, status, jobs, coverage,
-            "invalid_items_quarantined" if rejected else "", fetched, rejected,
+            "invalid_items_quarantined" if rejected else "inconsistent_empty_response" if inconsistent_empty else "",
+            fetched, rejected,
             fetcher.last_attempts, 200)
     except FetchError as exc:
         return BoardResult(source_id, "failed", error=str(exc), attempts=exc.attempts,
                            http_status=exc.status, retry_after=exc.retry_after)
-    except (ValueError, TypeError, AttributeError):
-        return BoardResult(source_id, "failed", error="invalid_board_response")
+    except (ValueError, TypeError, AttributeError) as exc:
+        code = str(exc) if str(exc) in {"duplicate_source_id", "invalid_board_response"} else "invalid_board_response"
+        return BoardResult(source_id, "failed", error=code,
+                           attempts=fetcher.last_attempts, http_status=200)

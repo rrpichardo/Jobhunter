@@ -164,3 +164,27 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
 - `uv run --locked python -m pytest -q`: 57 passed, 10 subtests passed. The full
   changed revision, including user-supplied cookie/bootstrap documentation, must
   receive a fresh review and affected cloud checks before merge.
+
+### M0 review/repair cycle 2 and new setup direction
+
+- Claude reviewed `aaed72b` and confirmed original findings resolved. New findings:
+  Windows newline translation broke returned digests; nested server JSON could
+  escape error handling; lone surrogates lost evidence; inconsistent-empty and
+  duplicate-ID paths lost failure metadata; some storage wording was stale.
+- Fixes: publish exact binary JSON bytes (ASCII escaping supports surrogates) and
+  hash those same bytes; catch server JSON recursion; preserve schema-error attempt/
+  HTTP evidence; report positive-total/empty lists as failed; align current setup
+  and handoff wording with user-approved Sheet state and credential bootstrap.
+- Regression failures were reproduced before fixing; the digest byte-equality test
+  also runs on Windows CI. Full local suite: 61 tests, 10 subtests passed.
+- Actual cloud recheck at `aaed72b` passed locked installation, 57 tests/10 subtests,
+  a new single-request Greenhouse harvest (655 valid, 0 rejected, 15 PM candidates,
+  1 selected, complete-response) and trusted-digest validation (1 record, exit 0).
+  Commands and outputs were inspected in the UI. This predates the binary-output
+  fix; recheck affected tests and saved-data validation without another live fetch.
+- User approved the Google credential-variable fallback with workbook-only Editor,
+  no project IAM roles, Sheets API only, in-memory loading or private 0600 temp-file
+  cleanup. First inspect compatible GCP secret types. Re-inspection confirmed Add
+  secret disabled, so types could not be inspected; no key/variable was entered.
+- Review cycle 3 is the final allowed review/repair cycle for this PR. Submit the
+  fixed current revision for review; do not merge unresolved actionable findings.

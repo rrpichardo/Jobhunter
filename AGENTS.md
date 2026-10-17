@@ -21,7 +21,8 @@ probe results as historical evidence, not proof the current environment works.
   Notes, and My rating on existing rows. Never infer eligibility from missing data.
 - Keep keys, cookies, browser profiles, raw email, and personal account data out
   of Git, test fixtures, logs, and PR descriptions. Use sanitized fixtures and
-  protected cloud storage for runtime session/recovery data.
+  the dedicated environment for approved runtime secrets and Sheet `_State` for
+  non-secret recovery data; temporary files stay private and outside Git.
 - Follow the read-only social scope, source limits, and stop rules in the plan.
   Never apply to jobs or contact people. User completes account verification.
 - Preserve the existing Claude Gmail connector. Read only forwarded job alerts
@@ -40,7 +41,13 @@ probe results as historical evidence, not proof the current environment works.
   can read them. Never inspect or expose cookie values. Reconstruct temporary cloud
   sessions each run; put only non-secret allowance/recovery state in Sheet `_State`.
   Do not treat that tab as an atomic lock or add another hosting service/account.
-  Google private-key provisioning remains a separate secure-authentication gate.
+  For Google authentication, first check for a compatible GCP service-account-key
+  secret type. If unavailable, the user authorizes a dedicated JobHunterEnv
+  credential variable: load in memory where possible; any required temp file is
+  0600 in a private directory and deleted at run end. Use a dedicated service
+  account with Editor on only the JobHunter workbook, no project IAM roles, and
+  only the Sheets API enabled. Never dump environment variables, credentials or
+  cookies. The user rotates an exposed key. No credential has been provisioned yet.
 
 ## Collaboration and verification
 

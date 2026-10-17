@@ -41,7 +41,8 @@ Request another review after substantive fixes. A missing or failed review is no
    At `https://claude.ai/code/routines`, create `JobHunter Daily`, select `rrpichardo/Jobhunter` and the dedicated
    `JobHunter` cloud environment, configure Full network access and the tested installation script, and attach
    only required connectors. Preserve the existing Gmail account and its `JobHunter`-label-only reading rule.
-5. Provision secrets and persistent session state using supported cloud mechanisms. Install/configure LinkedIn
+5. Provision approved credentials/cookies in JobHunterEnv settings and restore
+   temporary sessions each run; persist non-secret recovery state in Sheet `_State`. Install/configure LinkedIn
    MCP in the cloud via a supported connector or repository configuration; a local MCP installation is insufficient.
    Verify current runtime support before choosing the mechanism and record any unresolved blocker.
 6. Use the separate operational prompt for daily runs, not the long implementation prompt. It collects sources,
@@ -248,7 +249,7 @@ WebSearch scouts for public LinkedIn/X posts; code for all APIs and the `twscrap
 2. **Harvester** `scripts/v0_harvest.py` (Python): fetch every source with pagination + timeouts, record per source:
    status (OK / OK-zero-jobs / failed / blocked / needs setup + error), jobs fetched, AI-PM matches. Subagent outputs
    saved as JSON and merged. LinkedIn and X run as cloud collector steps within this same V0 workflow,
-   following their limits and stop rule. Persist retry data in protected cloud storage.
+   following their limits and stop rule. Persist non-secret retry data in Sheet `_State`.
 3. **AI PM filter (code):** title is a PM role (product manager / PM / product lead / group PM …) AND (AI/ML/LLM/GenAI/
    agent/model keyword in title or description, OR company tagged AI company in registry); exclude intern/Summer
    Associate; keep US / remote-US / unknown location. Preliminary **Rank 1–3** from registry tags (AI co / Big Tech /
@@ -259,7 +260,10 @@ WebSearch scouts for public LinkedIn/X posts; code for all APIs and the `twscrap
 5. **Sheet:** use the shared Google Sheet "Jobhunter V0" and configured workbook ID. Python creates missing tabs
    **Jobs**, **Sources** (health of every source tested), **Run Log**, and **_State**, then performs batch upserts
    with `gspread` (plain values, keyed by Job ID; see §1). If credentials/access are missing, record `needs setup`
-   and preserve normalized JSON in cloud storage for retry; an export does not satisfy Sheet delivery.
+   and retain normalized JSON in a private temporary run directory for the current
+   attempt; once workbook access works, persist pending work in `_State`. If no
+   durable write is possible, report the loss/re-harvest requirement explicitly.
+   An export does not satisfy Sheet delivery.
 6. **Cloud schedule and trial:** configure the daily V0 run, inject secrets, verify browser/session persistence,
    run recovery checks, and observe an actual scheduled harvest through Sheet delivery. Start the 14-day review
    window and retain daily source evidence; no operational step depends on a local computer.
@@ -332,9 +336,16 @@ every run reads/writes (no Git database, no sync problems). Code (Python, in rep
   dedicated service-account email as Editor. Configure its ID as `JOBHUNTER_SPREADSHEET_ID`.
 - Use Sheets-scoped credentials and open the workbook by ID; normal sync does not need a Drive connector or
   Drive-wide access. `gspread` and `google-auth` handle authenticated API requests directly.
-- For unattended runs, inject service-account credentials from the runner's secret store as a temporary file
-  referenced by `GOOGLE_APPLICATION_CREDENTIALS` in the cloud environment.
-  Never commit or log credential contents. Verify secret injection and workbook access in the chosen cloud runner
+- For unattended runs, first inspect the JobHunterEnv Add secret types and prefer
+  a compatible GCP service-account-key type if available and proven for Python.
+  If unavailable, the user authorizes a dedicated environment credential variable.
+  Application code loads its JSON in memory where possible; a required temporary
+  file must be 0600 in a private directory and deleted at run end. No credential
+  contents or environment dumps in chat, tool output, screenshots or logs.
+  Use a dedicated service account with Editor on only the JobHunter workbook,
+  no project IAM roles, and only the Sheets API enabled. User rotates the key if
+  exposed. Ordinary environment variables are visible to environment users and
+  commands; this specific fallback is user-approved. Verify actual workbook access
   during M0; connector authentication does not automatically authenticate Python.
 
 ## 2. Job identity & lifecycle
@@ -434,7 +445,8 @@ private repo/workbook; raw emails not stored, only extracted job fields.
 Enable Sheets API + share workbook with the service account + configure workbook ID/runtime secrets · network
 access for source and Google API requests · dedicated job-alert Gmail + alerts + filtered forwarding into the
 connected Gmail with a `JobHunter` label · create the dedicated LinkedIn and X accounts (job-alert Gmail as their
-sign-up email) and authenticate their cloud sessions yourself · configure cloud session storage and secrets ·
+sign-up email) and supply session cookies directly in JobHunterEnv settings ·
+configure approved credentials and non-secret `_State` recovery data ·
 share resume/LinkedIn PDF ·
 approve profile & Companies tab · label 30 postings (guided) · enable the V0 cloud routine (setup provided).
 

@@ -76,3 +76,10 @@ def test_all_http_failures_are_sanitized_and_bounded(kind):
     assert 1 <= len(calls) <= 3
     assert error.value.attempts == len(calls)
     assert "private diagnostic" not in str(error.value)
+
+
+def test_deeply_nested_server_json_becomes_sanitized_source_failure():
+    from jobhunter.fetch import FetchError
+    with pytest.raises(FetchError, match="invalid_json"):
+        fetcher(lambda request: httpx.Response(200, text="[" * 100000 + "]" * 100000)).get_json(
+            "https://example.com/jobs")
