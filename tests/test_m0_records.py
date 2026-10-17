@@ -61,3 +61,13 @@ def test_duplicate_extractions_are_rejected_and_source_instructions_are_inert():
 def test_invalid_source_values_are_rejected(change):
     with pytest.raises(ValueError):
         source(**change)
+
+
+@pytest.mark.parametrize("url", [" https://example.com", "https://example.com/a\nb", "https://example.com/a b"])
+def test_urls_with_control_characters_or_whitespace_are_rejected(url):
+    with pytest.raises(ValueError):
+        source(apply_url=url)
+
+
+def test_board_identity_is_case_normalized():
+    assert source(board="Example").job_id == source(board="example").job_id

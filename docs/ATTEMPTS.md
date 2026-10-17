@@ -118,3 +118,49 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
   before its intended missing-module failures were verified; assertions unchanged.
 - This stage has no Sheet writer, recovery, production auth or daily schedule.
   Review cycle 1 has not yet started; live code-path proof remains outstanding.
+
+### User clarification after attempt 2
+
+- User supplied local-login → direct cookie settings → fresh cloud restore as the
+  intended social bootstrap. Adopt it without adding infrastructure. Interactive
+  login inside the cloud VM is no longer required. This changes that prerequisite;
+  it is not proof of authenticated collection, and counters are not reset.
+- Non-secret pending work, markers and daily social allowances may live in Sheet
+  `_State`; no secret cross-run session volume is needed under this approach.
+  Atomic serialization and safe state reconciliation remain separate open gates.
+- Cookie provisioning and tool compatibility still need testing, with no secret
+  values printed or inspected. Current repo has no `.mcp.json`; select and pin the
+  package before claiming a declared cookie-compatible MCP exists.
+- Keep three attempts total per blocker across collector options, and immediate
+  challenge/429 stops. The proposed three fresh attempts per tool would reset the
+  existing shared cap, so that portion of the suggestion was not adopted.
+- Read-only primary-doc check: twscrape supports `auth_token` / `ct0` cookie
+  activation (https://github.com/vladkens/twscrape). Its default indefinite account
+  waits and rate-limit rotation are not approved runtime behavior. No live social
+  request or authentication attempted; this is compatibility research, not a third
+  attempt to provision/authenticate the missing accounts.
+
+### M0 review/repair cycle 1
+
+- Claude Code read the complete plan and reviewed `f913601` against `7f77cb5`.
+  Review posted on PR #5. It reproduced protocol/proxy failures, per-item schema
+  failure, absent-total coverage and input hygiene problems; it also ran all 43
+  tests/10 subtests successfully without installing anything.
+- Fixed with regressions: sanitize all HTTP errors and retain attempt/status/wait
+  evidence; quarantine malformed items without dropping valid jobs; preflight
+  output paths before fetching; unknown completeness when total is absent; strict
+  URL whitespace and canonical board case; bounded nested JSON; explicit empty/
+  partial extraction count/status; trusted-reference SHA-256 check; atomic
+  exclusive artifact publication; remove obvious hidden markup from source text.
+- Atomic publication regression was also run against the prior implementation
+  and failed before the fixed full suite passed. No assertion was weakened.
+- The source API's public post ID remains the M0 key; the official API documents
+  its uniqueness (https://docs.greenhouse.io/job-board.html). Broader cross-source
+  or multiple-post/requisition reconciliation is not implemented or claimed by
+  this one-post M0 stage. Speculative repost equivalence is not inferred.
+- Artifact hash checks depend on a trusted reference retained outside source
+  artifacts; they are not protection against an agent changing both file and
+  reference. HTML cleaning does not execute CSS or prove rendered visibility.
+- `uv run --locked python -m pytest -q`: 57 passed, 10 subtests passed. The full
+  changed revision, including user-supplied cookie/bootstrap documentation, must
+  receive a fresh review and affected cloud checks before merge.

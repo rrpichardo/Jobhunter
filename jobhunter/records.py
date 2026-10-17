@@ -7,7 +7,7 @@ from urllib.parse import urlsplit
 
 
 def https_url(value: object) -> bool:
-    if not isinstance(value, str):
+    if not isinstance(value, str) or any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in value):
         return False
     try:
         parsed = urlsplit(value)
@@ -32,6 +32,7 @@ class SourceJob:
     def __post_init__(self):
         if not isinstance(self.board, str) or not re.fullmatch(r"[a-zA-Z0-9_-]+", self.board):
             raise ValueError("invalid_board")
+        object.__setattr__(self, "board", self.board.lower())
         if type(self.source_item_id) is not int or self.source_item_id <= 0:
             raise ValueError("invalid_source_id")
         if type(self.ai_company) is not bool:

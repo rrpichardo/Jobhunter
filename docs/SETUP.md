@@ -60,6 +60,29 @@ This supersedes the earlier not-created answer. No job data, tabs, service-accou
 sharing, credentials, or integration test was added. Create/provision the writer
 only after a supported secure cloud credential mechanism is established.
 
+## User-supplied session-bootstrap clarification
+
+The user supplied Claude Code's cookie-bootstrap approach: local browser login is
+initial setup only; every daily cloud run reconstructs the dedicated LinkedIn/X
+session from cookies entered directly by the user into JobHunterEnv settings.
+Do not require an interactive cloud login or persist secret browser profiles across
+runs. Environment variables are permitted for these dedicated-account cookies,
+with the visibility caveat described in PLAN.md. No cookie value may appear in
+chat, screenshots, logs, Git or ordinary artifacts. Agents must not inspect values.
+
+Persist only non-secret allowance/run/recovery data in Sheet `_State`. This does
+not establish an atomic lock; one-writer serialization remains to be verified.
+No new hosting service/account is authorized. No source is dropped, deferred, or
+replaced by email. Dedicated source accounts are still the planned user-created
+accounts; no account creation or cookie provisioning has happened yet.
+
+Google service-account credential delivery is a separate unresolved prerequisite;
+the permission for social cookie variables does not authorize putting Google
+private keys in ordinary environment variables. Current twscrape documentation
+supports cookie-based account setup, but its default waits/rotation/retries need
+adaptation to the plan's immediate challenge/429 stop rules before live use.
+The proposed LinkedIn MCP package/configuration is not yet selected or verified.
+
 If the implementing chat cannot operate the Claude cloud configuration, prepare
 the smallest necessary manual step and a self-contained routine prompt. First use
 available local computer/browser controls to perform authorized setup on the user's

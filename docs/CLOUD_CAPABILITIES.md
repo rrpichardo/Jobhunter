@@ -21,15 +21,15 @@ Observed on October 17, 2026. This records readiness, not deployment success.
 
 | Requirement | Status | Exact next action |
 | --- | --- | --- |
-| Cloud Python and network | Unverified | Run a bounded cloud session installing from the reviewed lock and fetching one public Greenhouse posting. |
+| Cloud Python and network | Manual M0 code-path proven | Locked install, 43-test suite and one real code harvest passed at f913601 in JobHunterEnv; rerun affected checks after review fixes. Scheduled execution remains open. |
 | Python Google authentication | Needs setup | Establish a supported secure credential-file mechanism before creating/provisioning writer credentials. |
 | Destination workbook | Created, writer access pending | Empty private `Jobhunter V0` created and saved; see SETUP.md for its ID/link. Share only with the dedicated writer after secure cloud credential provisioning is established. |
-| Real Claude extraction | Unverified | Produce one evidence-backed structured record in the actual cloud runtime and validate in Python. |
+| Real Claude extraction | Manual M0 excerpt proven | Claude selected one exact excerpt and Python validated one record at f913601; this is not a full extraction-quality eval or Sheet delivery. |
 | Gmail connector | Needs verification | Inspect connector settings only to confirm connection; verify `JobHunter` label and scoped forwarding without reading unrelated mail. |
-| Protected recovery/session state | Unverified | Prove durable storage and restore across fresh cloud sessions, including daily social allowances. |
+| Non-secret recovery/allowance state | Writer not yet implemented | Persist non-secret records/counters in Sheet `_State` per the user clarification; no new storage service or persistent secret session volume is required. |
 | Single writer | Unverified | Prove runtime concurrency control plus an execution lock; a Sheet marker cannot provide an atomic lock. |
-| LinkedIn cloud browser | Needs setup | Verify a supported interactive cloud authentication mechanism, then let user create/login to dedicated account. |
-| X cloud session | Needs setup | Verify protected twscrape session provisioning/storage, then let user create/login to dedicated account. |
+| LinkedIn cloud browser | Needs setup | Verify cookie-compatible MCP or read-only Playwright restoration; user logs in locally and supplies dedicated account cookie directly in environment settings. No interactive cloud login required. |
+| X cloud session | Needs setup | Verify twscrape cookie restoration with immediate stop rules, then user provisions dedicated `auth_token`/`ct0` directly in settings; temporary session DB recreated each run. |
 | Daily schedule | Not configured | After M0 checks pass, configure 06:07 America/New_York and observe a real scheduled delivery. |
 
 ## Bounded live cloud probe
@@ -70,6 +70,26 @@ collection has been verified. The trial has not started; day-7/day-14 dates must
 be based on the first verified trial run, not this bootstrap date. The inventory
 table above remains an overview of required gates; public network access is now
 proven, while application installation and all delivery/authentication gates remain open.
+
+## Updated M0 evidence and user clarification
+
+The earlier probe paragraphs above are historical snapshots. The same cloud
+session later tested actual application revision `f913601`: locked install,
+43 tests/10 subtests, one live harvest, and one Claude-selected/Python-validated
+record passed. See V0_VERIFICATION.md. No Sheet delivery was attempted.
+
+User-supplied cookie bootstrap supersedes the earlier interactive-cloud-login and
+secret-volume prerequisites. Local browser login is initial setup only; every
+daily cloud run restores cookies from JobHunterEnv settings into a temporary
+headless session. User permits ordinary environment variables for these dedicated
+social-account cookies despite their environment-user visibility. No values are
+ever requested in chat or exposed by tools, screenshots or logs. Network-secret
+compatibility remains tool-specific and unverified.
+
+Non-secret daily allowances, markers and pending normalized work belong in Sheet
+`_State`. That tab is not an atomic lock; one-writer serialization is still a
+separate gate. Secure Google private-key-file delivery remains unresolved and is
+not covered by the cookie-variable permission. No new infrastructure is authorized.
 
 ## Source access inventory
 

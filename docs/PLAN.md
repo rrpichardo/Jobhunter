@@ -87,7 +87,9 @@ construct cell updates, or execute Sheet writes. Reuse one configured workbook I
   failures separately. LinkedIn uses Gmail alerts/JSearch plus the logged-in social lane below; do not enable
   JobSpy's all-sites default.
 - Social lane (separate dependency extra `social`, included in V0 testing): `twscrape` for X. LinkedIn runs
-  through a LinkedIn MCP server hosted in the cloud environment. Verify its current setup, browser requirements,
+  through a cookie-compatible LinkedIn MCP server hosted in the cloud environment,
+  with a small read-only Playwright collector as the next option if MCP cookie
+  restoration is unsupported. Verify package/version, browser requirements,
   and read-only tool selection before registering it in the cloud agent configuration. Enable each source after its dedicated
   account is configured; until then record `needs setup`. Pin tested package versions or exact Git commits.
 - Install browser dependencies needed by the LinkedIn test. Defer Crawl4AI and additional browser frameworks
@@ -123,24 +125,32 @@ If setup is missing, record `needs setup` and the exact next action; this does n
 Healthy sources continue delivering to the Sheet while other sources need attention. Missing cloud setup for
 LinkedIn or X remains a V0 blocker; delivering other sources alone does not complete the full V0 scope.
 
-- **Cloud execution in V0:** host both collectors and the LinkedIn browser in the cloud environment under the
-  same daily orchestration and one-writer rule (§1). No local collector or local MCP dependency. Verify browser
-  execution, authenticated session restoration, required network access, and unattended restart in the actual
-  cloud runtime. If the selected runner lacks a required capability, resolve cloud hosting or report the
-  specific V0 blocker; do not silently substitute a local workflow.
-- **Account setup:** you create the new dedicated LinkedIn test account and configure a dedicated X account,
-  then authenticate the cloud sessions yourself through a supported secure setup flow and complete any
-  verification. Verify that the selected cloud host supports this setup before choosing the browser integration.
-  Account creation and login are prerequisites, not agent collection steps. Do not put passwords, session
-  cookies, or browser profiles in Git.
-- **Accounts and credentials:** use dedicated LinkedIn and X test accounts. Store LinkedIn browser session
-  state in protected cloud storage and restore it for subsequent runs; verify persistence across runner restarts.
-  For X, verify the supported `twscrape` session-cookie setup and supply credentials from the cloud secret store.
-  Persist any required account/session database in protected cloud storage. Session data must never appear in
-  Git, logs, or ordinary run artifacts. Expired sessions trigger a setup action for you; unattended collection
-  resumes after authentication is restored.
-- **LinkedIn:** logged-in job search and job-detail pages through the LinkedIn MCP server (verify the exact package
-  and command at install). Include JobSpy's guest LinkedIn scraper as a separately tracked comparison during
+- **Cloud execution in V0:** both collectors and the LinkedIn headless browser run
+  in JobHunterEnv under the daily routine and one-writer rule (§1), with no local
+  runtime dependency or additional hosting service/account. Dedicated social
+  accounts remain user-created prerequisites. Missing capabilities are specific,
+  bounded blockers with an exact next user action, never silent replacements.
+- **Account setup and session bootstrap:** you log in to the dedicated LinkedIn
+  and X accounts in your own browser and complete phone/CAPTCHA/ID checks. You
+  copy LinkedIn `li_at` and X `auth_token` / `ct0` directly into JobHunterEnv
+  settings, never chat. Test environment-variable delivery first; use a Network
+  secret only if its compatibility with the exact tool is demonstrated. Ordinary
+  environment variables are readable by commands and users with environment
+  access; use only the dedicated environment and accounts. These cookies grant
+  account access. Agents never print, inspect, screenshot, or log their values.
+  Account creation/login and private input remain user actions.
+- **Session restoration:** each run restores cookies into its temporary headless
+  browser or `twscrape` session. No secret browser profile or account database must
+  persist across daily runs. Keep temporary session files private and outside Git,
+  exclude them from ordinary run artifacts, and discard them when the run ends.
+  Verify restoration in a fresh cloud session; a local browser login is not proof.
+- **LinkedIn collector order:** first select/pin a LinkedIn MCP server and declare
+  it in repository `.mcp.json` if it can accept the supplied cookie without an
+  interactive cloud login. No server is configured yet. If unsupported, use a small
+  read-only Playwright collector restoring the cookie. Do not add another service.
+  The implementation cap remains three distinct attempts total per blocker across
+  tools; switching tools does not reset it. Challenges/429 stop the source immediately.
+  Include JobSpy's guest LinkedIn scraper as a separately tracked comparison during
   the daily trial when accessible. Compare both
   against Gmail alerts: new roles found, duplicates, broken links. Include searches for hiring posts as well
   as job listings; keep their source URLs as evidence.
@@ -154,10 +164,14 @@ LinkedIn or X remains a V0 blocker; delivering other sources alone does not comp
 - **Starting limits (tune after the first run):** LinkedIn ≤ 5 searches and ≤ 50 detail views per run; X ≤ 10
   queries and ≤ 200 posts per run; randomized delays; at most one live collection per social source per
   America/New_York calendar day while testing. A manual Run now consumes that day's allowance. Persist the
-  allowance in cloud run state so a restart or scheduled run cannot reset it. Skip already-attempted social
+  allowance in the Sheet `_State` tab so a restart or scheduled run cannot reset it.
+  Store non-secret run markers and normalized pending-write/recovery records there
+  too; never cookies, raw email, or personal account data. `_State` is not an atomic
+  lock: prove one-writer serialization separately before enabling live collection.
+  Skip already-attempted social
   sources with a recorded reason; verify their next live scheduled collection on the next eligible day.
   Use saved sanitized payloads or fixtures with social fetchers disabled for repeat-sync, idempotency, and
-  failure-injection checks. Restore session state during restart tests without another social collection;
+  failure-injection checks. Restore session cookies during restart tests without another social collection;
   verify authenticated live access during the next permitted run.
 - **Stop rule:** on a checkpoint, CAPTCHA, login challenge, 429, or account warning, stop that source immediately,
   record `blocked` plus the message in Sources, do not retry that day, and tell you. Never try to bypass it.

@@ -129,6 +129,13 @@ instead of handing me a long list of clicks.
 - Set up supported cloud authentication and session storage. A successful login
   in local Chrome is not proof that the cloud collector is authenticated; verify
   the actual cloud session and its restoration after a restart.
+  For social sources, the updated PLAN.md specifies user local login followed by
+  direct dedicated-account cookie provisioning in JobHunterEnv settings and fresh
+  headless restoration each run. No interactive cloud login or persistent secret
+  browser volume is required. Non-secret allowances/recovery records go in Sheet
+  `_State`; prove serialization separately because the tab is not an atomic lock.
+  Do not introduce a new hosting service/account. The cookie-variable permission
+  does not authorize Google private keys in ordinary environment variables.
 - Configure and enable the approved Claude cloud routine, connectors, and schedule
   after tests pass; verify PR review configuration as needed for the handoff.
 

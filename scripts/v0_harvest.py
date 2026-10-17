@@ -8,7 +8,7 @@ from pathlib import Path
 import httpx
 import yaml
 
-from jobhunter.artifacts import write_artifact
+from jobhunter.artifacts import new_artifact_path, safe_error_code, write_artifact
 from jobhunter.fetch import JsonFetcher
 from jobhunter.greenhouse import collect_board, is_pm_candidate
 
@@ -22,6 +22,7 @@ def main(argv=None, *, client=None) -> int:
     owned = client is None
     client = client or httpx.Client()
     try:
+        output_path = new_artifact_path(args.output)
         config = yaml.safe_load(Path(args.config).read_text(encoding="utf-8"))
         if not isinstance(config, dict) or set(config) != {"board", "company", "ai_company"}:
             raise ValueError("invalid_registry")
@@ -32,19 +33,22 @@ def main(argv=None, *, client=None) -> int:
         result = collect_board(JsonFetcher(client), captured_at=captured_at, **config)
         candidates = [job for job in result.jobs if is_pm_candidate(job.title)]
         selected = candidates[:args.limit]
-        write_artifact(args.output, {
+        digest = write_artifact(output_path, {
             "schema_version": 1, "source": {
                 "source_id": result.source_id, "status": result.status,
-                "captured_at": captured_at, "jobs_fetched": len(result.jobs),
+                "captured_at": captured_at, "jobs_fetched": result.items_fetched,
+                "valid_jobs": len(result.jobs), "rejected_items": result.rejected_items,
                 "pm_candidates": len(candidates), "selected_for_m0": len(selected),
                 "coverage": result.coverage, "selection": "bounded-m0-sample",
-                "error": result.error,
+                "error": result.error, "attempts": result.attempts,
+                "http_status": result.http_status, "retry_after_seconds": result.retry_after,
             }, "jobs": [asdict(job) for job in selected],
         })
-        print(f"{result.status}: fetched={len(result.jobs)} selected_for_m0={len(selected)}")
+        print(f"{result.status}: fetched={result.items_fetched} selected_for_m0={len(selected)}")
+        print(f"harvest_sha256={digest}")
         return 2 if result.status == "failed" else 0
-    except (ValueError, TypeError, OSError, yaml.YAMLError):
-        print("harvest_failed: invalid_input_or_artifact")
+    except (ValueError, TypeError, OSError, yaml.YAMLError) as exc:
+        print(f"harvest_failed: {safe_error_code(exc)}")
         return 2
     finally:
         if owned:

@@ -34,6 +34,13 @@ probe results as historical evidence, not proof the current environment works.
   and label configuration. That setup exception does not allow routine Gmail writes
   or a local production dependency. User enters private details and completes
   account creation and verification; never expose secrets in tool output.
+- For the user-approved social bootstrap, the user logs in locally and provisions
+  dedicated-account cookies directly in JobHunterEnv settings. Ordinary environment
+  variables are permitted for these cookies; users/commands with environment access
+  can read them. Never inspect or expose cookie values. Reconstruct temporary cloud
+  sessions each run; put only non-secret allowance/recovery state in Sheet `_State`.
+  Do not treat that tab as an atomic lock or add another hosting service/account.
+  Google private-key provisioning remains a separate secure-authentication gate.
 
 ## Collaboration and verification
 

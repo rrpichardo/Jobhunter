@@ -62,3 +62,17 @@ def test_timeout_retries_but_invalid_json_does_not():
         fetcher(handler).get_json("https://example.com/jobs")
     assert len(calls) == 2
     assert "secret" not in str(error.value)
+
+
+@pytest.mark.parametrize("kind", [httpx.RemoteProtocolError, httpx.ProxyError, httpx.DecodingError])
+def test_all_http_failures_are_sanitized_and_bounded(kind):
+    from jobhunter.fetch import FetchError
+    calls = []
+    def handler(request):
+        calls.append(1)
+        raise kind("private diagnostic must not escape")
+    with pytest.raises(FetchError) as error:
+        fetcher(handler).get_json("https://example.com/jobs")
+    assert 1 <= len(calls) <= 3
+    assert error.value.attempts == len(calls)
+    assert "private diagnostic" not in str(error.value)
