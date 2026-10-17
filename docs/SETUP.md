@@ -36,6 +36,21 @@ plan, review guidance, isolated scraping probes, and a Sheets upsert review exam
 Recheck repository state at implementation start; do not treat those probes as
 production collectors or a complete writer.
 
+## October 17, 2026 inspection
+
+The user selected the **Richard** Chrome profile for setup assistance. The actual
+Claude Code UI now contains **JobHunterEnv** with **Full** network access; its
+setup script and environment-variable fields are empty. Preserve this dedicated
+environment and the other environments. No settings or credentials were changed.
+The Scheduled page shows no scheduled tasks. This updates the historical
+environment inventory above; it does not establish runtime feasibility.
+
+See [cloud capability and source inventory](CLOUD_CAPABILITIES.md) for the current
+evidence and exact next checks. In particular, do not put Google credential JSON
+in ordinary cloud environment variables: the editor explicitly says they are
+visible to environment users and not intended for credentials. Secure delivery
+to Python and protected persistent storage still require proof.
+
 If the implementing chat cannot operate the Claude cloud configuration, prepare
 the smallest necessary manual step and a self-contained routine prompt. First use
 available local computer/browser controls to perform authorized setup on the user's

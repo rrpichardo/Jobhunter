@@ -1,2 +1,17 @@
 .venv/
 __pycache__/
+.pytest_cache/
+.DS_Store
+.env
+.env.*
+!.env.example
+.superpowers/
+.worktrees/
+# Credentials, sessions, and recovery state must live outside the checkout.
+credentials*.json
+service-account*.json
+*.sqlite
+*.sqlite3
+*.db
+storage-state*.json
+browser-profile/
