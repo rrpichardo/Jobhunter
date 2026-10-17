@@ -15,12 +15,12 @@ via Drive, then writes tabs and rows with the Sheets connector (same file + link
 | Source | Problem found | Fix | Status |
 |---|---|---|---|
 | YC Work at a Startup | 406 (login wall) | Same jobs via `ycombinator.com/jobs/role/*` pages — embedded JSON with title, salary, location, experience, visa, apply URL (35 product roles on one page) | ✅ fixed |
-| Lenny's Jobs | Now redirects to **TrueUp**; jobs load in-browser only; robots.txt blocks AI crawlers | Don't scrape. Subscribe the job-hunt Gmail to Lenny's/TrueUp job alerts → read via Gmail | ✅ via email |
+| Lenny's Jobs | Now redirects to **TrueUp**; jobs load in-browser only | Subscribe the job-hunt Gmail to Lenny's/TrueUp job alerts → read via Gmail | ✅ via email |
 | a16z jobs | Pagination is in-browser | Server search works (`?q=AI product manager` → 5,727 matches, top 25 per query); run several queries + probe portfolio companies' own boards for full coverage | ✅ fixed |
 | Founders You Should Know | Wrong URL | Correct site `foundersysk.com` (invite-only); use showcased-company list for discovery + Ali Rohde Jobs RSS for their roles | ✅ fixed |
 | Cosign | Jobs load in-browser; network-gated beta | Skip in V0; revisit with your account | ⚠️ later |
 | a16z Build | Members-only community, no feed | If you're a member, its emails go to the job-hunt Gmail | ✅ via email |
-| LinkedIn job search | Guest API 429 + scraping breaks ToS | **Gmail LinkedIn job alerts** (primary) + **JSearch** (Google-for-Jobs results incl. LinkedIn/Indeed/Glassdoor; free key) | ✅ via email/API |
+| LinkedIn job search | Guest API 429 | **Gmail LinkedIn job alerts** (primary) + **JSearch** (Google-for-Jobs results incl. LinkedIn/Indeed/Glassdoor; free key) | ✅ via email/API |
 | LinkedIn posts | Search engines don't index them (tested: 0 hits) | Not reliably automatable. Workaround: you forward interesting posts to the job-hunt Gmail ("Fwd: post") → parsed like alerts | ⚠️ manual assist |
 | X posts | Login wall; not in search index (tested: 0 hits) | Official X API is paid → skip in V0; same forward-to-Gmail workaround | ⚠️ manual assist |
 | **New: VC portfolio boards (Getro)** — Accel, Primary, others | — | Embedded JSON with title, company, salary, work mode, URL | ✅ added |
@@ -45,7 +45,7 @@ via Drive, then writes tabs and rows with the Sheets connector (same file + link
 | Founders You Should Know | ❌ URL not found | Find correct site; else via Ali Rohde Jobs feed |
 | Cosign (a16z beta network) | ❌ not reachable / beta | Marked "needs account"; revisit |
 | Remotive, RemoteOK, Himalayas, Jobicy, The Muse, WWR RSS | ✅ (Remotive tested) | Code fetch, PM filter |
-| LinkedIn search | ⚠️ guest API 429 + ToS | No direct scraping. V0: **WebSearch scouts** for public `linkedin.com/jobs` + `/posts`; **Gmail LinkedIn alerts**; optional **JSearch API** (Google for Jobs incl. LinkedIn/Indeed/Glassdoor; free key) |
+| LinkedIn search | ⚠️ guest API 429 | V0: **WebSearch scouts** for public `linkedin.com/jobs` + `/posts`; **Gmail LinkedIn alerts**; optional **JSearch API** (Google for Jobs incl. LinkedIn/Indeed/Glassdoor; free key) |
 | X posts | ⚠️ login wall | WebSearch scouts for public x.com posts (limited coverage) |
 | Gmail alerts (LinkedIn, Indeed, Glassdoor, others) | ⚠️ Gmail connector "needs reconnect" | Included tonight if reconnected (dedicated account), else marked "needs setup" |
 | Adzuna / Jooble / JSearch | 🔑 keys needed | Included if keys added as environment variables, else "needs setup" |
