@@ -1,4 +1,10 @@
-# JobHunter review instructions
+# JobHunter instructions
+
+Read `AGENTS.md` for shared implementation and review rules, `docs/PLAN.md` for
+product scope, and `docs/SETUP.md` for setup answers. Codex may build the code;
+the full V0 daily workflow runs in the Claude Code cloud environment.
+
+## Review instructions
 
 When reviewing a pull request:
 
