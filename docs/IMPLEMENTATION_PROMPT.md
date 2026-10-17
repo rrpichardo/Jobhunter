@@ -13,6 +13,39 @@ Use goal tracking if available, without inventing a token budget. Keep deploymen
 readiness and trial completion as separate milestones within this goal. Do not
 mark the overall goal complete while either milestone has unmet requirements.
 
+## Retry limits and exit conditions
+
+- Make at most **three distinct attempts total per blocker**, including the initial
+  attempt. A blocker is the same failing requirement/root cause, not each command.
+  After a failure, inspect evidence and change the approach before retrying. Do not
+  repeat identical calls or move work to another agent just to reset the counter.
+- Persist attempts, relevant errors, approaches tried, and the next required action
+  in `docs/ATTEMPTS.md` (sanitized). Counters survive conversations and restarts.
+  A source challenge/429 stop rule overrides this budget: stop immediately when
+  the plan requires it. Normal bounded HTTP retries count toward the configured
+  request budget; do not wrap exhausted retries in another unbounded retry loop.
+- After three unsuccessful attempts, stop work on that blocker, report what failed
+  and what user input/external change is required, and continue independent work.
+  Resume that blocker only after a relevant external change or my explicit direction.
+  Three attempts is a maximum, not a requirement to repeat a clearly impossible action.
+- Limit implementation/review repair cycles to three per milestone before reporting
+  remaining findings and asking for a decision. Do not merge unresolved required
+  findings merely because the attempt budget ran out.
+- Do not busy-poll accounts, CI, reviews, credentials, or scheduled runs. Use bounded
+  event waits or scheduled follow-ups. If there is no productive independent work,
+  give a concise handoff instead of repeatedly saying that you are waiting.
+- I authorize pausing the tracked goal when all remaining work is blocked after
+  these attempts, requires my input, or only awaits scheduled trial observations.
+  State the exact reason and resume condition; follow the host's goal-status rules.
+  A pause is not completion. Do not fabricate a successful deployment to exit.
+- Once deployment is verified, let the cloud routine collect the 14-day evidence
+  and arrange day-7/day-14 follow-ups where supported. Pause this chat's goal while
+  waiting for those dates; do not keep it running for fourteen days. If follow-up
+  scheduling is unavailable, give me the exact resume date and prompt.
+- At day 14, deliver the review even if some results are inconclusive. Recommend
+  additional observation where useful, but ask before extending the evaluation
+  goal; no automatic endless extension. The approved daily collection may continue.
+
 ## Context and scope
 
 Repository: `rrpichardo/Jobhunter`. Read `AGENTS.md`, `CLAUDE.md`, `docs/PLAN.md`, and

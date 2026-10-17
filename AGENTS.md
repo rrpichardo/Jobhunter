@@ -55,6 +55,11 @@ probe results as historical evidence, not proof the current environment works.
   results. Separate offline tests, live integration checks, and scheduled evidence.
 - Document blockers and the exact next action. Continue independent work when
   possible. Do not request secrets in chat or silently add paid services.
+- Cap distinct attempts at three per blocker and repair/review cycles at three per
+  milestone. Persist counters across handoffs; do not reset them through delegation.
+  Stop earlier for source challenges. After exhaustion, report and stop that blocker;
+  continue independent work. Follow the prompt's authorized pause/exit conditions
+  and host goal rules rather than busy-polling or automatically extending the trial.
 
 ## Code Review Rules
 

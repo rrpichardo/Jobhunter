@@ -52,6 +52,15 @@ Request another review after substantive fixes. A missing or failed review is no
 
 All daily execution remains cloud-only; local setup assistance does not create a local runtime dependency.
 
+**Bounded implementation goal:** allow at most three distinct attempts per blocker, including the initial
+attempt, and at most three implementation/review repair cycles per milestone. Persist attempts and sanitized
+evidence across sessions; do not reset counters by restarting or delegating. After the limit, report the blocker
+and required next action, stop retrying it, and continue independent work. Existing source challenge stop rules
+take precedence. Pause the tracked goal when only blocked/user-dependent work or scheduled observations remain,
+following host goal-status rules. No busy polling. After cloud deployment, use scheduled day-7/day-14 reviews
+and pause chat work until needed. Deliver the day-14 review with inconclusive findings clearly labeled; ask
+before extending the evaluation goal. Stopping or pausing never counts as successful completion.
+
 **Earlier probes:** Greenhouse, Lever, Ashby, Remotive and HN Algolia returned HTTP 200 in the prior environment;
 retest each source in the actual run. **Sheets implementation decision:** Python uses `gspread` and Google
 authentication for all reads and batch writes. AI may extract job facts, but does not match rows, deduplicate,
