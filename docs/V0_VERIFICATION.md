@@ -35,3 +35,8 @@ This is a manual cloud probe, not a scheduled routine or application run.
 No source-to-Sheet delivery, validated Claude extraction contract, Gmail read,
 social collection, schedule, session restoration, or recovery evidence exists yet.
 No trial start or day-7/day-14 review dates have been assigned.
+
+Workbook setup: exact-title search found no existing workbook; the empty private
+`Jobhunter V0` was created in the approved browser profile. Title, URL, Saved to
+Drive, and private sharing status were read back from the UI. See `SETUP.md`.
+Creation is setup evidence only; no application Sheet write has occurred.

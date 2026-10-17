@@ -23,7 +23,7 @@ Observed on October 17, 2026. This records readiness, not deployment success.
 | --- | --- | --- |
 | Cloud Python and network | Unverified | Run a bounded cloud session installing from the reviewed lock and fetching one public Greenhouse posting. |
 | Python Google authentication | Needs setup | Establish a supported secure credential-file mechanism before creating/provisioning writer credentials. |
-| Destination workbook | Needs setup | Create `Jobhunter V0` in the selected Google account, then share only it with the dedicated writer. |
+| Destination workbook | Created, writer access pending | Empty private `Jobhunter V0` created and saved; see SETUP.md for its ID/link. Share only with the dedicated writer after secure cloud credential provisioning is established. |
 | Real Claude extraction | Unverified | Produce one evidence-backed structured record in the actual cloud runtime and validate in Python. |
 | Gmail connector | Needs verification | Inspect connector settings only to confirm connection; verify `JobHunter` label and scoped forwarding without reading unrelated mail. |
 | Protected recovery/session state | Unverified | Prove durable storage and restore across fresh cloud sessions, including daily social allowances. |

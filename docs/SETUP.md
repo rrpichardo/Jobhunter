@@ -51,6 +51,15 @@ in ordinary cloud environment variables: the editor explicitly says they are
 visible to environment users and not intended for credentials. Secure delivery
 to Python and protected persistent storage still require proof.
 
+The approved empty **Jobhunter V0** workbook was created through the browser after
+an exact-title search found no existing match. The UI confirmed **Saved to Drive**
+and **Private to only me**. Its configured destination is
+`JOBHUNTER_SPREADSHEET_ID=1kG1QeLhYmiImPW4pMtEDIHI6I-dK1Ztig_77B8mGrPw`;
+[open workbook](https://docs.google.com/spreadsheets/d/1kG1QeLhYmiImPW4pMtEDIHI6I-dK1Ztig_77B8mGrPw/edit).
+This supersedes the earlier not-created answer. No job data, tabs, service-account
+sharing, credentials, or integration test was added. Create/provision the writer
+only after a supported secure cloud credential mechanism is established.
+
 If the implementing chat cannot operate the Claude cloud configuration, prepare
 the smallest necessary manual step and a self-contained routine prompt. First use
 available local computer/browser controls to perform authorized setup on the user's
