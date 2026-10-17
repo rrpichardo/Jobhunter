@@ -110,3 +110,30 @@ available local computer/browser controls to perform authorized setup on the use
 behalf; avoid delegating all setup clicks when the agent can perform them.
 Keep deployment verification open until actual run evidence is obtained. Do not
 claim that a local Codex automation is the requested Claude cloud routine.
+
+## Google setup update after PR #5
+
+The user selected an existing account with working Cloud access. A dedicated
+JobHunter project and Sheets-writer service account now exist. No project IAM
+roles were selected; Sheets API was enabled. Following the user's explicit
+confirmation, only the Jobhunter V0 workbook was shared as Editor (notifications
+off), and a JSON key was downloaded to the user's computer. The agent did not
+open or read it. No billing account was selected during project creation; billing
+status itself has not yet been independently verified.
+
+Add secret is now enabled in JobHunterEnv. The actual menu includes **GCP access
+token (with Service Account Key)**, superseding the earlier disabled-control
+inspection. Its form says the proxy mints access tokens and keeps the key outside
+the VM. The prepared secret restricts its host to `sheets.googleapis.com`, its
+path prefix to `/v4/spreadsheets/` followed by the configured workbook ID, its
+scope to `https://www.googleapis.com/auth/spreadsheets`, and leaves Subject blank.
+The user is entering the key directly and must finish saving/closing the form.
+Do not inspect the form while its key is visible. Live gspread compatibility is
+still outstanding; do not substitute the credential-variable fallback first.
+
+The next connection attempt uses `gspread.Client` with google-auth
+`AnonymousCredentials`, a 20-second timeout and `open_by_key` only. Authentication
+must be injected by the proxy after requests leave the VM; no key or token is
+loaded in Python. Explicit non-secret configuration is:
+`JOBHUNTER_GOOGLE_AUTH_MODE=network-secret` and the existing
+`JOBHUNTER_SPREADSHEET_ID`. Tests alone do not establish authenticated access.
