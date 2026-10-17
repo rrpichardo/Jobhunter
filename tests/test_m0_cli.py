@@ -77,6 +77,30 @@ def test_failed_source_is_recorded_with_nonzero_exit(tmp_path):
     assert payload["jobs"] == []
 
 
+@pytest.mark.parametrize("retry_after", ["inf", "1e999", "nan", "-5"])
+def test_invalid_retry_delay_preserves_failed_source_artifact(tmp_path, monkeypatch, retry_after):
+    from jobhunter.fetch import JsonFetcher
+    from scripts import v0_harvest
+    config, output = tmp_path / "config.yaml", tmp_path / "failed.json"
+    config.write_text("board: example\ncompany: Example\nai_company: true\n")
+    requests, delays = [], []
+    def respond(request):
+        requests.append(request)
+        return httpx.Response(429, headers={"Retry-After": retry_after})
+    client = httpx.Client(transport=httpx.MockTransport(respond))
+    monkeypatch.setattr(v0_harvest, "JsonFetcher", lambda client: JsonFetcher(
+        client, sleep=delays.append, jitter=lambda: 0))
+    assert v0_harvest.main(["--config", str(config), "--output", str(output)], client=client) == 2
+    payload = json.loads(output.read_text())
+    assert payload["source"]["status"] == "failed"
+    assert payload["source"]["error"] == "http_429"
+    assert payload["source"]["http_status"] == 429
+    assert payload["source"]["attempts"] == 3
+    assert payload["source"]["retry_after_seconds"] is None
+    assert len(requests) == 3
+    assert delays == [1, 2]
+
+
 def test_doomed_output_path_does_not_spend_a_live_request(tmp_path):
     from scripts.v0_harvest import main
     config, output = tmp_path / "config.yaml", tmp_path / "harvest.json"

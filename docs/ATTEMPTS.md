@@ -211,3 +211,19 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
   open; the specific account selection is pending. Do not create another account
   or attempt to bypass the access restriction. This is distinct from credential
   injection compatibility; its counter does not reset the earlier blockers.
+
+### M0 cycle 4 — explicit one-cycle extension authorized
+
+- User authorized exactly one additional fix-and-Claude-review cycle for PR #5.
+  This extends the milestone counter to 4; it does not reset prior cycles or
+  authorize a fifth cycle.
+- Reproduced the missing failure artifact with CLI regressions for `inf` and
+  `1e999` Retry-After values before the fix. Ignore non-finite or negative header
+  delays and retain bounded local backoff; valid finite delays remain honored.
+- Added CLI coverage for infinity, overflow, NaN and negative headers, checking
+  three attempts, bounded waits and retained HTTP 429 evidence.
+- `uv run --locked python -m pytest -q`: 65 passed, 10 subtests passed.
+  `git diff --check` passed. Fresh exact-head Claude review and CI remain required.
+- The user selected a different existing Google account and signed in. The
+  Cloud console now opens successfully; an existing free trial is shown. No
+  billing settings were changed, and no credentials have been created or entered.

@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
+import math
 import random
 import time
 
@@ -57,7 +58,8 @@ class JsonFetcher:
                         requested = (stamp - self.now()).total_seconds()
                     except (ValueError, TypeError, OverflowError):
                         requested = delay
-                delay = max(delay, requested)
+                if math.isfinite(requested) and requested >= 0:
+                    delay = max(delay, requested)
             if delay > 60:
                 raise FetchError("retry_delay_exceeds_budget", attempts=attempt + 1,
                                  status=response.status_code, retry_after=delay)
