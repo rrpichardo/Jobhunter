@@ -56,9 +56,11 @@ All daily execution remains cloud-only; local setup assistance does not create a
 attempt, and at most three implementation/review repair cycles per milestone. Persist attempts and sanitized
 evidence across sessions; do not reset counters by restarting or delegating. After the limit, report the blocker
 and required next action, stop retrying it, and continue independent work. Existing source challenge stop rules
-take precedence. Pause the tracked goal when only blocked/user-dependent work or scheduled observations remain,
-following host goal-status rules. No busy polling. After cloud deployment, use scheduled day-7/day-14 reviews
-and pause chat work until needed. Deliver the day-14 review with inconclusive findings clearly labeled; ask
+take precedence. Pause the tracked goal when only blocked/user-dependent work remains, following host
+goal-status rules. No busy polling. Complete the implementation goal after verified deployment and arrangement
+of separate day-7/day-14 follow-ups (or delivery of exact review dates and a review prompt). Daily cloud runs
+start immediately after setup and continue after day 14 unless the user stops them. No coding chat waits for
+fourteen days. Deliver the day-14 review with inconclusive findings clearly labeled; ask
 before extending the evaluation goal. Stopping or pausing never counts as successful completion.
 
 **Earlier probes:** Greenhouse, Lever, Ashby, Remotive and HN Algolia returned HTTP 200 in the prior environment;
@@ -160,6 +162,9 @@ LinkedIn or X remains a V0 blocker; delivering other sources alone does not comp
 
 **V0 daily cloud source trial — broad coverage before keep/drop decisions**
 
+- **Meaning of trial:** the configured routine runs every day and adds results to the Sheet. Fourteen days is
+  the first results-review checkpoint, not a delay before activation, an expiry date, or a two-week coding task.
+  Review the accumulated evidence in a separate follow-up; daily collection continues afterward.
 - **Purpose:** learn which sources repeatedly find useful AI PM opportunities. An initial successful request
   proves access only; a single empty run or overlapping batch is not grounds to drop a source.
 - **Initial review window:** 14 calendar days from the first daily trial run (working default). Review progress

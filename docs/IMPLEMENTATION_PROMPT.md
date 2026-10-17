@@ -7,11 +7,11 @@ Include any setup answers from the preparation conversation that are not yet in
 ---
 
 Create and pursue a goal: **Implement, test, debug, and deploy JobHunter V0 as a
-daily Claude Code cloud routine, then collect and review the initial 14-day source
-trial evidence. Follow the completion gates below and report only verified results.**
-Use goal tracking if available, without inventing a token budget. Keep deployment
-readiness and trial completion as separate milestones within this goal. Do not
-mark the overall goal complete while either milestone has unmet requirements.
+daily Claude Code cloud routine, with source/run evidence recorded each day and
+a separate day-14 results review arranged. Follow the completion gates below and
+report only verified results.** Use goal tracking if available, without inventing
+a token budget. The implementation goal ends when deployment is verified and the
+follow-up is arranged; it does not stay active waiting for fourteen days to pass.
 
 ## Retry limits and exit conditions
 
@@ -35,13 +35,13 @@ mark the overall goal complete while either milestone has unmet requirements.
   event waits or scheduled follow-ups. If there is no productive independent work,
   give a concise handoff instead of repeatedly saying that you are waiting.
 - I authorize pausing the tracked goal when all remaining work is blocked after
-  these attempts, requires my input, or only awaits scheduled trial observations.
+  these attempts or requires my input.
   State the exact reason and resume condition; follow the host's goal-status rules.
   A pause is not completion. Do not fabricate a successful deployment to exit.
-- Once deployment is verified, let the cloud routine collect the 14-day evidence
-  and arrange day-7/day-14 follow-ups where supported. Pause this chat's goal while
-  waiting for those dates; do not keep it running for fourteen days. If follow-up
-  scheduling is unavailable, give me the exact resume date and prompt.
+- Once deployment is verified, let the cloud routine collect evidence every day
+  and arrange separate day-7/day-14 follow-ups where supported. Complete this
+  implementation goal when its acceptance gates pass; do not wait fourteen days.
+  If follow-up scheduling is unavailable, give me the exact review date and prompt.
 - At day 14, deliver the review even if some results are inconclusive. Recommend
   additional observation where useful, but ask before extending the evaluation
   goal; no automatic endless extension. The approved daily collection may continue.
@@ -202,11 +202,11 @@ If review cannot run, report the blocker rather than treating its absence as app
    prompt in `JobHunter Daily`, not this implementation goal prompt. Daily runs
    execute the reviewed application, not rebuild it or modify its repository.
    Verify actual Sheet/source results, not merely a green session status.
-7. **Observe the trial.** Collect per-run history for the initial 14-day window;
-   review at day 7 and day 14. Use cloud scheduling for future work rather than
-   keeping a local chat alive. Notify on meaningful failures, required user actions,
-   and review milestones, not unchanged daily status. Preserve the pending goal and
-   exact continuation instructions if this chat cannot receive cloud follow-ups.
+7. **Arrange the results review.** Daily collection begins immediately after setup
+   and verification, and saves per-run history. Arrange separate day-7/day-14 review
+   follow-ups, or provide exact review dates and a ready-to-use review prompt.
+   Notify on meaningful failures, required user actions, and review milestones,
+   not unchanged daily status. The routine continues after day 14 unless I stop it.
 
 If the selected cloud runtime cannot support a required capability, investigate
 cloud-compatible options within the approved budget. Record the actual blocker
@@ -273,7 +273,7 @@ Do not repeat passing checks unless new changes or unresolved concerns justify i
 - A self-contained routine prompt, setup/runbook, source inventory, evidence report,
   and precise operator actions are delivered. The daily trial is active.
 
-**Milestone B — V0 trial evaluated:**
+**Separate follow-up — review results after 14 days (not a deployment completion gate):**
 
 - Fourteen calendar days of cloud observation have elapsed from trial start; report
   actual successful/missed/blocked days per source, including sources added late.
@@ -281,15 +281,16 @@ Do not repeat passing checks unless new changes or unresolved concerns justify i
   overlap, working links, user-rated usefulness when available, reliability,
   runtime/cost, and maintenance effort. Missing feedback or cost stays unknown.
 - Provide evidence-backed keep/fix/extend/defer recommendations. Do not remove
-  a source because of one empty run. Extend sparse observations where warranted,
-  clearly identifying what remains unresolved and when it will be reviewed.
+  a source because of one empty run. Recommend further observation where warranted;
+  ask before extending the evaluation task, and identify what remains unresolved.
 - State the ongoing schedule and unresolved coverage gaps. Do not stop collection
   merely because the initial evaluation finished.
 
-The overall goal is complete only when both milestones are satisfied. If user
-credentials, external access, reviewer access, or elapsed observation time prevent
-completion, report exactly what is complete and pending; never fabricate results
-or label a handoff as a finished deployment. Follow the host's goal-status rules.
+The implementation goal is complete when Milestone A passes and the review
+follow-up is scheduled or its date and prompt are handed over. Future evaluation
+is a separate task. If credentials, external access, or reviewer access prevent
+deployment, report what is complete and pending; never fabricate results or label
+an incomplete deployment as finished. Follow the host's goal-status rules.
 
 At each milestone, report the outcome, evidence, remaining blockers, and next step
 concisely. Keep progress in durable repo documentation so another conversation can
