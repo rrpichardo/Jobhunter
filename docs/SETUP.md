@@ -36,6 +36,30 @@ plan, review guidance, isolated scraping probes, and a Sheets upsert review exam
 Recheck repository state at implementation start; do not treat those probes as
 production collectors or a complete writer.
 
+## October 17, 2026 inspection
+
+The user selected the **Richard** Chrome profile for setup assistance. The actual
+Claude Code UI now contains **JobHunterEnv** with **Full** network access; its
+setup script and environment-variable fields are empty. Preserve this dedicated
+environment and the other environments. No settings or credentials were changed.
+The Scheduled page shows no scheduled tasks. This updates the historical
+environment inventory above; it does not establish runtime feasibility.
+
+See [cloud capability and source inventory](CLOUD_CAPABILITIES.md) for the current
+evidence and exact next checks. In particular, do not put Google credential JSON
+in ordinary cloud environment variables: the editor explicitly says they are
+visible to environment users and not intended for credentials. Secure delivery
+to Python and protected persistent storage still require proof.
+
+The approved empty **Jobhunter V0** workbook was created through the browser after
+an exact-title search found no existing match. The UI confirmed **Saved to Drive**
+and **Private to only me**. Its configured destination is
+`JOBHUNTER_SPREADSHEET_ID=1kG1QeLhYmiImPW4pMtEDIHI6I-dK1Ztig_77B8mGrPw`;
+[open workbook](https://docs.google.com/spreadsheets/d/1kG1QeLhYmiImPW4pMtEDIHI6I-dK1Ztig_77B8mGrPw/edit).
+This supersedes the earlier not-created answer. No job data, tabs, service-account
+sharing, credentials, or integration test was added. Create/provision the writer
+only after a supported secure cloud credential mechanism is established.
+
 If the implementing chat cannot operate the Claude cloud configuration, prepare
 the smallest necessary manual step and a self-contained routine prompt. First use
 available local computer/browser controls to perform authorized setup on the user's
