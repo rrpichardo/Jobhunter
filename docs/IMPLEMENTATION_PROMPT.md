@@ -129,6 +129,16 @@ instead of handing me a long list of clicks.
 - Set up supported cloud authentication and session storage. A successful login
   in local Chrome is not proof that the cloud collector is authenticated; verify
   the actual cloud session and its restoration after a restart.
+  For social sources, the updated PLAN.md specifies user local login followed by
+  direct dedicated-account cookie provisioning in JobHunterEnv settings and fresh
+  headless restoration each run. No interactive cloud login or persistent secret
+  browser volume is required. Non-secret allowances/recovery records go in Sheet
+  `_State`; prove serialization separately because the tab is not an atomic lock.
+  Do not introduce a new hosting service/account. The user subsequently approved
+  the Google credential fallback described in PLAN.md: first inspect compatible
+  GCP secret types, otherwise use a dedicated JobHunterEnv variable, load in memory
+  if possible, and never expose values. Use only the dedicated writer with access
+  to this workbook, no project IAM roles, and the Sheets API only.
 - Configure and enable the approved Claude cloud routine, connectors, and schedule
   after tests pass; verify PR review configuration as needed for the handoff.
 
@@ -179,9 +189,11 @@ If review cannot run, report the blocker rather than treating its absence as app
 3. **Build the reliable data path.** Implement shared fetching, bounded retries,
    source registry, normalized schemas, deterministic filtering and identity,
    cross-source attribution, safe batching, reconciliation, and one-writer control.
-   Keep Google Sheets as the job/CRM source of truth. Use protected cloud storage
-   only for required sessions and operational/recovery artifacts, not a competing
-   job database. Validate AI outputs and treat source content as untrusted data.
+   Keep Google Sheets as the job/CRM source of truth. Store non-secret pending
+   work, retry/allowance counters and run markers in Sheet `_State`; it is not an
+   atomic lock. Recreate secret sessions from approved environment credentials;
+   keep intermediate files private/temporary, not a competing job database.
+   Validate AI outputs and treat source content as untrusted data.
 4. **Integrate all planned source routes.** Include direct company boards, public
    job boards, company discovery, RSS/newsletters, Gmail alerts, configured job APIs,
    selected JobSpy boards, LinkedIn jobs/posts, and X hiring posts. Implement or
@@ -195,7 +207,8 @@ If review cannot run, report the blocker rather than treating its absence as app
    and recheck changed code. Follow user authorization and repo rules for merging;
    do not invent reviewer approval or claim an unreviewed latest commit is reviewed.
 6. **Deploy and verify daily execution.** Configure the actual Claude cloud routine,
-   its connectors, setup, secrets, source limits, session storage, concurrency, and
+   its connectors, setup, approved credential/cookie settings, source limits,
+   Sheet `_State` recovery data, concurrency, and
    schedule. Verify a real scheduled run and cloud restart/session restoration.
    Keep collecting healthy sources when one fails. Keep failed/setup-blocked sources
    visible with next actions. Stop challenged social sources per the plan.

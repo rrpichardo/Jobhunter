@@ -41,7 +41,8 @@ Request another review after substantive fixes. A missing or failed review is no
    At `https://claude.ai/code/routines`, create `JobHunter Daily`, select `rrpichardo/Jobhunter` and the dedicated
    `JobHunter` cloud environment, configure Full network access and the tested installation script, and attach
    only required connectors. Preserve the existing Gmail account and its `JobHunter`-label-only reading rule.
-5. Provision secrets and persistent session state using supported cloud mechanisms. Install/configure LinkedIn
+5. Provision approved credentials/cookies in JobHunterEnv settings and restore
+   temporary sessions each run; persist non-secret recovery state in Sheet `_State`. Install/configure LinkedIn
    MCP in the cloud via a supported connector or repository configuration; a local MCP installation is insufficient.
    Verify current runtime support before choosing the mechanism and record any unresolved blocker.
 6. Use the separate operational prompt for daily runs, not the long implementation prompt. It collects sources,
@@ -87,7 +88,9 @@ construct cell updates, or execute Sheet writes. Reuse one configured workbook I
   failures separately. LinkedIn uses Gmail alerts/JSearch plus the logged-in social lane below; do not enable
   JobSpy's all-sites default.
 - Social lane (separate dependency extra `social`, included in V0 testing): `twscrape` for X. LinkedIn runs
-  through a LinkedIn MCP server hosted in the cloud environment. Verify its current setup, browser requirements,
+  through a cookie-compatible LinkedIn MCP server hosted in the cloud environment,
+  with a small read-only Playwright collector as the next option if MCP cookie
+  restoration is unsupported. Verify package/version, browser requirements,
   and read-only tool selection before registering it in the cloud agent configuration. Enable each source after its dedicated
   account is configured; until then record `needs setup`. Pin tested package versions or exact Git commits.
 - Install browser dependencies needed by the LinkedIn test. Defer Crawl4AI and additional browser frameworks
@@ -123,24 +126,32 @@ If setup is missing, record `needs setup` and the exact next action; this does n
 Healthy sources continue delivering to the Sheet while other sources need attention. Missing cloud setup for
 LinkedIn or X remains a V0 blocker; delivering other sources alone does not complete the full V0 scope.
 
-- **Cloud execution in V0:** host both collectors and the LinkedIn browser in the cloud environment under the
-  same daily orchestration and one-writer rule (§1). No local collector or local MCP dependency. Verify browser
-  execution, authenticated session restoration, required network access, and unattended restart in the actual
-  cloud runtime. If the selected runner lacks a required capability, resolve cloud hosting or report the
-  specific V0 blocker; do not silently substitute a local workflow.
-- **Account setup:** you create the new dedicated LinkedIn test account and configure a dedicated X account,
-  then authenticate the cloud sessions yourself through a supported secure setup flow and complete any
-  verification. Verify that the selected cloud host supports this setup before choosing the browser integration.
-  Account creation and login are prerequisites, not agent collection steps. Do not put passwords, session
-  cookies, or browser profiles in Git.
-- **Accounts and credentials:** use dedicated LinkedIn and X test accounts. Store LinkedIn browser session
-  state in protected cloud storage and restore it for subsequent runs; verify persistence across runner restarts.
-  For X, verify the supported `twscrape` session-cookie setup and supply credentials from the cloud secret store.
-  Persist any required account/session database in protected cloud storage. Session data must never appear in
-  Git, logs, or ordinary run artifacts. Expired sessions trigger a setup action for you; unattended collection
-  resumes after authentication is restored.
-- **LinkedIn:** logged-in job search and job-detail pages through the LinkedIn MCP server (verify the exact package
-  and command at install). Include JobSpy's guest LinkedIn scraper as a separately tracked comparison during
+- **Cloud execution in V0:** both collectors and the LinkedIn headless browser run
+  in JobHunterEnv under the daily routine and one-writer rule (§1), with no local
+  runtime dependency or additional hosting service/account. Dedicated social
+  accounts remain user-created prerequisites. Missing capabilities are specific,
+  bounded blockers with an exact next user action, never silent replacements.
+- **Account setup and session bootstrap:** you log in to the dedicated LinkedIn
+  and X accounts in your own browser and complete phone/CAPTCHA/ID checks. You
+  copy LinkedIn `li_at` and X `auth_token` / `ct0` directly into JobHunterEnv
+  settings, never chat. Test environment-variable delivery first; use a Network
+  secret only if its compatibility with the exact tool is demonstrated. Ordinary
+  environment variables are readable by commands and users with environment
+  access; use only the dedicated environment and accounts. These cookies grant
+  account access. Agents never print, inspect, screenshot, or log their values.
+  Account creation/login and private input remain user actions.
+- **Session restoration:** each run restores cookies into its temporary headless
+  browser or `twscrape` session. No secret browser profile or account database must
+  persist across daily runs. Keep temporary session files private and outside Git,
+  exclude them from ordinary run artifacts, and discard them when the run ends.
+  Verify restoration in a fresh cloud session; a local browser login is not proof.
+- **LinkedIn collector order:** first select/pin a LinkedIn MCP server and declare
+  it in repository `.mcp.json` if it can accept the supplied cookie without an
+  interactive cloud login. No server is configured yet. If unsupported, use a small
+  read-only Playwright collector restoring the cookie. Do not add another service.
+  The implementation cap remains three distinct attempts total per blocker across
+  tools; switching tools does not reset it. Challenges/429 stop the source immediately.
+  Include JobSpy's guest LinkedIn scraper as a separately tracked comparison during
   the daily trial when accessible. Compare both
   against Gmail alerts: new roles found, duplicates, broken links. Include searches for hiring posts as well
   as job listings; keep their source URLs as evidence.
@@ -154,10 +165,14 @@ LinkedIn or X remains a V0 blocker; delivering other sources alone does not comp
 - **Starting limits (tune after the first run):** LinkedIn ≤ 5 searches and ≤ 50 detail views per run; X ≤ 10
   queries and ≤ 200 posts per run; randomized delays; at most one live collection per social source per
   America/New_York calendar day while testing. A manual Run now consumes that day's allowance. Persist the
-  allowance in cloud run state so a restart or scheduled run cannot reset it. Skip already-attempted social
+  allowance in the Sheet `_State` tab so a restart or scheduled run cannot reset it.
+  Store non-secret run markers and normalized pending-write/recovery records there
+  too; never cookies, raw email, or personal account data. `_State` is not an atomic
+  lock: prove one-writer serialization separately before enabling live collection.
+  Skip already-attempted social
   sources with a recorded reason; verify their next live scheduled collection on the next eligible day.
   Use saved sanitized payloads or fixtures with social fetchers disabled for repeat-sync, idempotency, and
-  failure-injection checks. Restore session state during restart tests without another social collection;
+  failure-injection checks. Restore session cookies during restart tests without another social collection;
   verify authenticated live access during the next permitted run.
 - **Stop rule:** on a checkpoint, CAPTCHA, login challenge, 429, or account warning, stop that source immediately,
   record `blocked` plus the message in Sources, do not retry that day, and tell you. Never try to bypass it.
@@ -234,7 +249,7 @@ WebSearch scouts for public LinkedIn/X posts; code for all APIs and the `twscrap
 2. **Harvester** `scripts/v0_harvest.py` (Python): fetch every source with pagination + timeouts, record per source:
    status (OK / OK-zero-jobs / failed / blocked / needs setup + error), jobs fetched, AI-PM matches. Subagent outputs
    saved as JSON and merged. LinkedIn and X run as cloud collector steps within this same V0 workflow,
-   following their limits and stop rule. Persist retry data in protected cloud storage.
+   following their limits and stop rule. Persist non-secret retry data in Sheet `_State`.
 3. **AI PM filter (code):** title is a PM role (product manager / PM / product lead / group PM …) AND (AI/ML/LLM/GenAI/
    agent/model keyword in title or description, OR company tagged AI company in registry); exclude intern/Summer
    Associate; keep US / remote-US / unknown location. Preliminary **Rank 1–3** from registry tags (AI co / Big Tech /
@@ -245,7 +260,10 @@ WebSearch scouts for public LinkedIn/X posts; code for all APIs and the `twscrap
 5. **Sheet:** use the shared Google Sheet "Jobhunter V0" and configured workbook ID. Python creates missing tabs
    **Jobs**, **Sources** (health of every source tested), **Run Log**, and **_State**, then performs batch upserts
    with `gspread` (plain values, keyed by Job ID; see §1). If credentials/access are missing, record `needs setup`
-   and preserve normalized JSON in cloud storage for retry; an export does not satisfy Sheet delivery.
+   and retain normalized JSON in a private temporary run directory for the current
+   attempt; once workbook access works, persist pending work in `_State`. If no
+   durable write is possible, report the loss/re-harvest requirement explicitly.
+   An export does not satisfy Sheet delivery.
 6. **Cloud schedule and trial:** configure the daily V0 run, inject secrets, verify browser/session persistence,
    run recovery checks, and observe an actual scheduled harvest through Sheet delivery. Start the 14-day review
    window and retain daily source evidence; no operational step depends on a local computer.
@@ -318,9 +336,16 @@ every run reads/writes (no Git database, no sync problems). Code (Python, in rep
   dedicated service-account email as Editor. Configure its ID as `JOBHUNTER_SPREADSHEET_ID`.
 - Use Sheets-scoped credentials and open the workbook by ID; normal sync does not need a Drive connector or
   Drive-wide access. `gspread` and `google-auth` handle authenticated API requests directly.
-- For unattended runs, inject service-account credentials from the runner's secret store as a temporary file
-  referenced by `GOOGLE_APPLICATION_CREDENTIALS` in the cloud environment.
-  Never commit or log credential contents. Verify secret injection and workbook access in the chosen cloud runner
+- For unattended runs, first inspect the JobHunterEnv Add secret types and prefer
+  a compatible GCP service-account-key type if available and proven for Python.
+  If unavailable, the user authorizes a dedicated environment credential variable.
+  Application code loads its JSON in memory where possible; a required temporary
+  file must be 0600 in a private directory and deleted at run end. No credential
+  contents or environment dumps in chat, tool output, screenshots or logs.
+  Use a dedicated service account with Editor on only the JobHunter workbook,
+  no project IAM roles, and only the Sheets API enabled. User rotates the key if
+  exposed. Ordinary environment variables are visible to environment users and
+  commands; this specific fallback is user-approved. Verify actual workbook access
   during M0; connector authentication does not automatically authenticate Python.
 
 ## 2. Job identity & lifecycle
@@ -420,7 +445,8 @@ private repo/workbook; raw emails not stored, only extracted job fields.
 Enable Sheets API + share workbook with the service account + configure workbook ID/runtime secrets · network
 access for source and Google API requests · dedicated job-alert Gmail + alerts + filtered forwarding into the
 connected Gmail with a `JobHunter` label · create the dedicated LinkedIn and X accounts (job-alert Gmail as their
-sign-up email) and authenticate their cloud sessions yourself · configure cloud session storage and secrets ·
+sign-up email) and supply session cookies directly in JobHunterEnv settings ·
+configure approved credentials and non-secret `_State` recovery data ·
 share resume/LinkedIn PDF ·
 approve profile & Companies tab · label 30 postings (guided) · enable the V0 cloud routine (setup provided).
 

@@ -46,10 +46,10 @@ The Scheduled page shows no scheduled tasks. This updates the historical
 environment inventory above; it does not establish runtime feasibility.
 
 See [cloud capability and source inventory](CLOUD_CAPABILITIES.md) for the current
-evidence and exact next checks. In particular, do not put Google credential JSON
-in ordinary cloud environment variables: the editor explicitly says they are
-visible to environment users and not intended for credentials. Secure delivery
-to Python and protected persistent storage still require proof.
+evidence and exact next checks. At initial inspection the editor warned that
+environment variables are visible to environment users and not intended for
+credentials. The explicit, bounded user approval below now permits that fallback;
+actual Python workbook access still requires proof.
 
 The approved empty **Jobhunter V0** workbook was created through the browser after
 an exact-title search found no existing match. The UI confirmed **Saved to Drive**
@@ -59,6 +59,50 @@ and **Private to only me**. Its configured destination is
 This supersedes the earlier not-created answer. No job data, tabs, service-account
 sharing, credentials, or integration test was added. Create/provision the writer
 only after a supported secure cloud credential mechanism is established.
+
+## User-supplied session-bootstrap clarification
+
+The user supplied Claude Code's cookie-bootstrap approach: local browser login is
+initial setup only; every daily cloud run reconstructs the dedicated LinkedIn/X
+session from cookies entered directly by the user into JobHunterEnv settings.
+Do not require an interactive cloud login or persist secret browser profiles across
+runs. Environment variables are permitted for these dedicated-account cookies,
+with the visibility caveat described in PLAN.md. No cookie value may appear in
+chat, screenshots, logs, Git or ordinary artifacts. Agents must not inspect values.
+
+Persist only non-secret allowance/run/recovery data in Sheet `_State`. This does
+not establish an atomic lock; one-writer serialization remains to be verified.
+No new hosting service/account is authorized. No source is dropped, deferred, or
+replaced by email. Dedicated source accounts are still the planned user-created
+accounts; no account creation or cookie provisioning has happened yet.
+
+Google service-account credential delivery was a separate unresolved prerequisite;
+the subsequent user approval below defines its fallback. Current twscrape documentation
+supports cookie-based account setup, but its default waits/rotation/retries need
+adaptation to the plan's immediate challenge/429 stop rules before live use.
+The proposed LinkedIn MCP package/configuration is not yet selected or verified.
+
+## Explicit Google credential approval and UI check
+
+The user authorizes the agent to operate all non-private setup steps. First check
+whether Add secret offers a compatible GCP service-account-key type; prefer that
+if available and it works with Python without placing the key in the session.
+On re-inspection, **Add secret is disabled** in JobHunterEnv, so the dropdown and
+its types could not be inspected. No value entered and no settings changed.
+Do not claim that a GCP type was proven absent. If still unavailable at provisioning,
+the user-approved fallback is a dedicated JobHunterEnv credential variable.
+
+Conditions: dedicated service account with Editor on only Jobhunter V0, no project
+IAM roles, only Sheets API enabled; load the credential in memory where possible.
+If a file is required, make it 0600 in a private temporary directory and delete it
+at run end. Never print/read back environment values or keys into model output,
+chat, logs, screenshots or Git. User rotates the key if exposed. Provisioning and
+workbook access are not yet verified; no service account/key has been created.
+
+Google Cloud console access is unavailable in the initially selected Google
+account. User chose to switch to another existing account; the chooser is open
+and the exact account is awaiting user selection. No new account, project, API,
+billing, service account or key was created. Keep setup gated on actual access.
 
 If the implementing chat cannot operate the Claude cloud configuration, prepare
 the smallest necessary manual step and a self-contained routine prompt. First use

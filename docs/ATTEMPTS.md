@@ -70,3 +70,160 @@ direction is required to resume. Do not reset a counter merely by renaming it.
 
 These are distinct unresolved prerequisites, not exhausted retries. The initial
 cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
+
+## October 17 continuation
+
+- PR #4 merged as `7f77cb5` after Linux/Windows CI and fresh local Claude review of
+  `4e104fa`. Post-merge `uv sync --locked` and the complete suite passed (6 tests,
+  10 subtests). The user granted standing authorization for future Codex milestone
+  merges after passing checks and a current Claude review; AGENTS.md records it.
+- Existing automatic review plugin skips PRs once Claude has commented, so a
+  green job alone is insufficient for updated revisions. Fresh local Claude
+  reviews are available; preserve exact reviewed SHAs and post results to each PR.
+- User confirms **no existing external cloud resources**. A proposed Cloudflare
+  Free workaround was questioned as outside the plan and is not authorized.
+  No Cloudflare implementation, account, or service activation is planned.
+
+### Cloud prerequisites — attempt 2 / 3 (each existing blocker)
+
+- Distinct approach: checked official provider alternatives and self-hosted runner
+  availability instead of repeating the earlier live public-network probe.
+- Credential delivery: Anthropic request-header secrets do not document provision
+  of the private-key file required by the planned service-account auth. Google
+  workload federation requires an identity provider credential that this runtime
+  has not been shown to issue. No secret was provisioned or inspected.
+- Persistent state/concurrency: no hosted Pro protected cross-session volume or
+  atomic writer primitive established. Official self-hosted runners are documented
+  for Team/Enterprise and require infrastructure, so they are not an approved
+  substitute for the current Pro setup.
+- Interactive cloud social auth: no documented user-operated browser handoff or
+  session-restore mechanism established. A headless browser installation alone
+  still does not satisfy the requirement. No social fetch/account setup attempted.
+- Outcome: all three remain open. Do not count new-service research as an approved
+  architecture change or perform another identical probe. Next action is a
+  provider-supported mechanism within the approved plan; if none can be verified,
+  report the specific limitation and obtain a scope decision. Independent Python
+  implementation/testing can continue. One distinct attempt remains per blocker.
+- Primary references: https://code.claude.com/docs/en/cloud-environments,
+  https://code.claude.com/docs/en/routines,
+  https://code.claude.com/docs/en/self-hosted-environments,
+  https://docs.cloud.google.com/iam/docs/workload-identity-federation.
+
+## M0 source/extraction code stage
+
+- Branch `codex/m0-thin-pipeline`; acceptance and module interfaces are in
+  `docs/superpowers/plans/2026-10-17-m0-data-path.md`.
+- Initial tests observed failing before production modules existed; source,
+  validation, HTTP and CLI tests now pass. A test-file parenthesis typo was fixed
+  before its intended missing-module failures were verified; assertions unchanged.
+- This stage has no Sheet writer, recovery, production auth or daily schedule.
+  Review cycle 1 has not yet started; live code-path proof remains outstanding.
+
+### User clarification after attempt 2
+
+- User supplied local-login → direct cookie settings → fresh cloud restore as the
+  intended social bootstrap. Adopt it without adding infrastructure. Interactive
+  login inside the cloud VM is no longer required. This changes that prerequisite;
+  it is not proof of authenticated collection, and counters are not reset.
+- Non-secret pending work, markers and daily social allowances may live in Sheet
+  `_State`; no secret cross-run session volume is needed under this approach.
+  Atomic serialization and safe state reconciliation remain separate open gates.
+- Cookie provisioning and tool compatibility still need testing, with no secret
+  values printed or inspected. Current repo has no `.mcp.json`; select and pin the
+  package before claiming a declared cookie-compatible MCP exists.
+- Keep three attempts total per blocker across collector options, and immediate
+  challenge/429 stops. The proposed three fresh attempts per tool would reset the
+  existing shared cap, so that portion of the suggestion was not adopted.
+- Read-only primary-doc check: twscrape supports `auth_token` / `ct0` cookie
+  activation (https://github.com/vladkens/twscrape). Its default indefinite account
+  waits and rate-limit rotation are not approved runtime behavior. No live social
+  request or authentication attempted; this is compatibility research, not a third
+  attempt to provision/authenticate the missing accounts.
+
+### M0 review/repair cycle 1
+
+- Claude Code read the complete plan and reviewed `f913601` against `7f77cb5`.
+  Review posted on PR #5. It reproduced protocol/proxy failures, per-item schema
+  failure, absent-total coverage and input hygiene problems; it also ran all 43
+  tests/10 subtests successfully without installing anything.
+- Fixed with regressions: sanitize all HTTP errors and retain attempt/status/wait
+  evidence; quarantine malformed items without dropping valid jobs; preflight
+  output paths before fetching; unknown completeness when total is absent; strict
+  URL whitespace and canonical board case; bounded nested JSON; explicit empty/
+  partial extraction count/status; trusted-reference SHA-256 check; atomic
+  exclusive artifact publication; remove obvious hidden markup from source text.
+- Atomic publication regression was also run against the prior implementation
+  and failed before the fixed full suite passed. No assertion was weakened.
+- The source API's public post ID remains the M0 key; the official API documents
+  its uniqueness (https://docs.greenhouse.io/job-board.html). Broader cross-source
+  or multiple-post/requisition reconciliation is not implemented or claimed by
+  this one-post M0 stage. Speculative repost equivalence is not inferred.
+- Artifact hash checks depend on a trusted reference retained outside source
+  artifacts; they are not protection against an agent changing both file and
+  reference. HTML cleaning does not execute CSS or prove rendered visibility.
+- `uv run --locked python -m pytest -q`: 57 passed, 10 subtests passed. The full
+  changed revision, including user-supplied cookie/bootstrap documentation, must
+  receive a fresh review and affected cloud checks before merge.
+
+### M0 review/repair cycle 2 and new setup direction
+
+- Claude reviewed `aaed72b` and confirmed original findings resolved. New findings:
+  Windows newline translation broke returned digests; nested server JSON could
+  escape error handling; lone surrogates lost evidence; inconsistent-empty and
+  duplicate-ID paths lost failure metadata; some storage wording was stale.
+- Fixes: publish exact binary JSON bytes (ASCII escaping supports surrogates) and
+  hash those same bytes; catch server JSON recursion; preserve schema-error attempt/
+  HTTP evidence; report positive-total/empty lists as failed; align current setup
+  and handoff wording with user-approved Sheet state and credential bootstrap.
+- Regression failures were reproduced before fixing; the digest byte-equality test
+  also runs on Windows CI. Full local suite: 61 tests, 10 subtests passed.
+- Actual cloud recheck at `aaed72b` passed locked installation, 57 tests/10 subtests,
+  a new single-request Greenhouse harvest (655 valid, 0 rejected, 15 PM candidates,
+  1 selected, complete-response) and trusted-digest validation (1 record, exit 0).
+  Commands and outputs were inspected in the UI. This predates the binary-output
+  fix; recheck affected tests and saved-data validation without another live fetch.
+- User approved the Google credential-variable fallback with workbook-only Editor,
+  no project IAM roles, Sheets API only, in-memory loading or private 0600 temp-file
+  cleanup. First inspect compatible GCP secret types. Re-inspection confirmed Add
+  secret disabled, so types could not be inspected; no key/variable was entered.
+- Review cycle 3 is the final allowed review/repair cycle for this PR. Submit the
+  fixed current revision for review; do not merge unresolved actionable findings.
+
+### M0 cycle 3 result — blocked from merge
+
+- Claude reviewed `2a7e7dfa1af561cc017d8abade5474e6a47e7183`, ran 61 tests/10
+  subtests, and confirmed the cycle-2 fixes. One remaining actual edge case:
+  non-finite Retry-After values (`inf` / `1e999`) flow into failure metadata and
+  prevent strict JSON serialization, losing the source-failure artifact.
+- PR #5 remains unmerged. The three-cycle cap has been reached. The next action
+  is a user decision to authorize one additional fix/review cycle or leave the
+  PR open. Do not automatically reset/increase the cap or advance dependent code.
+- Proposed bounded repair: reject non-finite retry delays, preserve finite HTTP
+  status/attempt evidence, and add a CLI-level regression. Require another Claude
+  review of the resulting exact head plus Linux/Windows checks before merging.
+
+### Google Cloud setup access — attempt 1 / 3
+
+- Inspected the selected account's Google Cloud console for the planned service
+  account setup. Console reports Cloud access unavailable; no project/API/billing
+  or credential changes made. No personal account identifiers are recorded here.
+- User directed switching to another existing Google account. Account chooser is
+  open; the specific account selection is pending. Do not create another account
+  or attempt to bypass the access restriction. This is distinct from credential
+  injection compatibility; its counter does not reset the earlier blockers.
+
+### M0 cycle 4 — explicit one-cycle extension authorized
+
+- User authorized exactly one additional fix-and-Claude-review cycle for PR #5.
+  This extends the milestone counter to 4; it does not reset prior cycles or
+  authorize a fifth cycle.
+- Reproduced the missing failure artifact with CLI regressions for `inf` and
+  `1e999` Retry-After values before the fix. Ignore non-finite or negative header
+  delays and retain bounded local backoff; valid finite delays remain honored.
+- Added CLI coverage for infinity, overflow, NaN and negative headers, checking
+  three attempts, bounded waits and retained HTTP 429 evidence.
+- `uv run --locked python -m pytest -q`: 65 passed, 10 subtests passed.
+  `git diff --check` passed. Fresh exact-head Claude review and CI remain required.
+- The user selected a different existing Google account and signed in. The
+  Cloud console now opens successfully; an existing free trial is shown. No
+  billing settings were changed, and no credentials have been created or entered.

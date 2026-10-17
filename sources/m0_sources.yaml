@@ -1,0 +1,4 @@
+# Thin-loop route only. Full V0 inventory remains in CLOUD_CAPABILITIES.md.
+board: anthropic
+company: Anthropic
+ai_company: true

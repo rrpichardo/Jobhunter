@@ -22,7 +22,7 @@ runtime imports, and the complete current offline suite on Linux and Windows.
 The application is not packaged yet. The current tests under `review_probe/`
 exercise a historical in-memory writer example. Passing them proves neither a
 production Sheet writer nor source access, recovery, or cloud deployment.
-Scripts under `scripts/` are historical experiments, not production commands.
+The `scripts/try_*.py` files are historical experiments, not production commands.
 
 Social dependencies and JobSpy are not installed or enabled by this bootstrap.
 They need separate tested extras and cloud authentication before collection.
@@ -31,3 +31,26 @@ No direct paid model API is used.
 Keep credentials, email, browser profiles, and session/recovery data outside this
 checkout. Local development is permitted; daily production must run entirely
 in Claude's cloud. Read [AGENTS.md](AGENTS.md) before changing the repository.
+
+## M0 source/extraction stage
+
+This stage samples one public Greenhouse PM posting. It does not implement full
+eligibility, all V0 sources, or Google Sheets delivery. Run from the repo root:
+
+```sh
+uv run --locked python -m scripts.v0_harvest --output /protected/run/harvest.json
+uv run --locked python -m scripts.validate_extractions \
+  --harvest /protected/run/harvest.json \
+  --harvest-sha256 <digest-printed-by-harvest> \
+  --extractions /protected/run/extractions.json \
+  --output /protected/run/records.json
+```
+
+Use new absolute paths outside the checkout in an existing private directory.
+On Windows use equivalent absolute paths. Commands never overwrite existing
+artifacts. Use a private directory with appropriate permissions/ACLs; intermediate
+files may be ephemeral. Production pending normalized work must be saved in Sheet
+`_State` by the upcoming writer. The temporary directory is not persistent storage.
+Follow [the cloud excerpt prompt](docs/M0_EXTRACTION_PROMPT.md) to produce the
+Claude JSON through the existing subscription. Never manually label test data as
+a live model result. Python validates quotations and derives record fields.
