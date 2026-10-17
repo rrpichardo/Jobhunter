@@ -40,3 +40,15 @@ Workbook setup: exact-title search found no existing workbook; the empty private
 `Jobhunter V0` was created in the approved browser profile. Title, URL, Saved to
 Drive, and private sharing status were read back from the UI. See `SETUP.md`.
 Creation is setup evidence only; no application Sheet write has occurred.
+
+## M0 source/extraction stage — local evidence
+
+- `uv run --locked python -m pytest -q`: **43 passed, 10 subtests passed**.
+- Tests first failed for missing modules, then passed after implementation.
+- New synthetic-data tests cover deterministic public IDs, strict model excerpt
+  validation, duplicate/unknown IDs, inert embedded instructions, explicit
+  timeouts and bounded retries, Retry-After seconds/dates, source schema errors,
+  empty vs failed source results, bounded sample/coverage metadata, and CLI
+  roundtrip. Artifacts cannot overwrite files or be written inside the checkout.
+- No new live source request, Claude extraction, Sheet write, or deployment is
+  established by these tests. See the next PR for final revision/CI/review evidence.

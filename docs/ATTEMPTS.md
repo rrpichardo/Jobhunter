@@ -70,3 +70,51 @@ direction is required to resume. Do not reset a counter merely by renaming it.
 
 These are distinct unresolved prerequisites, not exhausted retries. The initial
 cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
+
+## October 17 continuation
+
+- PR #4 merged as `7f77cb5` after Linux/Windows CI and fresh local Claude review of
+  `4e104fa`. Post-merge `uv sync --locked` and the complete suite passed (6 tests,
+  10 subtests). The user granted standing authorization for future Codex milestone
+  merges after passing checks and a current Claude review; AGENTS.md records it.
+- Existing automatic review plugin skips PRs once Claude has commented, so a
+  green job alone is insufficient for updated revisions. Fresh local Claude
+  reviews are available; preserve exact reviewed SHAs and post results to each PR.
+- User confirms **no existing external cloud resources**. A proposed Cloudflare
+  Free workaround was questioned as outside the plan and is not authorized.
+  No Cloudflare implementation, account, or service activation is planned.
+
+### Cloud prerequisites — attempt 2 / 3 (each existing blocker)
+
+- Distinct approach: checked official provider alternatives and self-hosted runner
+  availability instead of repeating the earlier live public-network probe.
+- Credential delivery: Anthropic request-header secrets do not document provision
+  of the private-key file required by the planned service-account auth. Google
+  workload federation requires an identity provider credential that this runtime
+  has not been shown to issue. No secret was provisioned or inspected.
+- Persistent state/concurrency: no hosted Pro protected cross-session volume or
+  atomic writer primitive established. Official self-hosted runners are documented
+  for Team/Enterprise and require infrastructure, so they are not an approved
+  substitute for the current Pro setup.
+- Interactive cloud social auth: no documented user-operated browser handoff or
+  session-restore mechanism established. A headless browser installation alone
+  still does not satisfy the requirement. No social fetch/account setup attempted.
+- Outcome: all three remain open. Do not count new-service research as an approved
+  architecture change or perform another identical probe. Next action is a
+  provider-supported mechanism within the approved plan; if none can be verified,
+  report the specific limitation and obtain a scope decision. Independent Python
+  implementation/testing can continue. One distinct attempt remains per blocker.
+- Primary references: https://code.claude.com/docs/en/cloud-environments,
+  https://code.claude.com/docs/en/routines,
+  https://code.claude.com/docs/en/self-hosted-environments,
+  https://docs.cloud.google.com/iam/docs/workload-identity-federation.
+
+## M0 source/extraction code stage
+
+- Branch `codex/m0-thin-pipeline`; acceptance and module interfaces are in
+  `docs/superpowers/plans/2026-10-17-m0-data-path.md`.
+- Initial tests observed failing before production modules existed; source,
+  validation, HTTP and CLI tests now pass. A test-file parenthesis typo was fixed
+  before its intended missing-module failures were verified; assertions unchanged.
+- This stage has no Sheet writer, recovery, production auth or daily schedule.
+  Review cycle 1 has not yet started; live code-path proof remains outstanding.

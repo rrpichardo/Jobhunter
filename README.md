@@ -31,3 +31,24 @@ No direct paid model API is used.
 Keep credentials, email, browser profiles, and session/recovery data outside this
 checkout. Local development is permitted; daily production must run entirely
 in Claude's cloud. Read [AGENTS.md](AGENTS.md) before changing the repository.
+
+## M0 source/extraction stage
+
+This stage samples one public Greenhouse PM posting. It does not implement full
+eligibility, all V0 sources, or Google Sheets delivery. Run from the repo root:
+
+```sh
+uv run --locked python -m scripts.v0_harvest --output /protected/run/harvest.json
+uv run --locked python -m scripts.validate_extractions \
+  --harvest /protected/run/harvest.json \
+  --extractions /protected/run/extractions.json \
+  --output /protected/run/records.json
+```
+
+Use new absolute paths outside the checkout in an existing private directory.
+On Windows use equivalent absolute paths. Commands never overwrite existing
+artifacts. The directory must be operator-provisioned protected cloud storage for
+production; an ephemeral test directory proves no cross-run persistence.
+Follow [the cloud excerpt prompt](docs/M0_EXTRACTION_PROMPT.md) to produce the
+Claude JSON through the existing subscription. Never manually label test data as
+a live model result. Python validates quotations and derives record fields.
