@@ -77,6 +77,7 @@ def test_inconsistent_empty_response_is_failed_and_schema_failure_retains_attemp
     assert result.status == "failed"
     assert result.error == "duplicate_source_id"
     assert result.attempts == 2 and result.http_status == 200
+    assert result.items_fetched == 2
 
 
 @pytest.mark.parametrize("title,expected", [("Product Manager, AI", True),

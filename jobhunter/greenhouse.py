@@ -36,10 +36,12 @@ def collect_board(fetcher: JsonFetcher, *, board: str, company: str,
         raise ValueError("invalid_board")
     board = board.lower()
     source_id = f"greenhouse:{board}"
+    fetched = 0
     try:
         data = fetcher.get_json(f"https://boards-api.greenhouse.io/v1/boards/{board}/jobs?content=true")
         if not isinstance(data, dict) or not isinstance(data.get("jobs"), list):
             raise ValueError("invalid_board_response")
+        fetched = len(data["jobs"])
         jobs, seen, rejected = [], set(), 0
         for item in data["jobs"]:
             try:
@@ -72,7 +74,6 @@ def collect_board(fetcher: JsonFetcher, *, board: str, company: str,
             jobs.append(job)
         meta = data.get("meta", {})
         total = meta.get("total") if isinstance(meta, dict) else None
-        fetched = len(data["jobs"])
         coverage = ("unknown" if type(total) is not int else
                     "complete-response" if total == fetched else "partial-response")
         if rejected:
@@ -89,4 +90,4 @@ def collect_board(fetcher: JsonFetcher, *, board: str, company: str,
     except (ValueError, TypeError, AttributeError) as exc:
         code = str(exc) if str(exc) in {"duplicate_source_id", "invalid_board_response"} else "invalid_board_response"
         return BoardResult(source_id, "failed", error=code,
-                           attempts=fetcher.last_attempts, http_status=200)
+                           items_fetched=fetched, attempts=fetcher.last_attempts, http_status=200)
