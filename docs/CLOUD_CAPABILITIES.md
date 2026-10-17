@@ -32,9 +32,44 @@ Observed on October 17, 2026. This records readiness, not deployment success.
 | X cloud session | Needs setup | Verify protected twscrape session provisioning/storage, then let user create/login to dedicated account. |
 | Daily schedule | Not configured | After M0 checks pass, configure 06:07 America/New_York and observe a real scheduled delivery. |
 
+## Bounded live cloud probe
+
+[Cloud session](https://claude.ai/code/session_015wZ8bZKVEjazvzsqciHokQ)
+ran in **JobHunterEnv** with Sonnet on October 17, 2026. It was read-only with
+respect to the repository and accounts: no Gmail calls, social fetches, writes,
+commits, schedules, or account setup. The public-request tool output was inspected.
+
+- Ubuntu 24.04.5 LTS, x86_64; Python 3.13.16; preinstalled uv 0.11.32. These differ
+  from the reviewed application's Python 3.12 / uv 0.13.1 pins, so the future setup
+  script must install the pinned versions. Locked installation was not tested in
+  this cloud session.
+- One Python stdlib request, timeout 20 seconds and no retries, to
+  `https://boards-api.greenhouse.io/v1/boards/anthropic/jobs?content=true` returned
+  HTTP 200 and 655 jobs, including 15 product-manager titles.
+- One public posting was retrieved: [Product Manager, Billing](https://job-boards.greenhouse.io/anthropic/jobs/5434361008),
+  public job ID `5434361008`, requisition `267748`, location San Francisco / New York.
+  This is fetch/parse evidence only, not a validated normalized record or an
+  eligibility decision. Company-tag filtering has not been implemented.
+- Gmail `search_threads`, `get_message`, `get_thread`, and `list_labels` tool names
+  are available in the cloud session; none were invoked. Connector presence does
+  not establish label-scoped alert access or Python Google authentication.
+- Chromium/Playwright are reported preinstalled; no LinkedIn MCP is registered.
+  No supported user-operated cloud login or protected session restore was established.
+- Secure credential-file delivery, protected state shared across new routine
+  sessions, and an atomic cross-session lock remain unknown. No secret was inspected.
+
+The [cloud environment documentation](https://code.claude.com/docs/en/cloud-environments)
+describes proxy-injected network secret headers, not a Google private-key file.
+The [routine documentation](https://code.claude.com/docs/en/routines) describes
+new sessions per trigger. Neither establishes the plan's secure temporary-file
+authentication or durable session/recovery storage. A compatible supported
+mechanism must be proven; do not substitute plain environment variables or Git.
+
 No cloud source-to-Sheet run, scheduled delivery, recovery, or authenticated social
 collection has been verified. The trial has not started; day-7/day-14 dates must
-be based on the first verified trial run, not this bootstrap date.
+be based on the first verified trial run, not this bootstrap date. The inventory
+table above remains an overview of required gates; public network access is now
+proven, while application installation and all delivery/authentication gates remain open.
 
 ## Source access inventory
 

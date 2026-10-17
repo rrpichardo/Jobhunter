@@ -16,14 +16,14 @@ parallel. Production remains Claude Code cloud; no local operational substitute.
 
 ## Acceptance and steps
 
-- [ ] Pin uv and Python 3.12; resolve the six mandated runtime libraries and pytest
+- [x] Pin uv and Python 3.12; resolve the six mandated runtime libraries and pytest
   into a committed lock. Do not install unverified social integrations.
-- [ ] Verify `uv sync --locked`, runtime imports, and the full existing offline
+- [x] Verify `uv sync --locked`, runtime imports, and the full existing offline
   test suite locally. No new behavior is added, so no new behavior tests are needed.
-- [ ] Run the same installation/import/test checks in Linux and Windows CI.
-- [ ] Inspect actual Claude routine/environment UI without credentials in logs;
+- [x] Run the same installation/import/test checks in Linux and Windows CI.
+- [x] Inspect actual Claude routine/environment UI without credentials in logs;
   record supported capabilities separately from unknown or blocked ones.
-- [ ] Record source/access inventory and precise next actions; keep all M0 live
+- [x] Record source/access inventory and precise next actions; keep all M0 live
   gates (Greenhouse → extraction → Sheet, recovery, schedule, persistence) open.
 - [ ] Commit and open a prerequisite milestone PR; obtain Claude Code review of
   the current code revision, resolve findings within the repository cycle limit,
