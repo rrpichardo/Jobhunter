@@ -9,18 +9,13 @@ def prepare_sheet_rows(existing_rows, incoming_jobs):
     to the user and must survive a refresh of machine-owned fields.
     """
     by_id = {row["Job ID"]: dict(row) for row in existing_rows}
-    seen = set()
+    defaults = {"Status": "New", "Notes": "", "My rating": ""}
 
     for job in incoming_jobs:
-        identity = (job["Company"], job["Job title"])
-        if identity in seen:
-            continue
-        seen.add(identity)
-
-        row = dict(job)
-        row["Status"] = "New"
-        row["Notes"] = ""
-        row["My rating"] = ""
+        existing = by_id.get(job["Job ID"], {})
+        row = {**existing, **job}
+        for field, default in defaults.items():
+            row[field] = existing.get(field, default)
         by_id[job["Job ID"]] = row
 
     return list(by_id.values())
