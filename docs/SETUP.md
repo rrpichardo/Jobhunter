@@ -137,3 +137,26 @@ must be injected by the proxy after requests leave the VM; no key or token is
 loaded in Python. Explicit non-secret configuration is:
 `JOBHUNTER_GOOGLE_AUTH_MODE=network-secret` and the existing
 `JOBHUNTER_SPREADSHEET_ID`. Tests alone do not establish authenticated access.
+
+### Latest user direction and saved state
+
+The key was subsequently disclosed in chat. The user explicitly accepted this
+and authorized using that dedicated key for the approved setup. Replacement was
+recommended; it is not an additional mandatory gate under the user's direction.
+Keep the value out of Git/logs/PRs/handoff. This is a specific exception for this
+key, not general permission to publish credentials. See AGENTS.md and the current
+[Claude handoff](CLAUDE_HANDOFF.md).
+
+Agent transferred the complete JSON directly via native editor copy/paste into
+the protected GCP secret field, without printing its contents. The Add action
+succeeded: UI showed its restricted host/workbook path and Replace/Delete controls.
+The editor was closed after saving the two non-secret variables described above.
+The key is stored as a network secret, not an environment credential variable.
+A bounded read-only Python connection test is running in the actual JobHunterEnv;
+its result and harmless write/lock endpoint checks remain to be recorded.
+The downloaded file stays under user control; no agent deletion is authorized.
+
+Initial cloud read access now succeeded at `0260388`: gspread opened only the
+configured workbook and counted one worksheet, exit 0, clean tree. Actual command
+output inspected in the UI. No Sheet write, RAW write/readback or lock batch
+endpoint proof yet. No key/token/file was supplied to Python; proxy secret used.

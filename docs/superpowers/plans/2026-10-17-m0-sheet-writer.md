@@ -2,7 +2,10 @@
 
 Spec: docs/PLAN.md writer/M0; user approval: in-memory service-account variable fallback if GCP secret type unavailable; no new hosting. Dedicated writer only workbook Editor, no project IAM roles, Sheets only.
 
-Files: jobhunter/sheets.py (normalized records, safe header mapping, RAW upserts/reconciliation/state/run evidence), jobhunter/sheet_lock.py (atomic structural lock), jobhunter/google_auth.py (in-memory credential factory; sanitized failures), scripts/sheets_sync.py (CLI), tests/test_sheets*.py (sanitized model of Google Sheets semantics), docs/M0_WRITER_RUNBOOK.md.
+The initial draft below is historical. The updated prerequisites/ledger supersede
+its credential-factory and account-access assumptions.
+
+Files: jobhunter/sheets.py (normalized records, safe header mapping, RAW upserts/reconciliation/state/run evidence), jobhunter/sheet_lock.py (atomic structural lock), jobhunter/google_auth.py (network-secret client; sanitized failures), scripts/sheets_sync.py (CLI), tests/test_sheets*.py (sanitized model of Google Sheets semantics), docs/M0_WRITER_RUNBOOK.md.
 
 Acceptance: tests fail before behavior; duplicate incoming IDs deduped and duplicate existing IDs/ambiguous headers abort; preserve Status/Notes/My rating; preserve original Date found; support changed header order and between-run sorting; never sort or move rows while writing; new rows Status New/Notes+rating blank; RAW everywhere; bounded chunk writes; uncertain append must reread IDs before retry; verify affected IDs/cells before completion.
 
@@ -12,7 +15,7 @@ Lock candidate: one atomic spreadsheets.batchUpdate adds hidden _JobHunterLock s
 
 Test recovery: interruption before journal, after journal before jobs, after append before done, append succeeds but raises timeout, partial chunk completion, duplicate rows, overlap/fixed lock collision, stale marker, failure release unknown, sorting between runs and multi-chunk user-data preservation.
 
-Live gates: Google Cloud currently says account closed/access unavailable; no SA/key or workbook sharing provisioned. User must restore account access or select another existing Google account. Do not claim live writer/recovery/lock until real credentials+workbook access. Offline code can proceed after PR #5 integration. PR review/test/merge follow standing policy and maximum3 repair cycles.
+Live gates: Google account access is now working; dedicated service account, workbook sharing and GCP network secret were provisioned with user approval. Actual Python API access and harmless write/lock endpoints still need proof. Do not claim live writer/recovery/lock until real credentials+workbook access. Offline code can proceed after PR #5 integration. PR review/test/merge follow standing policy and maximum3 repair cycles.
 
 ## Updated prerequisites and execution ledger
 

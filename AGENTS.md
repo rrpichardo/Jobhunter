@@ -47,7 +47,11 @@ probe results as historical evidence, not proof the current environment works.
   0600 in a private directory and deleted at run end. Use a dedicated service
   account with Editor on only the JobHunter workbook, no project IAM roles, and
   only the Sheets API enabled. Never dump environment variables, credentials or
-  cookies. The user rotates an exposed key. No credential has been provisioned yet.
+  cookies. For the current dedicated Sheets key, the user explicitly accepted
+  prior disclosure and authorized continued setup. Prior disclosure alone does
+  not block this specific use; replacement remains recommended. This exception
+  does not authorize copying credentials into Git, logs, PRs or the handoff.
+  Read SETUP.md for actual provisioning status.
 
 ## Collaboration and verification
 

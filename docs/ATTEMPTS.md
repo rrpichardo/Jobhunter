@@ -264,3 +264,34 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
   Google's atomic batch and unique ID/title documentation. It is a candidate for
   compliant writers, not a supported lock primitive or protection against human
   lock deletion. Live overlap proof remains mandatory. No writer code yet.
+
+### Connection checkpoint PR #6 — review cycle 1 / 3
+
+- PR #6: https://github.com/rrpichardo/Jobhunter/pull/6 . Claude reviewed exact
+  `0260388`, found no blocking bug, and identified actionable safe-diagnostic and
+  handoff consistency issues. Its plan-mode restrictions prevented running tests;
+  local and Linux/Windows CI passed 70 tests/10 subtests independently. No invented
+  reviewer test execution is claimed.
+- Add allowlisted error categories / numeric HTTP status so a bounded failed auth
+  attempt is diagnosable without provider bodies. New test first failed, then the
+  full locked suite passed 71 tests/10 subtests. Clarify preferred auth in plan,
+  user-authorized key use, write-endpoint proof still needed, and current counters.
+- Credential-delivery attempt 3 / 3 now tests the newly available GCP network
+  secret after the relevant external capability changed. No counter reset:
+  earlier two delivery investigations remain recorded. Secret configuration
+  succeeded; actual Python connectivity is being checked once. If incompatible,
+  stop this blocker and report evidence/next action rather than trying repeatedly.
+- User pasted the key into chat and expressly accepted disclosure and authorized
+  continued use. Agent recommended replacement; user direction supersedes the
+  earlier mandatory-rotation handoff. No key value is stored in repository or logs.
+  Direct native JSON copy/paste saved the restricted GCP secret; non-secret
+  workbook/auth-mode variables saved too. No application Sheet write occurred.
+- Fresh current-revision review is required after these fixes (cycle 2 / 3).
+
+- Credential delivery attempt 3 result: **initial read access succeeded** in
+  JobHunterEnv at `0260388`. One bounded connection attempt (workbook open plus
+  worksheet metadata read), `RESULT=success tab_count=1`, exit 0, tree clean.
+  Actual command output expanded/verified. This resolves initial delivery/read
+  connectivity, not write endpoints, recovery or serialization. No Google writes.
+- Cycle 2 / 3 is the fresh review of the safe-discriminator and handoff fixes.
+  Local locked suite: 71 tests/10 subtests passed. No secret value in tracked files.

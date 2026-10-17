@@ -29,7 +29,7 @@ daily routine prompt. V0 is **not deployed**. Do not restart completed milestone
 - The current change adds `jobhunter/google_auth.py` and tests: explicit
   `network-secret` mode, AnonymousCredentials for gspread, workbook-by-ID access,
   20-second timeout, sanitized failure. It is a connection foundation, **not a
-  Sheet writer**. Live authentication compatibility remains unproved.
+  Sheet writer**. Initial cloud read access is proven; write paths remain unproved.
 - User specifically requests all work committed/pushed, reviewed merges, and
   this ready-to-use handoff so Claude Code can continue when Codex runs out.
   Verify the current PR's status/review rather than treating this text as approval.
@@ -55,8 +55,8 @@ read-only code review; local review is not cloud-execution evidence.
 - Live Greenhouse request at earlier `aaed72b`: HTTP 200, 655 valid jobs,
   0 rejected, 15 PM candidates, 1 selected. Claude supplied an exact excerpt;
   Python validated it. Later replay used saved data, not another live request.
-- The connection foundation's local locked suite passes 70 tests/10 subtests.
-  These use mocks. They prove neither Google credentials nor live Sheet access.
+- The connection foundation's local locked suite passes 71 tests/10 subtests.
+  These use mocks; see the separate live read-access evidence below.
 - Saved cloud artifacts may disappear; don't rely on their persistence. The
   session scratchpad contains `m0dir2.txt` pointing at the saved harvest and
   extraction directory. Its original trusted harvest SHA-256 is
@@ -64,7 +64,7 @@ read-only code review; local review is not cloud-execution evidence.
   Never recompute a trusted reference from an edited artifact. If gone, report
   that and run a new bounded public harvest with a new independently retained hash.
 
-## Immediate Google setup — user input pending
+## Immediate Google setup — saved secret and successful read access
 
 - Correct local Chrome profile: **Richard**. The user selected the existing
   dedicated jobs Google account. Its Cloud console works; an earlier account was
@@ -79,35 +79,39 @@ read-only code review; local review is not cloud-execution evidence.
   `jobhunter-sheets-writer@jobhunter-511923.iam.gserviceaccount.com`.
   User confirmed Editor access only to this workbook, notifications off. UI
   confirmed sharing. No application data/tabs/writes have been made.
-- User explicitly approved downloading its JSON key. Agent created/downloaded
-  it through Google UI but **did not open/read the file**. User handles secret
-  contents. Never read Downloads/clipboard/environment dumps for the key.
-- **Rotation pending:** user subsequently supplied a screenshot that appears to
-  include key text behind the environment dialog. Treat that key as exposed.
-  Do not use it for cloud setup. Asked user to close the window showing the key
-  and confirm revoking/replacing it. No rotation is verified yet. Check the latest
-  user answer before acting. Never reproduce/store screenshot key text in Git.
+- User explicitly approved downloading its JSON key and later directed the agent
+  to use it. Agent privately opened only that approved file for direct copy/paste
+  into the protected secret field; no contents were printed or put in Git. Do not
+  inspect unrelated Downloads files, clipboard contents or environment dumps.
+- **User-approved key exception:** the key was disclosed in chat. User explicitly
+  accepted this and directed using it for this setup. Replacement was recommended
+  but is not a mandatory gate under that direction. Do not repeat key contents
+  in Git, logs, PRs or this handoff. The agent transferred the complete JSON
+  directly through native copy/paste without printing it, saved the GCP network
+  secret, and closed the editor. Never read the clipboard or local key for logs.
 - The preferred GCP secret type **exists**. Earlier disabled Add secret evidence
   is superseded. Actual menu: Add secret → GCP access token (with Service Account
   Key) → GCP service account key JSON. The key belongs in that field, **not**
-  Setup script. User's latest screenshot was the parent environment editor with
-  “No secrets yet”; prior prepared form had been left. Treat saving as unconfirmed.
-- Prepare these non-secret restrictions, then let user paste replacement key and
-  click Add/close: host `sheets.googleapis.com`; path prefix
+  Setup script. The approved secret is now saved; UI showed its restricted
+  host/workbook path with Replace/Delete controls, with no secret value shown.
+- The saved secret uses these non-secret restrictions: host `sheets.googleapis.com`; path prefix
   `/v4/spreadsheets/1kG1QeLhYmiImPW4pMtEDIHI6I-dK1Ztig_77B8mGrPw`;
   scope `https://www.googleapis.com/auth/spreadsheets`; Subject empty. Verify
-  non-secret saved status only after user says the secret field is closed.
-- No screen/AX/clipboard/file inspection while the key is visible. Agent may
-  navigate and configure known non-secret settings; user enters private values.
+  non-secret saved status only while the secret field is closed.
+- Avoid printing/screenshotting secret contents. User expressly authorized the
+  agent to use this existing key for setup; direct private transfer is permitted.
+  Do not treat that as general authorization to publish or commit credentials.
 - Claude docs say the network proxy mints/injects tokens after requests leave
   the VM; the key stays outside the VM. The current Python candidate uses
-  `gspread.Client(auth=AnonymousCredentials())`; prove it, don't assume it works.
-- Non-secret config: `JOBHUNTER_GOOGLE_AUTH_MODE=network-secret` and
+  `gspread.Client(auth=AnonymousCredentials())`; read access succeeded. Write-path
+  compatibility must still be proven.
+- Non-secret config has been saved: `JOBHUNTER_GOOGLE_AUTH_MODE=network-secret` and
   `JOBHUNTER_SPREADSHEET_ID` set to the ID above. Existing sessions may need a
   fresh session for changed environment variables. Don't dump environment values.
-- Next live test: in actual JobHunterEnv, use the helper to open only this workbook
-  and report a sanitized success/count or failure code. No raw response, headers,
-  tokens or account details. Start read-only; do not claim writer proof.
+- Initial live test completed in actual JobHunterEnv at `0260388`: the helper
+  opened only this workbook and worksheets() returned `tab_count=1`, exit 0,
+  clean tree. Command output was expanded and inspected. No key/token or raw
+  response was printed. This proves read access only, not writer readiness.
 - If the preferred secret type proves incompatible, the user already approved
   an in-memory credential-variable fallback, narrowly scoped to this workbook.
   It is a fallback, not a reason to skip testing the preferred supported secret.
@@ -116,7 +120,8 @@ read-only code review; local review is not cloud-execution evidence.
 
 Follow `docs/superpowers/plans/2026-10-17-m0-sheet-writer.md` and the binding plan:
 
-1. Prove cloud Python Google authentication; implement safe Jobs upserts keyed by
+1. Read access is proven; verify harmless RAW write/readback and the lock batch
+   endpoint before calling writer authentication ready. Implement safe Jobs upserts keyed by
    Job ID, RAW writes, chunking, header/duplicate checks and readback. Preserve
    Status, Notes, My rating and original Date found on existing rows. Sampling
    records are not eligibility decisions.
@@ -157,9 +162,11 @@ Follow `docs/superpowers/plans/2026-10-17-m0-sheet-writer.md` and the binding pl
   alerts; no unrelated thread messages, security mail or broadened empty search.
   Forwarding/label/connected identity remain unverified. One-time setup allowed;
   operational Gmail writes are forbidden.
-- Read the full ATTEMPTS.md. Credential-delivery, persistent-state/concurrency and
-  social-auth blockers were at **2/3** before current external setup changes;
-  don't reset counters. GCP access attempt 1 is now resolved by selected account.
+- Read the full ATTEMPTS.md. Credential delivery/read access succeeded on attempt
+  **3/3** after GCP secrets became available. Persistent-state/concurrency and
+  social-auth remain at **2/3**; don't reset counters. GCP access attempt 1 is
+  resolved by the selected account. PR #6 is at review cycle 2/3 for the current
+  fixes; check its latest head/review/merge state before continuing.
   PR #5 exhausted 3 cycles, then user authorized exactly one fourth cycle, now
   completed/merged. That extension does not apply to new milestones.
 - New milestones have the normal three-cycle cap. Obtain a current opposite-agent

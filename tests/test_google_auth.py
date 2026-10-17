@@ -44,3 +44,33 @@ def test_google_error_is_sanitized(monkeypatch):
                        'JOBHUNTER_GOOGLE_AUTH_MODE': 'network-secret'})
     assert raised.value.__suppress_context__
     assert 'private' not in str(raised.value)
+
+
+def test_expected_google_failures_have_safe_actionable_codes(monkeypatch):
+    from google.auth.exceptions import InvalidOperation
+    from requests.exceptions import SSLError, Timeout, ConnectionError
+    from gspread.exceptions import SpreadsheetNotFound, APIError
+    from jobhunter.google_auth import open_workbook, GoogleSetupError
+    import gspread
+    from requests import Response
+    response = Response()
+    response.status_code = 429
+    response._content = b'{"error":{"code":429,"message":"provider-private-detail"}}'
+    cases = [(InvalidOperation('provider-private-detail'), 'google_proxy_auth_missing'),
+             (SpreadsheetNotFound('provider-private-detail'), 'google_workbook_not_found'),
+             (PermissionError('provider-private-detail'), 'google_workbook_forbidden'),
+             (SSLError('provider-private-detail'), 'google_tls_error'),
+             (Timeout('provider-private-detail'), 'google_timeout'),
+             (ConnectionError('provider-private-detail'), 'google_transport_error'),
+             (APIError(response), 'google_http_429')]
+    class Client:
+        def __init__(self, **kwargs): pass
+        def set_timeout(self, timeout): pass
+        def open_by_key(self, key): raise current_error
+    monkeypatch.setattr(gspread, 'Client', Client)
+    for current_error, expected in cases:
+        with pytest.raises(GoogleSetupError) as raised:
+            open_workbook({'JOBHUNTER_SPREADSHEET_ID': 'A' * 44,
+                           'JOBHUNTER_GOOGLE_AUTH_MODE': 'network-secret'})
+        assert str(raised.value) == expected
+        assert raised.value.__suppress_context__
