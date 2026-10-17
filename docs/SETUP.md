@@ -99,6 +99,11 @@ at run end. Never print/read back environment values or keys into model output,
 chat, logs, screenshots or Git. User rotates the key if exposed. Provisioning and
 workbook access are not yet verified; no service account/key has been created.
 
+Google Cloud console access is unavailable in the initially selected Google
+account. User chose to switch to another existing account; the chooser is open
+and the exact account is awaiting user selection. No new account, project, API,
+billing, service account or key was created. Keep setup gated on actual access.
+
 If the implementing chat cannot operate the Claude cloud configuration, prepare
 the smallest necessary manual step and a self-contained routine prompt. First use
 available local computer/browser controls to perform authorized setup on the user's

@@ -188,3 +188,26 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
   secret disabled, so types could not be inspected; no key/variable was entered.
 - Review cycle 3 is the final allowed review/repair cycle for this PR. Submit the
   fixed current revision for review; do not merge unresolved actionable findings.
+
+### M0 cycle 3 result — blocked from merge
+
+- Claude reviewed `2a7e7dfa1af561cc017d8abade5474e6a47e7183`, ran 61 tests/10
+  subtests, and confirmed the cycle-2 fixes. One remaining actual edge case:
+  non-finite Retry-After values (`inf` / `1e999`) flow into failure metadata and
+  prevent strict JSON serialization, losing the source-failure artifact.
+- PR #5 remains unmerged. The three-cycle cap has been reached. The next action
+  is a user decision to authorize one additional fix/review cycle or leave the
+  PR open. Do not automatically reset/increase the cap or advance dependent code.
+- Proposed bounded repair: reject non-finite retry delays, preserve finite HTTP
+  status/attempt evidence, and add a CLI-level regression. Require another Claude
+  review of the resulting exact head plus Linux/Windows checks before merging.
+
+### Google Cloud setup access — attempt 1 / 3
+
+- Inspected the selected account's Google Cloud console for the planned service
+  account setup. Console reports Cloud access unavailable; no project/API/billing
+  or credential changes made. No personal account identifiers are recorded here.
+- User directed switching to another existing Google account. Account chooser is
+  open; the specific account selection is pending. Do not create another account
+  or attempt to bypass the access restriction. This is distinct from credential
+  injection compatibility; its counter does not reset the earlier blockers.
