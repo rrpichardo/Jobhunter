@@ -5,7 +5,8 @@ Goal: pull **AI PM jobs** from as many sources as possible, **prove each source 
 **Google Sheet** with our columns. Include **LinkedIn jobs/posts and X hiring posts** in the V0 test scope.
 **Execution requirement:** all collectors, browser sessions, MCP servers, extraction, deduplication, Sheet writes,
 and scheduling run in the cloud environment from V0. Daily operation must not depend on your computer being on.
-V0 includes the first harvest, recovery checks, a verified daily schedule, and the daily source trial below.
+V0 deployment includes the first harvest, recovery checks, a verified daily schedule, and starting daily
+source observation. The day-14 results review is a separate follow-up, not a deployment completion gate.
 AI scoring is not required to begin collection. LinkedIn and X are V0 cloud sources, not later migrations.
 
 **Confirmed setup decisions:** Claude Pro. Existing environments are `Boom` (default) and `Default`; neither
@@ -48,13 +49,15 @@ Request another review after substantive fixes. A missing or failed review is no
    does not rebuild the application, modify repository code, open implementation PRs, or apply to jobs daily.
 7. Configure 06:07 America/New_York, use Run now for initial verification, then verify an actual scheduled run
    and cloud restart/session restoration. Confirm real Sheet rows and source/run evidence: a green routine
-   session status alone does not prove task success. Continue daily collection through the 14-day trial.
+   session status alone does not prove task success. Continue daily collection; day 14 is a review point,
+   not an end date.
 
 All daily execution remains cloud-only; local setup assistance does not create a local runtime dependency.
 
 **Bounded implementation goal:** allow at most three distinct attempts per blocker, including the initial
 attempt, and at most three implementation/review repair cycles per milestone. Persist attempts and sanitized
-evidence across sessions; do not reset counters by restarting or delegating. After the limit, report the blocker
+evidence in `docs/ATTEMPTS.md` across implementation sessions; do not reset counters by restarting or delegating.
+The daily routine never edits this file; runtime failures belong in Sources and Run Log. After the limit, report the blocker
 and required next action, stop retrying it, and continue independent work. Existing source challenge stop rules
 take precedence. Pause the tracked goal when only blocked/user-dependent work remains, following host
 goal-status rules. No busy polling. Complete the implementation goal after verified deployment and arrangement
@@ -149,7 +152,13 @@ LinkedIn or X remains a V0 blocker; delivering other sources alone does not comp
   comparison as unavailable if Gmail or another baseline is not configured; never report it as zero.
 - **Read-only.** Search and view only: no connection requests, messages, posts, likes, follows, or applications.
 - **Starting limits (tune after the first run):** LinkedIn ≤ 5 searches and ≤ 50 detail views per run; X ≤ 10
-  queries and ≤ 200 posts per run; randomized delays; at most one run per day while testing.
+  queries and ≤ 200 posts per run; randomized delays; at most one live collection per social source per
+  America/New_York calendar day while testing. A manual Run now consumes that day's allowance. Persist the
+  allowance in cloud run state so a restart or scheduled run cannot reset it. Skip already-attempted social
+  sources with a recorded reason; verify their next live scheduled collection on the next eligible day.
+  Use saved sanitized payloads or fixtures with social fetchers disabled for repeat-sync, idempotency, and
+  failure-injection checks. Restore session state during restart tests without another social collection;
+  verify authenticated live access during the next permitted run.
 - **Stop rule:** on a checkpoint, CAPTCHA, login challenge, 429, or account warning, stop that source immediately,
   record `blocked` plus the message in Sources, do not retry that day, and tell you. Never try to bypass it.
 - **Output:** normalized JSON goes through the same filter, dedupe, and `sheets_sync` as every other source. Source
@@ -182,7 +191,7 @@ LinkedIn or X remains a V0 blocker; delivering other sources alone does not comp
   LinkedIn and X, feeds the same normalization and Sheet sync. Record missed runs and source failures. Account
   challenges require user resolution before resuming; existing source limits and stop rules apply. Verify an
   actual scheduled run and session restoration after a cloud restart; a manual run alone is insufficient.
-  Review the initial 14-day results as part of V0; the deployed collection loop remains active during review.
+  Review the initial 14-day results in a separate follow-up; daily collection continues during and after review.
 - **Evidence:** retain per-run source history in Run Log (Daily Log in the scheduled phase), not only the latest
   Sources status. Record attempted/successful/missed days, fetched items, AI PM matches, new unique roles, overlaps,
   first-seen time, working application links, user-rated useful leads, runtime, service cost when available,
@@ -256,7 +265,7 @@ usable. If a source is `blocked`, it was stopped and not retried. Failed or bloc
 coverage gaps with next actions, never silently dropped or counted as working. Missing cloud infrastructure or
 authentication is an outstanding V0 setup requirement.
 
-**V0 evaluation complete when:** the initial 14-day daily cloud trial has a source-by-source review with
+**Separate day-14 evaluation complete when (not a deployment gate):** the initial 14-day daily cloud trial has a source-by-source review with
 observed days, gaps, useful leads, duplicates, and operating effort; extend observation where evidence is thin.
 The schedule continues while results are reviewed.
 
@@ -352,7 +361,8 @@ by explicit rule or left "unresolved" (never auto-excluded). Seniority from the 
 
 ## 5. Build order (each milestone demoed on real data)
 V0 includes the cloud collection foundation, recovery, all planned source integrations and attempts, daily
-scheduling, and the source trial. M0 and the collection work in M2 are V0 implementation steps; profile,
+scheduling, and starting source observation. The later day-14 review is a separate follow-up. M0 and the
+collection work in M2 are V0 implementation steps; profile,
 eligibility, and ranking enhancements do not delay the V0 collection loop.
 - **M0 — Thin end-to-end + recovery (first!):** one source (one company's Greenhouse board) → one posting →
   extraction → save to Sheet by Job ID → Run Log → second run (no duplicate). Run it **as a scheduled routine** to

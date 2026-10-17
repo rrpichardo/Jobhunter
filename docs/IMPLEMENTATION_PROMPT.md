@@ -21,6 +21,8 @@ follow-up is arranged; it does not stay active waiting for fourteen days to pass
   repeat identical calls or move work to another agent just to reset the counter.
 - Persist attempts, relevant errors, approaches tried, and the next required action
   in `docs/ATTEMPTS.md` (sanitized). Counters survive conversations and restarts.
+  This log is for implementation work; the daily routine never edits it. Runtime
+  failures and retry evidence go to Sources and Run Log.
   A source challenge/429 stop rule overrides this budget: stop immediately when
   the plan requires it. Normal bounded HTTP retries count toward the configured
   request budget; do not wrap exhausted retries in another unbounded retry loop.
@@ -248,6 +250,11 @@ examples, not proof of the production implementation.
   at least five working application links checked (or report insufficient rows as
   outstanding), actual scheduled execution, fresh cloud session/restart, and proof
   that no local collector or writer was needed.
+  Repeat-sync, recovery, and failure-injection checks replay sanitized saved records
+  or fixtures with live social fetchers disabled. Manual social collection consumes
+  that source's daily allowance in America/New_York; persist the allowance across
+  restarts and skip another same-day collection. Verify live authenticated access
+  after restart on the next eligible run. Do not count a skipped run as live proof.
 
 Use deterministic fixtures for failure injection and live checks for real access.
 Keep account data out of fixtures and avoid unnecessary live retries or spending.
@@ -272,6 +279,8 @@ Do not repeat passing checks unless new changes or unresolved concerns justify i
   rules when deciding whether a documented access block prevents readiness.
 - A self-contained routine prompt, setup/runbook, source inventory, evidence report,
   and precise operator actions are delivered. The daily trial is active.
+- Day-7 progress and day-14 results follow-ups are scheduled, or their exact dates
+  and review prompts are delivered. Neither elapsed observation period gates deployment.
 
 **Separate follow-up — review results after 14 days (not a deployment completion gate):**
 

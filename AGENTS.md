@@ -50,13 +50,17 @@ probe results as historical evidence, not proof the current environment works.
   the current revision before merging and advancing dependent implementation.
 - Creating a PR does not authorize merging it. Follow the user's merge direction
   and repository rules. Do not push implementation directly to main.
+  If merge authorization is missing, ask once and pause dependent implementation;
+  continue unrelated work rather than silently stacking on the unmerged milestone.
 - Run all applicable tests before claiming completion. Add regression tests for
   real bugs, fix failures without weakening assertions, and record commands and
   results. Separate offline tests, live integration checks, and scheduled evidence.
 - Document blockers and the exact next action. Continue independent work when
   possible. Do not request secrets in chat or silently add paid services.
 - Cap distinct attempts at three per blocker and repair/review cycles at three per
-  milestone. Persist counters across handoffs; do not reset them through delegation.
+  milestone. Persist counters in `docs/ATTEMPTS.md` across implementation handoffs;
+  do not reset them through delegation. The daily routine never edits this file;
+  record runtime failures in Sources and Run Log instead.
   Stop earlier for source challenges. After exhaustion, report and stop that blocker;
   continue independent work. Follow the prompt's authorized pause/exit conditions
   and host goal rules rather than busy-polling or automatically extending the trial.
