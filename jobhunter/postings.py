@@ -51,7 +51,7 @@ LATIN_AMERICA = re.compile(r'\b(south america|latin america|latam|colombia|domin
                            r'brazil|brasil|argentina|chile|peru|perú|ecuador|bolivia|uruguay|paraguay|venezuela|'
                            r'(?<!new )mexico|méxico|costa rica|panama|panamá|guatemala|honduras|el salvador|nicaragua|belize)\b', re.I)
 ONSITE_COUNTRIES = re.compile(r'\b(colombia|dominican republic|rep[uú]blica dominicana)\b', re.I)
-REMOTE_TERMS = re.compile(r'\b(remote|anywhere|worldwide|global)\b', re.I)
+REMOTE_TERMS = re.compile(r'\b(remote|remoto|anywhere|worldwide|global)\b', re.I)
 EXPLICIT_US = re.compile(r'(?i:\b(?:united states|usa)\b|\bu\.s\.(?:a\.)?)|\bUS\b')
 MIN_REGIONAL_ANNUAL_USD = 70_000
 # Short country/state collisions are not US evidence on the regional path.
@@ -232,7 +232,7 @@ def collection_region(location: str, *, remote: bool = False) -> str | None:
     # Only known department/capital-district spellings may be consumed. An
     # arbitrary phrase here could swallow a second city and its US state code.
     department = r'(?:Antioquia|Cundinamarca|D\.?\s*C\.?|Distrito Capital|Capital District|Colombia)'
-    location = re.sub(rf'\b{city}(?:,\s*{department})?,\s*CO\b', 'Colombia', location, flags=re.I)
+    location = re.sub(rf'\b{city}(?:,\s*{department})?,\s*(?:CO|Colombia)\b', 'Colombia', location, flags=re.I)
     location = re.sub(r'\bsanto domingo,\s*DO\b', 'Dominican Republic', location, flags=re.I)
     for country, code in (('Colombia', 'CO'), ('Panama', 'PA'), ('Argentina', 'AR'),
                           ('Dominican Republic', 'DO')):
@@ -250,12 +250,14 @@ def collection_region(location: str, *, remote: bool = False) -> str | None:
         # A second place without a reliable country/state cannot establish the
         # lower floor either. Strip only attached prefix/suffix work-mode labels:
         # "Remote - Colombia" is one place; "Colombia or Remote" is ambiguous.
-        mode = r'(?:remote|hybrid|on[- ]?site|in[- ]?office)'
-        places = re.sub(rf'^\s*{mode}\s*[-/:]\s*|\s*[-/:]\s*{mode}\s*$', '', location, flags=re.I)
-        places = [part.strip(' ()-:.,') for part in re.split(
-            r'[|;/&·\n]+|\s+[-–—]\s+|\b(?:or|and|y|o)\b', places, flags=re.I)]
+        mode = r'(?:remote|remoto|hybrid|on[- ]?site|in[- ]?office)'
+        places = re.sub(rf'^\s*{mode}\s*[-–—/:]\s*|\s*[-–—/:]\s*{mode}\s*$', '', location, flags=re.I)
+        places = [part.strip(' -:.,') for part in re.split(
+            r'[,|;/&·\n]+|\s+[-–—]\s+|\b(?:or|and|y|o)\b', places, flags=re.I)]
         places = [part for part in places if part]
-        if len(places) > 1 and any(not LATIN_AMERICA.search(part) for part in places):
+        qualifier = rf'(?:{city}|santo domingo|{department})(?:\s*\(\s*{mode}\s*\))?'
+        if len(places) > 1 and any(not LATIN_AMERICA.search(part)
+                and not re.fullmatch(qualifier, part, re.I) for part in places):
             return 'unresolved'
         if remote or REMOTE_TERMS.search(location) or ONSITE_COUNTRIES.search(location):
             return 'LATAM'

@@ -2,6 +2,12 @@
 
 ## Latest continuation — broader alerts and salary preferences
 
+Latest cycle-6 repair handles comma-separated unknown alternatives and attached
+long-dash/Remoto labels. Explicit known regional hierarchy forms normalize before
+splitting; unfamiliar qualifiers remain unresolved and retained. Local557/10
+passes; exact pushed-head cycle-7 Claude review and CI remain required. User's
+continued PR16 repair authorization is still in force; Gmail UI remains separate.
+
 Latest cycle-5 repair keeps country-less city/department and unclassified places
 unresolved; alternative locations cannot use the lower floor when another place
 or mode-only option is unknown, including missing-comma US formats. Local suite

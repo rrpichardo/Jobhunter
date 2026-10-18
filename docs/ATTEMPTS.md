@@ -2,6 +2,15 @@
 
 ## October 18 broader collection and Gmail intake milestone
 
+- Cycle 6 Claude reviewed `e158c6beb4089f0ff4bc74effb52e3112b1d274a`,
+  confirmed earlier fixes but found comma-separated unknown alternatives could
+  satisfy70k and long-dash remote labels became unresolved. Regressions failed
+  before repair. Known regional hierarchy forms normalize before comma splitting;
+  unknown qualifiers remain unresolved and collected, not asserted eligible.
+  Long dashes, Remoto and parenthesized known-city mode qualifiers are handled.
+  Latest full local suite: 557 tests / 10 subtests, diff check clean. Fresh
+  exact pushed-head cycle-7 Claude review and CI remain required before merge.
+
 - Cycle 5 Claude reviewed `07de188e9a6fa03b168b6c4658aa4f8600031ecf`,
   confirmed prior repairs and found country-less city/department forms (Bogotá,
   DC; Medellín, Antioquia; etc.) were still dropped or assigned US. Regressions

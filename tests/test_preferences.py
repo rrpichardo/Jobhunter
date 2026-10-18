@@ -168,6 +168,23 @@ def test_unrecognized_location_is_unknown_not_confirmed_outside_scope(location):
     assert p.salary_preference(candidate)[0] == 'unresolved'
 
 
+@pytest.mark.parametrize('location', ['Bogotá, Colombia, Toronto, Canada', 'Colombia, Canada',
+    'Remote - Colombia, Canada', 'Colombia, Portland', 'Colombia, Raleigh',
+    'Bogotá, Colombia, London, UK', 'Colombia, Unclassified place', 'Unclassified city, Colombia'])
+def test_unknown_comma_delimited_place_cannot_satisfy_the_latam_floor(location):
+    candidate = job(location=location, salary='USD 90,000 annually')
+    assert p.collection_match(candidate)
+    assert p.salary_preference(candidate)[0] == 'unresolved'
+
+
+@pytest.mark.parametrize('location', ['Remote – Colombia', 'Colombia – Remote', 'Remote — LATAM',
+    'Remoto - Colombia', 'Colombia - Bogotá', 'Bogotá, Colombia', 'Medellín, Antioquia, Colombia',
+    'Colombia - Bogotá (Remote)', 'Bogotá (Remote), Colombia'])
+def test_attached_remote_labels_and_known_regional_qualifiers_keep_latam_floor(location):
+    candidate = job(location=location, salary='USD 90,000 annually')
+    assert p.salary_preference(candidate) == ('satisfied', 70_000)
+
+
 def test_unresolved_salary_check_is_in_details_not_next_step():
     row = p.to_row(job(salary=''))
     assert row['Next step'] == ''
