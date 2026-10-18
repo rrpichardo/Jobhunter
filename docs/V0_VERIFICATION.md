@@ -1,5 +1,24 @@
 # V0 verification evidence
 
+## Current local repair scope — not new cloud evidence
+
+The historical cloud runs below prove only the revisions they name. Local review
+repairs have not been pushed or exercised against live sources/Google Sheets.
+The current local full suite passes 283 tests and 10 subtests; this is offline
+evidence, not a Claude reviewer test run or deployment proof.
+
+Identity policy after review: merge verified ATS requisitions and matching explicit
+Greenhouse `gh_jid` links; retain unknown shared application URLs as flagged
+possible duplicates, including multiple-source and same-source repost cases.
+The older second-run statement about identical employer links describes that
+historical revision and does not assert that every custom URL is now mergeable.
+
+The bounded probe still selects at most eight jobs per source and 150 globally.
+Detail fetches prioritize explicit AI titles inside the existing eight-page
+budget; skipped detail/global-cap counts are retained in probe notes and its
+summary. Description-only AI matches beyond that budget remain unexamined.
+These notes are artifact evidence; durable per-run source history is still open.
+
 ## Bootstrap prerequisite — October 17, 2026
 
 Scope: reproducible installation and CI plus cloud readiness inventory. This is

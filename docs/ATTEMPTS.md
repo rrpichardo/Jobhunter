@@ -1,5 +1,39 @@
 # Implementation attempt log
 
+## October 18 current local source follow-up
+
+- The user superseded the three-cycle pause with "do as many as needed" while
+  retaining the no-push/no-merge direction. Keep the historical counts: source
+  review 1 was Codex at `a17bae4`, review 2 was Claude's first `5487aa5` patch
+  review, and review 3 covered the `5976ca3` patch. Earlier wording calling that
+  last review "cycle 2" counted repair iterations, not all reviews; this entry
+  corrects the total rather than resetting it. Current source follow-up is cycle 4.
+- The requested whole-PR Claude checks now cover #7 `9f4fd58` retrospectively,
+  #8 `e3536e4`, #9 `32a54b8`, and #10 `a17bae4` plus the local patch. All were
+  static reviews; Claude did not run the tests. Original #7 findings repaired by
+  #8 remain historical. Current code still needs fresh review after these repairs.
+- Reproduced and fixed the third-custom-source batch stop: unknown links always
+  retain separate flagged rows, with deterministic review references. Multiple
+  conflicting verified requisitions still require operator reconciliation.
+- Reproduced and fixed Colombia's `DC` bypass, New Mexico's false exclusion,
+  punctuated/underscore annual salary tokens, missing same-source repost flags,
+  and matching custom Greenhouse `gh_jid` links across sources/runs. Country and
+  pay units remain explicit; no COP/DOP conversion or eligibility inference.
+- Known AI titles are prioritized inside the existing bounded detail budget;
+  omitted detail and global-limit counts are recorded in the artifact/summary.
+  This remains partial coverage, not a promise that every description-only AI
+  signal was examined. No source request limits were raised.
+- Text-only YC/Getro detail pages cannot establish a missing regional salary, so
+  those on-site candidates no longer consume detail requests. Provider parser
+  recursion errors are isolated to that source, and response bodies are streamed
+  with a decoded-byte limit rather than downloaded whole before the size check.
+- The natural deeply nested JSON fixture was handled by the current parser runtime;
+  an injected parser RecursionError established the error-boundary regression.
+  Do not claim a particular live provider response triggered that exception.
+- Writer diagnostic follow-up and evidence clarifications were propagated locally.
+  Locked full candidate suite: 283 tests and 10 subtests passed; no live calls,
+  pushes, merges to main or deployments. Further Claude review is outstanding.
+
 ## October 18 user continuation instruction — review limits superseded
 
 - After the source milestone reached its original three-review cap, the user

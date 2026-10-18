@@ -236,6 +236,72 @@ def test_known_low_regional_salary_does_not_consume_a_detail_slot():
     assert all(not url.endswith('/1') for url in seen)
 
 
+def test_blank_regional_stub_salary_does_not_fetch_a_text_only_detail():
+    listing = YC_LIST.replace('San Francisco, CA', 'Colombia')
+    seen = []
+    with httpx.Client(transport=httpx.MockTransport(lambda request: seen.append(str(request.url)) or
+            httpx.Response(200, text=listing))) as client:
+        source, jobs, _ = probe.probe_source(client, {'id': 'yc-product', 'kind': 'yc',
+            'url': 'https://www.ycombinator.com/jobs/role/product-manager'}, '2026-10-18T00:00:00+00:00')
+    assert jobs == [] and len(seen) == 1
+
+
+def test_recursion_failure_in_a_source_parser_does_not_abort_other_sources(monkeypatch):
+    registry = {**REGISTRY, 'detail_sources': [{'id': 'getro', 'kind': 'getro', 'url': 'https://getro.test/jobs'}]}
+    def parser_limit(*args):
+        raise RecursionError('source structure exceeds parser recursion limit')
+    monkeypatch.setitem(probe.DETAIL_SOURCES, 'getro', (parser_limit, probe.DETAIL_SOURCES['getro'][1]))
+    with httpx.Client(transport=httpx.MockTransport(lambda request: httpx.Response(200, text='source data')
+                     if 'getro.test' in str(request.url) else handler(request))) as client:
+        payload = probe.run(registry, client, delay=0, sleep=lambda _: None, environ={})
+    assert payload['jobs']
+    source = next(s for s in payload['sources'] if s['source_id'] == 'getro')
+    assert (source['status'], source['error']) == ('failed', 'invalid_board_response')
+
+
+def test_response_byte_limit_stops_reading_before_the_rest_of_the_body(monkeypatch):
+    monkeypatch.setattr(probe, 'MAX_BYTES', 4)
+    consumed = []
+
+    class Body(httpx.SyncByteStream):
+        def __iter__(self):
+            for chunk in [b'12345', b'must-not-read']:
+                consumed.append(chunk)
+                yield chunk
+
+    with httpx.Client(transport=httpx.MockTransport(lambda request: httpx.Response(200, stream=Body()))) as client:
+        status, body, error = probe.fetch_once(client, 'https://example.com/oversized')
+    assert (status, body, error) == (200, None, 'invalid_board_response')
+    assert consumed == [b'12345']
+
+
+def test_total_cap_reports_how_many_jobs_were_omitted(monkeypatch):
+    monkeypatch.setattr(probe, 'TOTAL_LIMIT', 0)
+    payload = run_probe()
+    assert payload['probe']['notes']['total_limit_skipped'] == 1
+
+
+def test_detail_budget_prioritizes_known_ai_titles_and_reports_skipped_candidates(monkeypatch):
+    from html import escape
+    monkeypatch.setattr(probe, 'PER_SOURCE_LIMIT', 1)
+    listing = '<div data-page="' + escape(json.dumps({'props': {'jobPostings': [
+        {'id': i, 'title': title, 'url': f'/companies/acme/jobs/{i}',
+         'location': 'United States', 'companyName': 'Acme'}
+        for i, title in [(1, 'Product Manager'), (2, 'Product Manager'), (3, 'AI Product Manager')]
+    ]}}), quote=True) + '"></div>'
+    seen = []
+    def serve(request):
+        seen.append(str(request.url))
+        return httpx.Response(200, text=listing if 'jobs/role' in str(request.url) else
+            YC_PAGE if request.url.path.endswith('/3') else YC_PAGE.replace('Build AI agents.', 'Build products.'))
+    with httpx.Client(transport=httpx.MockTransport(serve)) as client:
+        source, jobs, note = probe.probe_source(client, {'id': 'yc-product', 'kind': 'yc',
+            'url': 'https://www.ycombinator.com/jobs/role/product-manager'}, '2026-10-18T00:00:00+00:00')
+    assert [job.job_id for job in jobs] == ['yc-product:3']
+    assert len(seen) == 2
+    assert 'details_skipped=2' in note
+
+
 def test_duplicates_across_sources_are_merged_and_counted():
     gh = {"jobs": [{"id": 1, "title": "Product Manager, AI Agents", "location": {"name": "Remote"},
                     "content": "<p>Agents.</p>", "absolute_url": "https://job-boards.greenhouse.io/good/jobs/1"}]}

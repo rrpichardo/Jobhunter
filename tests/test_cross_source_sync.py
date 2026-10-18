@@ -76,6 +76,8 @@ def test_distinct_source_requisitions_sharing_a_generic_link_remain_separate():
     deliver(store, [row('remotive:1', 'remotive', 'https://example.com/careers')], 'one')
     deliver(store, [row('remotive:2', 'remotive', 'https://example.com/careers')], 'two')
     assert len(store.tables['Jobs']) == 3
+    headers = store.tables['Jobs'][0]
+    assert 'Possible duplicate of remotive:1' in store.tables['Jobs'][2][headers.index('More details')]
 
 
 def test_a_historical_generic_link_cannot_collapse_new_source_requisitions():
@@ -92,3 +94,23 @@ def test_a_historical_generic_link_cannot_collapse_new_source_requisitions():
     for values in store.tables['Jobs'][2:]:
         assert 'Possible duplicate of remotive:1' in values[headers.index('More details')]
         assert 'needs review' in values[headers.index('More details')]
+
+
+def test_new_sources_sharing_an_uncertain_link_never_block_the_daily_batch():
+    store = MemoryStore()
+    for source in ('remotive', 'himalayas', 'jobicy', 'fourth'):
+        incoming = row(source + ':1', source, 'https://example.com/careers/pm')
+        deliver(store, [incoming], source)
+        deliver(store, [incoming], source)
+    assert len(store.tables['Jobs']) == 5
+    headers = store.tables['Jobs'][0]
+    assert all('needs review' in values[headers.index('More details')]
+               for values in store.tables['Jobs'][2:])
+
+
+def test_custom_greenhouse_requisition_reconciles_across_runs():
+    store = MemoryStore()
+    deliver(store, [row('remotive:1', 'remotive', 'https://example.com/careers?gh_jid=111')], 'first')
+    deliver(store, [row('himalayas:2', 'himalayas', 'https://example.com/careers?gh_jid=111')], 'second')
+    assert len(store.tables['Jobs']) == 2
+    assert store.tables['Jobs'][1][0] == 'remotive:1'

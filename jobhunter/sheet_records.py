@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import date
 import re
 
-from jobhunter.job_identity import canonical_key
+from jobhunter.job_identity import canonical_key, verified_requisition
 from jobhunter.records import https_url
 
 JOB_HEADERS = ('Job ID', 'Date found', 'Job title', 'Company', 'Salary', 'Location',
@@ -137,18 +137,22 @@ def reconcile_jobs(rows, records):
         identity = record['Job ID']
         key = canonical_key(record['Apply link']) if https_url(record['Apply link']) else None
         if identity not in known and identity not in planned and key is not None:
-            matches = [candidate for candidate in by_link.get(key, ())
-                       if (planned.get(candidate) or known[candidate])['Source'] != record['Source']]
-            if len(matches) > 1:
+            matches = sorted(candidate for candidate in by_link.get(key, ())
+                             if (planned.get(candidate) or known[candidate])['Source'] != record['Source'])
+            if len(matches) > 1 and verified_requisition(key):
                 # Never choose between rows whose user-owned cells may disagree.
                 # A shared generic/custom URL does not verify which requisition
                 # from another source an existing row represents.
                 raise ValueError('ambiguous_existing_job_identity')
-            if matches and key.startswith('https://'):
+            if matches and not verified_requisition(key):
                 record = record | {'More details': record['More details'] +
                     f'\nPossible duplicate of {matches[0]} (shared application link; requisition identity unverified; needs review)'}
             elif matches:
                 identity = matches[0]
+            elif by_link.get(key):
+                candidate = sorted(by_link[key])[0]
+                record = record | {'More details': record['More details'] +
+                    f'\nPossible duplicate of {candidate} (same source, shared link, different requisition; needs review)'}
         previous = planned.get(identity) or known.get(identity)
         if previous:
             details = record['More details'].splitlines()

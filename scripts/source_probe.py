@@ -18,7 +18,7 @@ import httpx
 import yaml
 
 from jobhunter.artifacts import safe_error_code, write_artifact
-from jobhunter.postings import (DETAIL_SOURCES, LISTING_ONLY, ONSITE_COUNTRIES, PARSERS, Posting, ai_pm_match,
+from jobhunter.postings import (AI_TERMS, DETAIL_SOURCES, LISTING_ONLY, PARSERS, Posting, ai_pm_match,
                                 collection_location_match, dedupe, is_pm_title, to_row)
 
 USER_AGENT = "JobHunterBot/0.1 (personal job search; polite single requests)"
@@ -44,15 +44,24 @@ def record(source_id, status, stamp, *, error="", http=None, listed=None, valid=
 def fetch_once(client, url):
     """(status, text, error_code). One attempt; never follows redirects or retries."""
     try:
-        response = client.get(url, timeout=30, follow_redirects=False,
-                              headers={"User-Agent": USER_AGENT, "Accept": "application/json, */*"})
+        with client.stream('GET', url, timeout=30, follow_redirects=False,
+                           headers={"User-Agent": USER_AGENT, "Accept": "application/json, */*"}) as response:
+            if response.status_code != 200:
+                return response.status_code, '', ''
+            data = bytearray()
+            for chunk in response.iter_bytes(chunk_size=min(65536, MAX_BYTES + 1)):
+                if len(data) + len(chunk) > MAX_BYTES:
+                    return response.status_code, None, 'invalid_board_response'
+                data.extend(chunk)
+            try:
+                text = data.decode(response.encoding or 'utf-8', errors='replace')
+            except LookupError:
+                text = data.decode('utf-8', errors='replace')
+            return response.status_code, text, ''
     except httpx.TimeoutException:
         return None, None, "timeout"
     except httpx.HTTPError:
         return None, None, "transport_error"
-    if len(response.content) > MAX_BYTES:
-        return response.status_code, None, "invalid_board_response"
-    return response.status_code, response.text, ""
 
 
 def fetch_details(client, entry, stubs, stamp, *, delay, sleep):
@@ -100,7 +109,7 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep):
         data = json.loads(body) if kind in JSON_KINDS else body
     except (ValueError, RecursionError):
         return record(source_id, "failed", stamp, error="invalid_json", http=200), [], "invalid_json"
-    problem, attempts = None, 1
+    problem, attempts, detail_skipped = None, 1, 0
     try:
         if kind in LISTING_ONLY:
             counts = LISTING_ONLY[kind](data, ctx)
@@ -110,8 +119,9 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep):
         if kind in DETAIL_SOURCES:
             stubs, rejected = DETAIL_SOURCES[kind][0](data, {**ctx, "url": url})
             shortlist = [s for s in stubs if is_pm_title(s["title"])
-                         and (collection_location_match(s["location"], s["salary"])
-                              or (not s['salary'] and ONSITE_COUNTRIES.search(s["location"])))]
+                         and collection_location_match(s["location"], s["salary"])]
+            shortlist.sort(key=lambda stub: not bool(AI_TERMS.search(stub['title'])))
+            detail_skipped = max(0, len(shortlist) - PER_SOURCE_LIMIT)
             postings, failed, problem, detail_attempts = fetch_details(
                 client, entry, shortlist[:PER_SOURCE_LIMIT], stamp, delay=delay, sleep=sleep)
             attempts += detail_attempts
@@ -119,7 +129,7 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep):
             total = len(stubs)
         else:
             postings, rejected, total = PARSERS[kind](data, ctx)
-    except (ValueError, TypeError, KeyError, AttributeError) as exc:
+    except (ValueError, TypeError, KeyError, AttributeError, RecursionError) as exc:
         code = "duplicate_source_id" if str(exc) == "duplicate_source_id" else "invalid_board_response"
         return record(source_id, "failed", stamp, error=code, http=200), [], code
     candidates = [p for p in postings if is_pm_title(p.title)]
@@ -129,17 +139,18 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep):
         candidates = shortlist
     if rejected:
         coverage += "-with-rejections"
+    skipped_note = f'; details_skipped={detail_skipped}' if detail_skipped else ''
     if problem is not None:
         status, error, http = problem
         return record(source_id, status, stamp, error=error, http=http, listed=total,
                       valid=len(postings), rejected=rejected, candidates=len(candidates),
-                      selected=len(selected), coverage=coverage, attempts=attempts), selected, error
+                      selected=len(selected), coverage=coverage, attempts=attempts), selected, error + skipped_note
     if not postings and rejected:
         return record(source_id, "failed", stamp, error="invalid_items_quarantined", http=200, listed=total,
-                      valid=0, rejected=rejected, candidates=0, coverage=coverage), [], "invalid_items"
+                      valid=0, rejected=rejected, candidates=0, coverage=coverage), [], "invalid_items" + skipped_note
     status = "OK" if selected else "OK-zero-jobs"
     return record(source_id, status, stamp, http=200, listed=total, valid=len(postings), rejected=rejected,
-                  candidates=len(candidates), selected=len(selected), coverage=coverage, attempts=attempts), selected, "ok"
+                  candidates=len(candidates), selected=len(selected), coverage=coverage, attempts=attempts), selected, "ok" + skipped_note
 
 
 def entries(registry):
@@ -176,6 +187,12 @@ def run(registry, client, *, delay=1.0, sleep=time.sleep, environ=None,
         rows.append(to_row(posting, note))
         kept[posting.source_id] = kept.get(posting.source_id, 0) + 1
     notes["duplicates_merged"] = duplicates
+    omitted = {}
+    for posting, _ in unique[len(rows):]:
+        omitted[posting.source_id] = omitted.get(posting.source_id, 0) + 1
+    notes['total_limit_skipped'] = sum(omitted.values())
+    for source_id, count in omitted.items():
+        notes[source_id] += f'; total_limit_skipped={count}'
     for source in sources:  # a capped or merged source must report what was actually delivered
         source["selected_for_m0"] = kept.get(source["source_id"], 0)
         if source["status"] == "OK" and not source["selected_for_m0"]:

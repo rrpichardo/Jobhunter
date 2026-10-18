@@ -57,10 +57,11 @@ work; incomplete Claude extraction batches are rejected before Google access.
   the same source remain separate. `ambiguous_existing_job_identity` means more
   than one existing row could match; reconcile those rows manually while keeping
   user notes before retrying. The writer never deletes or combines existing rows.
-  Automatic cross-source merging requires a known ATS requisition identity.
-  A single shared custom/generic link keeps the incoming row separate with a
-  possible-duplicate note for review. Multiple existing candidate rows remain an
-  error rather than choosing which row's user notes should win.
+  Automatic cross-source merging requires a known ATS requisition identity or
+  matching explicit Greenhouse `gh_jid` application parameters. Shared unknown
+  custom/generic links keep incoming rows separate with possible-duplicate notes,
+  even when several other-source rows share the link. Multiple conflicting
+  verified identities remain an error rather than choosing which user data wins.
 - A source blocked partway through detail collection remains `blocked` with its
   actual HTTP/error evidence. Jobs validated before that failure may still be
   delivered when the artifact explicitly accounts for them. That does not turn

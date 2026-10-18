@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup
 import feedparser
 
 from jobhunter.records import https_url
-from jobhunter.job_identity import canonical_key
+from jobhunter.job_identity import canonical_key, verified_requisition
 
 PM_TITLE = re.compile(r"\b(product manager|product lead|group product manager|head of product|"
                       r"director of product|vp of product|vp,? product|pm)\b", re.I)
@@ -27,7 +27,7 @@ EXCLUDED_TITLE = re.compile(r"\b(intern|internship|summer associate|product mark
 AI_TERMS = re.compile(r"\b(ai|a\.i\.|ml|llms?|genai|gen ai|generative ai|machine learning|"
                       r"artificial intelligence|agentic|ai agents?|foundation models?|"
                       r"language models?|deep learning)\b", re.I)
-US_TERMS = re.compile(r"\b(united states(?: of america)?|usa|u\.s\.a?\.?|us|north america|new york|nyc|san francisco|"
+US_TERMS = re.compile(r"\b(united states(?: of america)?|usa|u\.s\.a?\.?|us|north america|new mexico|new york|nyc|san francisco|"
                       r"sf|bay area|seattle|austin|boston|chicago|los angeles|denver|atlanta|"
                       r"washington|dc|miami|california|texas|massachusetts)\b", re.I)
 ANYWHERE = re.compile(r"\b(remote|anywhere|worldwide|global|hybrid)\b", re.I)
@@ -45,9 +45,10 @@ LOCATION_US_CODE = re.compile(r",\s*(?:A[LKZR]|C[AOT]|DE|FL|GA|HI|I[ADLN]|K[SY]|
                               r"N[CDEHJMVY]|O[HKR]|PA|RI|S[CD]|T[NX]|UT|V[AT]|W[AIVY]|DC)\b")
 LATIN_AMERICA = re.compile(r'\b(south america|latin america|latam|colombia|dominican republic|rep[uú]blica dominicana|'
                            r'brazil|brasil|argentina|chile|peru|perú|ecuador|bolivia|uruguay|paraguay|venezuela|'
-                           r'mexico|méxico|costa rica|panama|panamá|guatemala|honduras|el salvador|nicaragua|belize)\b', re.I)
+                           r'(?<!new )mexico|méxico|costa rica|panama|panamá|guatemala|honduras|el salvador|nicaragua|belize)\b', re.I)
 ONSITE_COUNTRIES = re.compile(r'\b(colombia|dominican republic|rep[uú]blica dominicana)\b', re.I)
 REMOTE_TERMS = re.compile(r'\b(remote|anywhere|worldwide|global)\b', re.I)
+EXPLICIT_US = re.compile(r'(?i:\b(?:united states|usa)\b|\bu\.s\.(?:a\.)?)|\bUS\b')
 MIN_REGIONAL_ANNUAL_USD = 70_000
 
 
@@ -114,13 +115,14 @@ def us_or_unknown(location: str) -> bool:
 def regional_salary_match(salary: str) -> bool:
     """Annual USD salary range overlaps the user's floor; unknown units stay unknown."""
     usd = re.compile(r'\bUSD\b|US\$', re.I)
+    salary = salary.replace('_', ' ')
     if (not usd.search(salary)
             or not re.search(r'\b(year|yearly|annual|annually|annum|yr)\b', salary, re.I)
             or re.search(r'\b(COP|DOP|CAD|AUD|MXN|EUR|GBP|hour|hourly|month|monthly|week|weekly|day|daily|'
                          r'OTE|total compensation|equity)\b|RD\$|R\$', salary, re.I)):
         return False
     amounts = []
-    for number, scale in re.findall(r'(?<![\w.])(\d[\d,]*(?:\.\d+)?)\s*([kK]?)(?![\w.])', usd.sub(' ', salary)):
+    for number, scale in re.findall(r'(?<![\w.])(\d[\d,]*(?:\.\d+)?)\s*([kK]?)(?!\w|\.\d)', usd.sub(' ', salary)):
         value = float(number.replace(',', '')) * (1000 if scale else 1)
         if math.isfinite(value):
             amounts.append(value)
@@ -129,7 +131,7 @@ def regional_salary_match(salary: str) -> bool:
 
 def collection_location_match(location: str, salary: str = '', *, remote: bool = False) -> bool:
     """Collection preference; a regional remote lead does not assert US eligibility."""
-    if LATIN_AMERICA.search(location) and not US_TERMS.search(location):
+    if LATIN_AMERICA.search(location) and not EXPLICIT_US.search(location):
         return (remote or bool(REMOTE_TERMS.search(location))
                 or bool(ONSITE_COUNTRIES.search(location) and regional_salary_match(salary)))
     return us_or_unknown(location)
@@ -459,12 +461,12 @@ def dedupe(postings):
     kept, by_key, by_similar = [], {}, {}
     for posting in ordered:
         key = canonical_key(posting.apply_url)
-        if (not key.startswith('https://') and key in by_key
+        if (verified_requisition(key) and key in by_key
                 and by_key[key]["posting"].source_id != posting.source_id):
             by_key[key]["also"].append(posting.source_id)
             continue
         entry = {"posting": posting, "also": [], "similar": by_similar.get(_similar(posting)),
-                 'shared': by_key[key]['posting'].job_id if key.startswith('https://') and key in by_key else None}
+                 'shared': by_key[key]['posting'].job_id if not verified_requisition(key) and key in by_key else None}
         by_key.setdefault(key, entry)
         by_similar.setdefault(_similar(posting), posting.job_id)
         kept.append(entry)

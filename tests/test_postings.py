@@ -60,10 +60,23 @@ def test_remote_south_and_latin_america_roles_are_kept_without_salary(location):
     ('Remote - Brazil', '', True),
     ('Colombia (Hybrid)', '', False),
     ('Costa Rica (Hybrid)', '', False),
+    ('Bogotá, DC, Colombia', '', False),
+    ('Bogota, D.C., Colombia', 'USD 69,999 annually', False),
+    ('Bogotá, DC, Colombia', 'USD 70,000 annually', True),
+    ('Colombia or United States', '', True),
+    ('Albuquerque, New Mexico', '', True),
 ])
 def test_regional_roles_follow_remote_or_country_and_annual_usd_salary_preference(location, salary, expected):
     from dataclasses import replace
     assert p.ai_pm_match(replace(posting(location=location), salary=salary)) is expected
+
+
+def test_salary_amount_can_end_in_sentence_punctuation():
+    assert p.regional_salary_match('Annual salary: USD 80,000.')
+
+
+def test_explicit_annual_period_token_with_underscore_is_supported():
+    assert p.regional_salary_match('USD 80,000 per_year')
 
 
 def test_ai_pm_needs_ai_signal_or_ai_company():
@@ -273,6 +286,12 @@ def test_shared_custom_links_retain_distinct_requisitions_for_review():
     assert [job.job_id for job, note in kept] == ['remotive:1', 'himalayas:1', 'himalayas:2']
     assert all('Possible duplicate of remotive:1' in note and 'needs review' in note
                for job, note in kept[1:])
+
+
+def test_custom_greenhouse_application_id_is_verified_for_cross_source_matching():
+    a = make('remotive:1', 'remotive', 'https://example.com/careers?gh_jid=111')
+    b = make('himalayas:2', 'himalayas', 'https://example.com/careers?gh_jid=111&utm_source=himalayas')
+    assert len(p.dedupe([a, b])) == 1
 
 
 def test_distinct_jobs_sharing_one_careers_page_path_are_not_merged():

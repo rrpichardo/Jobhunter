@@ -20,3 +20,11 @@ def canonical_key(url: str) -> str:
     pairs = sorted((k, v) for k, v in parse_qsl(parts.query, keep_blank_values=True)
                    if not TRACKING_PARAMS.match(k))
     return urlunsplit((parts.scheme.lower(), parts.netloc.lower(), parts.path.rstrip('/'), urlencode(pairs), ''))
+
+
+def verified_requisition(key: str) -> bool:
+    """Known ATS path or explicit Greenhouse embed requisition, never a generic link."""
+    if key.startswith(('greenhouse:', 'lever:', 'ashby:')):
+        return True
+    values = [value for name, value in parse_qsl(urlsplit(key).query) if name == 'gh_jid']
+    return len(values) == 1 and bool(re.fullmatch(r'[1-9][0-9]*', values[0]))
