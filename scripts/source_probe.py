@@ -18,7 +18,8 @@ import httpx
 import yaml
 
 from jobhunter.artifacts import safe_error_code, write_artifact
-from jobhunter.postings import LISTING_ONLY, PARSERS, ai_pm_match, is_pm_title, to_row
+from jobhunter.postings import (DETAIL_SOURCES, LISTING_ONLY, PARSERS, Posting, ai_pm_match, dedupe, is_pm_title,
+                                to_row, us_or_unknown)
 
 USER_AGENT = "JobHunterBot/0.1 (personal job search; polite single requests)"
 MAX_BYTES = 40 * 1024 * 1024
@@ -54,7 +55,29 @@ def fetch_once(client, url):
     return response.status_code, response.text, ""
 
 
-def probe_source(client, entry, stamp):
+def fetch_details(client, entry, stubs, stamp, *, delay, sleep):
+    """One polite GET per shortlisted job page; a refusal stops the rest for this source."""
+    postings, rejected = [], 0
+    detail = DETAIL_SOURCES[entry["kind"]][1]
+    for stub in stubs:
+        sleep(delay)
+        status, body, error = fetch_once(client, stub["url"])
+        if error or status != 200:
+            rejected += 1
+            if status in BLOCKED:
+                break  # stop this source immediately; never retry or probe further
+            continue
+        try:
+            found = detail(body)
+            postings.append(Posting(stub["job_id"], entry["id"], found.get("company") or stub["company"], stub["title"],
+                                    found.get("location") or stub["location"], found["text"], stub["url"], stamp,
+                                    salary=found.get("salary") or stub["salary"], tag="other"))
+        except (ValueError, TypeError, KeyError, AttributeError, RecursionError):
+            rejected += 1
+    return postings, rejected
+
+
+def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep):
     """Returns (source record or None for an unresponsive candidate, postings, note)."""
     kind, source_id = entry["kind"], entry["id"]
     url = entry["url"]
@@ -79,13 +102,22 @@ def probe_source(client, entry, stamp):
             return record(source_id, "OK-zero-jobs", stamp, http=200, listed=counts["listed"],
                           valid=counts["listed"], rejected=0, candidates=counts["pm_titles"],
                           coverage="partial-response"), [], "listing_only"
-        postings, rejected, total = PARSERS[kind](data, ctx)
+        if kind in DETAIL_SOURCES:
+            stubs, rejected = DETAIL_SOURCES[kind][0](data, {**ctx, "url": url})
+            shortlist = [s for s in stubs if is_pm_title(s["title"]) and us_or_unknown(s["location"])]
+            postings, failed = fetch_details(client, entry, shortlist[:PER_SOURCE_LIMIT], stamp, delay=delay, sleep=sleep)
+            rejected += failed
+            total = len(stubs)
+        else:
+            postings, rejected, total = PARSERS[kind](data, ctx)
     except (ValueError, TypeError, KeyError, AttributeError) as exc:
         code = "duplicate_source_id" if str(exc) == "duplicate_source_id" else "invalid_board_response"
         return record(source_id, "failed", stamp, error=code, http=200), [], code
     candidates = [p for p in postings if is_pm_title(p.title)]
     selected = [p for p in postings if ai_pm_match(p)][:PER_SOURCE_LIMIT]
     coverage = "complete-response" if entry.get("board") else "partial-response"
+    if kind in DETAIL_SOURCES:
+        candidates = shortlist
     if rejected:
         coverage += "-with-rejections"
     if not postings and rejected:
@@ -101,8 +133,8 @@ def entries(registry):
         for board in boards:
             yield {"id": f"{kind}:{board['board']}", "kind": kind, "url": URLS[kind].format(board=board["board"]),
                    **board}
-    for group in ("aggregators", "listing_only"):
-        yield from registry[group]
+    for group in ("aggregators", "detail_sources", "listing_only"):
+        yield from registry.get(group, [])
 
 
 def run(registry, client, *, delay=1.0, sleep=time.sleep, environ=None,
@@ -111,7 +143,7 @@ def run(registry, client, *, delay=1.0, sleep=time.sleep, environ=None,
     stamp = now()
     sources, jobs, notes = [], [], {}
     for entry in entries(registry):
-        record_, selected, note = probe_source(client, entry, stamp)
+        record_, selected, note = probe_source(client, entry, stamp, delay=delay, sleep=sleep)
         notes[entry["id"]] = note
         if record_ is not None:
             sources.append(record_)
@@ -121,13 +153,16 @@ def run(registry, client, *, delay=1.0, sleep=time.sleep, environ=None,
         missing = [name for name in item["env"] if not environ.get(name)]
         sources.append(record(item["id"], "needs setup", stamp, attempts=0))
         notes[item["id"]] = ("keys_missing:" + ",".join(missing) if missing else "setup_or_collector_pending")
+    unique = dedupe(jobs)
+    duplicates = len(jobs) - len(unique)
     rows, kept = [], {}
-    for posting in jobs:
+    for posting, note in unique:
         if len(rows) >= TOTAL_LIMIT:
             break
-        rows.append(to_row(posting))
+        rows.append(to_row(posting, note))
         kept[posting.source_id] = kept.get(posting.source_id, 0) + 1
-    for source in sources:  # a capped source must report what was actually delivered
+    notes["duplicates_merged"] = duplicates
+    for source in sources:  # a capped or merged source must report what was actually delivered
         source["selected_for_m0"] = kept.get(source["source_id"], 0)
         if source["status"] == "OK" and not source["selected_for_m0"]:
             source["status"] = "OK-zero-jobs"
@@ -143,6 +178,7 @@ def summary(payload):
         lines.append(f"{source['source_id']:<28}{source['status']:<14}{str(source['jobs_fetched'] or '-'):>8}"
                      f"{str(source['pm_candidates'] if source['pm_candidates'] is not None else '-'):>5}"
                      f"{source['selected_for_m0']:>10}  {payload['probe']['notes'][source['source_id']]}")
+    lines.append(f"duplicates_merged={payload['probe']['notes']['duplicates_merged']}")
     return "\n".join(lines)
 
 

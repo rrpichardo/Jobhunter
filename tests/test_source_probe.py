@@ -20,8 +20,20 @@ REGISTRY = {
 }
 
 
+YC_LIST = ('<div data-page="{&quot;props&quot;:{&quot;jobPostings&quot;:[{&quot;id&quot;:7,&quot;title&quot;:'
+           '&quot;Product Manager, AI&quot;,&quot;url&quot;:&quot;/companies/acme/jobs/abc-pm&quot;,&quot;location&quot;:'
+           '&quot;San Francisco, CA&quot;,&quot;companyName&quot;:&quot;Acme&quot;,&quot;salaryRange&quot;:&quot;&quot;},'
+           '{&quot;id&quot;:8,&quot;title&quot;:&quot;Designer&quot;,&quot;url&quot;:&quot;/companies/acme/jobs/d&quot;,'
+           '&quot;location&quot;:&quot;Remote&quot;,&quot;companyName&quot;:&quot;Acme&quot;}]}}"></div>')
+YC_PAGE = ('<script type="application/ld+json">{"@type":"JobPosting","description":"Build AI agents."}</script>')
+
+
 def handler(request):
     url = str(request.url)
+    if "ycombinator.com/jobs/role" in url:
+        return httpx.Response(200, text=YC_LIST)
+    if "ycombinator.com/companies" in url:
+        return httpx.Response(200, text=YC_PAGE)
     if "good" in url:
         return httpx.Response(200, json=GH)
     if "ghost" in url:
@@ -106,3 +118,51 @@ def test_sync_rejects_inconsistent_multi_source_payload(tmp_path):
     backend = MemoryStore()
     assert sync(["--input", str(out)], store=backend) == 2
     assert backend.tables == {}
+
+
+def test_detail_source_fetches_only_shortlisted_pm_pages_and_delivers_them():
+    registry = {**REGISTRY, "boards": {}, "aggregators": [], "listing_only": [], "needs_setup": [],
+                "detail_sources": [{"id": "yc-product", "kind": "yc", "url": "https://www.ycombinator.com/jobs/role/product-manager"}]}
+    seen = []
+    client = httpx.Client(transport=httpx.MockTransport(lambda r: seen.append(str(r.url)) or handler(r)))
+    payload = probe.run(registry, client, delay=0, sleep=lambda s: None, environ={}, now=lambda: "2026-10-18T00:00:00+00:00")
+    assert [row["Job ID"] for row in payload["jobs"]] == ["yc-product:7"]
+    assert payload["jobs"][0]["Brief description"] == "Build AI agents."
+    assert sum("ycombinator.com/companies" in url for url in seen) == 1  # the Designer page was never fetched
+    source = payload["sources"][0]
+    assert (source["status"], source["jobs_fetched"], source["pm_candidates"], source["selected_for_m0"]) == ("OK", 2, 1, 1)
+
+
+def test_a_refused_detail_page_stops_that_source_and_is_never_retried():
+    registry = {**REGISTRY, "boards": {}, "aggregators": [], "listing_only": [], "needs_setup": [],
+                "detail_sources": [{"id": "yc-product", "kind": "yc", "url": "https://www.ycombinator.com/jobs/role/product-manager"}]}
+    seen = []
+
+    def refuse(request):
+        seen.append(str(request.url))
+        return httpx.Response(200, text=YC_LIST) if "jobs/role" in str(request.url) else httpx.Response(429)
+    payload = probe.run(registry, httpx.Client(transport=httpx.MockTransport(refuse)), delay=0,
+                        sleep=lambda s: None, environ={})
+    assert payload["jobs"] == [] and sum("companies" in url for url in seen) == 1
+
+
+def test_duplicates_across_sources_are_merged_and_counted():
+    gh = {"jobs": [{"id": 1, "title": "Product Manager, AI Agents", "location": {"name": "Remote"},
+                    "content": "<p>Agents.</p>", "absolute_url": "https://job-boards.greenhouse.io/good/jobs/1"}]}
+    remotive = {"jobs": [{"id": 9, "title": "Product Manager, AI Agents", "company_name": "Good",
+                          "candidate_required_location": "USA", "description": "<p>Agents.</p>",
+                          "url": "https://job-boards.greenhouse.io/good/jobs/1?ref=remotive"}]}
+    registry = {"boards": {"greenhouse": [{"board": "good", "company": "Good", "tag": "ai"}]},
+                "aggregators": [{"id": "remotive", "kind": "remotive", "url": "https://agg.test/r"}],
+                "needs_setup": []}
+
+    def serve(request):
+        return httpx.Response(200, json=gh if "greenhouse" in str(request.url) else remotive)
+    payload = probe.run(registry, httpx.Client(transport=httpx.MockTransport(serve)), delay=0,
+                        sleep=lambda s: None, environ={})
+    assert [row["Job ID"] for row in payload["jobs"]] == ["greenhouse:good:1"]
+    assert "Also listed by: remotive" in payload["jobs"][0]["More details"]
+    by_id = {s["source_id"]: s for s in payload["sources"]}
+    assert (by_id["greenhouse:good"]["selected_for_m0"], by_id["remotive"]["selected_for_m0"],
+            by_id["remotive"]["status"]) == (1, 0, "OK-zero-jobs")
+    assert payload["probe"]["notes"]["duplicates_merged"] == 1

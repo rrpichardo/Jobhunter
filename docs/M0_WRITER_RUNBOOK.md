@@ -146,6 +146,19 @@ Python, never by a model. Sources needing keys, accounts or a labeled mailbox ar
 `OK-zero-jobs`, nothing delivered, until a detail fetch exists. Guessed company boards that
 answer 404 are dropped as non-responders. No social, Gmail or logged-in access happens here.
 
+Y Combinator (the same jobs Work at a Startup lists, without its login), Built In and the Getro
+VC boards (Accel, Primary) are detail sources: the listing is parsed, up to 8 shortlisted PM
+titles per source get one polite GET of their own job page for the description, employer and
+place, and a refusal (401/403/406/429) stops that source at once. a16z and Hacker News are
+still count-only. The fetched pages were checked against each site's robots.txt.
+
+Cross-source duplicates are merged only when two different sources link the same employer
+posting (the same Greenhouse/Lever/Ashby requisition, or the same URL once tracking parameters
+are dropped; job-identifying parameters such as `gh_jid` are kept). The company-board row wins
+and lists the other sources in More details. Company-and-title similarity alone never merges:
+it adds a "Possible duplicate ... needs review" note and keeps both rows. A source never merges
+its own postings.
+
 ```sh
 uv run --locked python -m scripts.source_probe --output /private/run/probe.json
 uv run --locked python -m scripts.sheets_sync --input /private/run/probe.json --run-id m1-probe-001

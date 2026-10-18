@@ -37,11 +37,13 @@ aggregators:
   - {id: jobicy, kind: jobicy, url: "https://jobicy.com/api/v2/remote-jobs?count=50&tag=product"}
   - {id: themuse, kind: themuse, url: "https://www.themuse.com/api/public/jobs?category=Product%20Management&page=1"}
   - {id: weworkremotely, kind: wwr, url: "https://weworkremotely.com/categories/remote-product-jobs.rss"}
-listing_only:  # reachable and counted, but no description text yet, so nothing is delivered
+detail_sources:  # listing page, then each shortlisted PM job's own page for its description (polite, capped)
   - {id: yc-product, kind: yc, url: "https://www.ycombinator.com/jobs/role/product-manager"}
+  - {id: builtin-product, kind: builtin, url: "https://builtin.com/jobs/product-management"}
+  - {id: getro-accel, kind: getro, url: "https://jobs.accel.com/jobs?q=ai%20product%20manager"}
+  - {id: getro-primary, kind: getro, url: "https://jobs.primary.vc/jobs?q=ai%20product%20manager"}
+listing_only:  # reachable and counted, but no description text yet, so nothing is delivered
   - {id: a16z-ai-pm, kind: a16z, url: "https://jobs.a16z.com/jobs?q=AI%20product%20manager"}
-  - {id: getro-accel, kind: getro, url: "https://jobs.accel.com/jobs"}
-  - {id: getro-primary, kind: getro, url: "https://jobs.primary.vc/jobs"}
   - {id: hn-who-is-hiring, kind: hn, url: "https://hn.algolia.com/api/v1/search_by_date?tags=story,author_whoishiring&hitsPerPage=3"}
 needs_setup:
   - {id: jsearch, env: [JSEARCH_API_KEY], action: "Create a free JSearch key and add JSEARCH_API_KEY to JobHunterEnv."}
@@ -52,4 +54,6 @@ needs_setup:
   - {id: gmail-job-alerts, env: [], action: "Forward alerts to the connected Gmail and add the JobHunter label filter; then verify the label."}
   - {id: nextplay-rss, env: [], action: "Record the verified Next Play feed URL, then enable RSS plus extraction."}
   - {id: alirohde-rss, env: [], action: "Record the verified Ali Rohde Jobs feed URL, then enable RSS plus extraction."}
-  - {id: cosign, env: [], action: "Network-gated beta; revisit with the user's account."}
+  - {id: cosign, env: [], action: "cosign.com now redirects to a domain-parking page; the user supplies the correct Cosign URL and creates the account, then supplies session cookies in environment settings."}
+  - {id: work-at-a-startup-logged-in, env: [], action: "workatastartup.com answers HTTP 406 without a login. The same YC jobs are collected from ycombinator.com pages already; for the logged-in site the user creates the account and supplies session cookies in environment settings."}
+  - {id: mba-and-school-job-sites, env: [], action: "The user names each school or MBA site and its URL, creates or uses the logins, and supplies session cookies in environment settings; Claude never creates accounts or types passwords."}

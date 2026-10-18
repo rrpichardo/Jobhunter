@@ -25,7 +25,8 @@ def test_pm_title_filter(title, expected):
 @pytest.mark.parametrize("location,expected", [
     ("", True), ("San Francisco, CA", True), ("New York City, NY", True), ("Remote - US", True),
     ("Remote", True), ("United States", True), ("Remote - Europe", False), ("London, UK", False),
-    ("Toronto, Canada", False), ("Berlin, BE, DE / Remote", False), ("Worldwide", True)])
+    ("Toronto, Canada", False), ("Berlin, BE, DE / Remote", False), ("Worldwide", True), ("Bengaluru, KA, IN / Bengaluru, KA, IN", False), ("Chicago, IL, US", True),
+    ("Mumbai", False)])
 def test_us_or_unknown_location(location, expected):
     assert p.us_or_unknown(location) is expected
 
@@ -91,14 +92,103 @@ def test_aggregators_parse():
     assert (job.company, job.title) == ("Legion", "Principal Product Manager, Agentic AI")
 
 
+YC_LISTING = ('<div data-page="{&quot;props&quot;:{&quot;jobPostings&quot;:[{&quot;id&quot;:7,&quot;title&quot;:'
+              '&quot;Product Manager, AI&quot;,&quot;url&quot;:&quot;/companies/acme/jobs/abc-pm&quot;,&quot;location&quot;:'
+              '&quot;San Francisco, CA&quot;,&quot;companyName&quot;:&quot;Acme&quot;,&quot;salaryRange&quot;:'
+              '&quot;$150K - $200K&quot;},{&quot;title&quot;:&quot;broken, no id&quot;}]}}"></div>')
+YC_DETAIL = ('<script type="application/ld+json">{"@type":"JobPosting","description":'
+             '"\\u003cp\\u003eBuild AI agents.\\u003c/p\\u003e"}</script>')
+
+
+def test_yc_stubs_and_detail_description():
+    stubs, rejected = p.stubs_yc(YC_LISTING, {"source_id": "yc-product"})
+    assert rejected == 1 and stubs == [{"job_id": "yc-product:7", "company": "Acme", "title": "Product Manager, AI",
+        "location": "San Francisco, CA", "url": "https://www.ycombinator.com/companies/acme/jobs/abc-pm",
+        "salary": "$150K - $200K"}]
+    assert p.detail_yc(YC_DETAIL) == {"text": "Build AI agents."}
+    assert p.detail_yc("<html>no structured data</html>") == {"text": ""}
+
+
+def test_getro_stubs_and_detail_description():
+    state = {"props": {"pageProps": {"initialState": {"jobs": {"found": [
+        {"id": 5, "slug": "5-pm", "title": "Product Manager", "organization": {"name": "Co", "slug": "co-1"},
+         "locations": ["New York, NY"], "compensationAmountMinCents": 15000000, "compensationAmountMaxCents": 20000000,
+         "compensationCurrency": "USD", "compensationPeriod": "year"}, {"id": 6}],
+        "currentJob": {"description": "<p>Agents.</p>"}}}}}}
+    page = f'<script id="__NEXT_DATA__" type="application/json">{json.dumps(state)}</script>'
+    stubs, rejected = p.stubs_getro(page, {"source_id": "getro-accel", "url": "https://jobs.accel.com/jobs?q=x"})
+    assert rejected == 1 and stubs[0]["url"] == "https://jobs.accel.com/companies/co-1/jobs/5-pm"
+    assert (stubs[0]["job_id"], stubs[0]["salary"]) == ("getro-accel:5", "150,000 - 200,000 USD year")
+    assert p.detail_getro(page) == {"text": "Agents."}
+
+
+BUILTIN_LIST = ('<script type="application/ld&#x2B;json">{"@graph":[{"@type":"ItemList","itemListElement":['
+                '{"name":"Principal Product Manager, AI","url":"https://builtin.com/job/principal-product-manager-ai/11735619",'
+                '"description":"short"},{"name":"bad","url":"https://builtin.com/not-a-job"}]}]}</script>')
+BUILTIN_JOB = ('<script type="application/ld&#x2B;json">{"@context":"https://schema.org","@type":"JobPosting",'
+               '"description":"<p>Lead AI roadmap.</p>","hiringOrganization":{"name":"Expedia Group"},'
+               '"jobLocation":{"address":{"addressLocality":"Seattle","addressRegion":"Washington","addressCountry":"USA"}},'
+               '"baseSalary":{"value":{"minValue":150000,"maxValue":200000,"unitText":"YEAR"}}}</script>')
+
+
+def test_builtin_listing_and_job_page():
+    stubs, rejected = p.stubs_builtin(BUILTIN_LIST, {"source_id": "builtin-product"})
+    assert rejected == 1 and stubs[0]["job_id"] == "builtin-product:11735619"
+    assert p.detail_builtin(BUILTIN_JOB) == {"text": "Lead AI roadmap.", "company": "Expedia Group",
+        "location": "Seattle, Washington, USA", "salary": "150,000 - 200,000 USD YEAR"}
+    assert p.detail_builtin("<html></html>")["text"] == ""
+
+
 def test_listing_only_counters():
-    html = ('<div data-page="{&quot;props&quot;:{&quot;jobPostings&quot;:[{&quot;title&quot;:&quot;Product '
-            'Manager&quot;},{&quot;title&quot;:&quot;Designer&quot;}]}}"></div>')
-    assert p.count_yc(html, CTX) == {"listed": 2, "pm_titles": 1}
     hn = {"hits": [{"title": "Ask HN: Who is hiring? (October 2026)", "num_comments": 393}]}
     assert p.count_hn(hn, CTX)["listed"] == 393
     with pytest.raises(ValueError):
         p.count_hn({"hits": []}, CTX)
+    a16z = '<a href="/jobs/komodo/8868-principal-product-manager-ai">x</a><a href="/jobs/komodo">y</a>'
+    assert p.count_a16z(a16z, CTX) == {"listed": 1, "pm_titles": 1}
+
+
+def make(job_id, source, url, title="Senior Product Manager, AI", company="Acme"):
+    return p.Posting(job_id, source, company, title, "Remote", "Build AI.", url, CTX["captured_at"])
+
+
+@pytest.mark.parametrize("url,key", [
+    ("https://job-boards.greenhouse.io/Acme/jobs/123?gh_src=x", "greenhouse:acme:123"),
+    ("https://boards.greenhouse.io/acme/jobs/123", "greenhouse:acme:123"),
+    ("https://jobs.lever.co/acme/7a8b9c0d-1111-2222-3333-444455556666", "lever:acme:7a8b9c0d-1111-2222-3333-444455556666"),
+    ("https://jobs.ashbyhq.com/acme/7a8b9c0d-1111-2222-3333-444455556666/application", "ashby:acme:7a8b9c0d-1111-2222-3333-444455556666"),
+    ("https://Example.com/jobs/1/?utm_source=x#top", "https://example.com/jobs/1")])
+def test_canonical_keys(url, key):
+    assert p.canonical_key(url) == key
+
+
+def test_dedupe_merges_identical_employer_links_and_prefers_company_boards():
+    board = make("greenhouse:acme:123", "greenhouse:acme", "https://job-boards.greenhouse.io/acme/jobs/123")
+    aggregator = make("remotive:9", "remotive", "https://boards.greenhouse.io/acme/jobs/123?src=remotive")
+    kept = p.dedupe([aggregator, board])
+    assert [(posting.job_id, note) for posting, note in kept] == [("greenhouse:acme:123", "Also listed by: remotive")]
+
+
+def test_distinct_jobs_sharing_one_careers_page_path_are_not_merged():
+    one = make("greenhouse:acme:1", "greenhouse:acme", "https://acme.com/careers/job?gh_jid=111", title="PM, AI Search")
+    two = make("greenhouse:acme:2", "greenhouse:acme", "https://acme.com/careers/job?gh_jid=222", title="PM, AI Ads")
+    assert [n for _, n in p.dedupe([one, two])] == ["", ""]
+    assert p.canonical_key("https://acme.com/careers/job?gh_jid=111&utm_source=x") == "https://acme.com/careers/job?gh_jid=111"
+
+
+def test_a_source_never_merges_its_own_postings():
+    a = make("remotive:1", "remotive", "https://example.com/apply", title="PM, AI Search")
+    b = make("remotive:2", "remotive", "https://example.com/apply", title="PM, AI Ads")
+    assert len(p.dedupe([a, b])) == 2
+
+
+def test_look_alikes_are_flagged_for_review_never_merged():
+    a = make("greenhouse:acme:1", "greenhouse:acme", "https://job-boards.greenhouse.io/acme/jobs/1")
+    b = make("remotive:2", "remotive", "https://remotive.com/jobs/2")
+    kept = p.dedupe([a, b])
+    assert len(kept) == 2 and kept[0][1] == ""
+    assert kept[1][1].startswith("Possible duplicate of greenhouse:acme:1") and "needs review" in kept[1][1]
+    assert "needs review" in p.to_row(*kept[1])["More details"]
 
 
 def test_row_is_deterministic_and_excerpt_is_exact_prefix():

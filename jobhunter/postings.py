@@ -10,7 +10,7 @@ from html import unescape
 import hashlib
 import json
 import re
-from urllib.parse import urljoin
+from urllib.parse import parse_qsl, urljoin, urlsplit
 
 from bs4 import BeautifulSoup
 import feedparser
@@ -32,7 +32,13 @@ ANYWHERE = re.compile(r"\b(remote|anywhere|worldwide|global|hybrid)\b", re.I)
 NON_US = re.compile(r"\b(europe|emea|apac|asia|latam|canada|mexico|brazil|uk|united kingdom|london|"
                     r"ireland|dublin|germany|berlin|france|paris|spain|netherlands|amsterdam|india|"
                     r"bangalore|singapore|japan|tokyo|australia|sydney|israel|tel aviv|poland|"
-                    r"portugal|sweden|switzerland|zurich|dubai|nigeria|kenya|south africa)\b", re.I)
+                    r"portugal|sweden|switzerland|zurich|dubai|nigeria|kenya|south africa|bengaluru|mumbai|delhi|"
+                    r"hyderabad|pune|chennai|gurgaon|gurugram|noida|karnataka|philippines|manila|vietnam|"
+                    r"indonesia|jakarta|argentina|buenos aires|colombia|bogota|chile|santiago|turkey|"
+                    r"istanbul|egypt|cairo|pakistan|bangladesh|china|shanghai|beijing|hong kong|korea|seoul|"
+                    r"taiwan|new zealand|auckland|italy|milan|rome|belgium|brussels|denmark|copenhagen|"
+                    r"norway|oslo|finland|helsinki|austria|vienna|czech|prague|romania|bucharest|ukraine)\b", re.I)
+COUNTRY_CODE = re.compile(r",\s*[A-Z]{2},\s*([A-Z]{2})\b")
 LOCATION_US_CODE = re.compile(r",\s*(?:A[LKZR]|C[AOT]|DE|FL|GA|HI|I[ADLN]|K[SY]|LA|M[ADEINOST]|"
                               r"N[CDEHJMVY]|O[HKR]|PA|RI|S[CD]|T[NX]|UT|V[AT]|W[AIVY]|DC)\b")
 
@@ -89,6 +95,8 @@ def us_or_unknown(location: str) -> bool:
     if US_TERMS.search(location):  # country or well-known US city: allow even if a non-US place is also listed
         return True
     if NON_US.search(location):  # checked before ambiguous two-letter codes (", DE" is Germany or Delaware)
+        return False
+    if any(code != "US" for code in COUNTRY_CODE.findall(location)):  # "City, ST, CC" with a non-US country
         return False
     return bool(LOCATION_US_CODE.search(location) or ANYWHERE.search(location))
 
@@ -260,21 +268,114 @@ def _page_json(text):
     return json.loads(unescape(match.group(1)))
 
 
-def count_yc(text, ctx):
-    """Listing only: titles, no description text. Counts coverage, delivers nothing."""
-    jobs = _page_json(text)["props"]["jobPostings"]
-    titles = [plain(j.get("title")) for j in jobs if isinstance(j, dict)]
-    return {"listed": len(titles), "pm_titles": sum(is_pm_title(t) for t in titles)}
+def _stub_text(value):
+    return plain(value) if isinstance(value, str) else ""
 
 
-def count_getro(text, ctx):
+def stubs_yc(text, ctx):
+    """Listing rows for YC product jobs; the description comes from each job's own page."""
+    stubs, rejected = [], 0
+    for job in _page_json(text)["props"]["jobPostings"]:
+        try:
+            stubs.append({"job_id": f"{ctx['source_id']}:{job['id']}", "company": _stub_text(job.get("companyName")),
+                          "title": _stub_text(job.get("title")), "location": _stub_text(job.get("location")),
+                          "url": absolute("https://www.ycombinator.com", job["url"]),
+                          "salary": _stub_text(job.get("salaryRange"))})
+        except (KeyError, TypeError, AttributeError):
+            rejected += 1
+    return stubs, rejected
+
+
+LD_JSON = re.compile(r'<script type="application/ld(?:\+|&#x2B;)json">(.*?)</script>', re.S)
+
+
+def _json_ld_blocks(text):
+    for block in LD_JSON.findall(text):
+        try:
+            data = json.loads(block)
+        except (ValueError, RecursionError):
+            continue
+        for item in data.get("@graph", [data]) if isinstance(data, dict) else data:
+            if isinstance(item, dict):
+                yield item
+
+
+def _job_posting(text):
+    return next((item for item in _json_ld_blocks(text) if item.get("@type") == "JobPosting"), {})
+
+
+def detail_yc(text):
+    return {"text": clean_html(_job_posting(text).get("description"))}
+
+
+def stubs_builtin(text, ctx):
+    """Built In listing: JSON-LD ItemList of titles and links; company and place come from each job page."""
+    stubs, rejected = [], 0
+    for block in _json_ld_blocks(text):
+        if block.get("@type") != "ItemList":
+            continue
+        for item in block.get("itemListElement", []):
+            try:
+                match = re.search(r"/job/[^/]+/(\d+)$", item["url"])
+                stubs.append({"job_id": f"{ctx['source_id']}:{match.group(1)}", "company": "", "location": "",
+                              "title": _stub_text(item.get("name")), "url": item["url"], "salary": ""})
+            except (KeyError, TypeError, AttributeError):
+                rejected += 1
+    return stubs, rejected
+
+
+def detail_builtin(text):
+    job = _job_posting(text)
+    org = job.get("hiringOrganization")
+    places = job.get("jobLocation") or []
+    places = places if isinstance(places, list) else [places]
+    parts = []
+    for place in places:
+        address = place.get("address", {}) if isinstance(place, dict) else {}
+        label = ", ".join(plain(address.get(k)) for k in ("addressLocality", "addressRegion", "addressCountry")
+                          if isinstance(address.get(k), str) and address.get(k).strip())
+        if label:
+            parts.append(label)
+    requirement = job.get("applicantLocationRequirements")
+    if not parts and isinstance(requirement, dict) and isinstance(requirement.get("name"), str):
+        parts.append(plain(requirement["name"]))
+    salary = job.get("baseSalary", {}).get("value", {}) if isinstance(job.get("baseSalary"), dict) else {}
+    return {"text": clean_html(job.get("description")),
+            "company": plain(org.get("name")) if isinstance(org, dict) else "",
+            "location": "; ".join(parts),
+            "salary": _salary(salary.get("minValue"), salary.get("maxValue"), "USD", salary.get("unitText"))
+            if isinstance(salary, dict) else ""}
+
+
+def _getro_state(text):
     match = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', text, re.S)
     if not match:
         raise ValueError("invalid_board_response")
-    jobs = json.loads(match.group(1))["props"]["pageProps"]["initialState"]["jobs"]
-    titles = [plain(j.get("title")) for j in jobs["found"] if isinstance(j, dict)]
-    return {"listed": len(titles), "pm_titles": sum(is_pm_title(t) for t in titles),
-            "total_on_board": jobs.get("total")}
+    return json.loads(match.group(1))["props"]["pageProps"]["initialState"]["jobs"]
+
+
+def stubs_getro(text, ctx):
+    stubs, rejected = [], 0
+    base = "https://" + urlsplit(ctx["url"]).hostname
+    for job in _getro_state(text)["found"]:
+        try:
+            org = job["organization"]
+            low, high = job.get("compensationAmountMinCents"), job.get("compensationAmountMaxCents")
+            salary = _salary(low // 100 if type(low) is int else None, high // 100 if type(high) is int else None,
+                             job.get("compensationCurrency"), job.get("compensationPeriod"))
+            locations = job.get("locations") or job.get("searchableLocations") or []
+            stubs.append({"job_id": f"{ctx['source_id']}:{job['id']}", "company": _stub_text(org.get("name")),
+                          "title": _stub_text(job.get("title")),
+                          "location": ", ".join(_stub_text(x) for x in locations if isinstance(x, str)),
+                          "url": f"{base}/companies/{org['slug']}/jobs/{job['slug']}", "salary": salary})
+        except (KeyError, TypeError, AttributeError):
+            rejected += 1
+    return stubs, rejected
+
+
+def detail_getro(text):
+    job = _getro_state(text).get("currentJob") or {}
+    return {"text": clean_html(job.get("description"))}
 
 
 def count_a16z(text, ctx):
@@ -293,19 +394,82 @@ def count_hn(data, ctx):
 PARSERS = {"greenhouse": parse_greenhouse, "lever": parse_lever, "ashby": parse_ashby,
            "remotive": parse_remotive, "remoteok": parse_remoteok, "himalayas": parse_himalayas,
            "jobicy": parse_jobicy, "themuse": parse_themuse, "wwr": parse_wwr_rss}
-LISTING_ONLY = {"yc": count_yc, "getro": count_getro, "a16z": count_a16z, "hn": count_hn}
+LISTING_ONLY = {"a16z": count_a16z, "hn": count_hn}
+DETAIL_SOURCES = {"yc": (stubs_yc, detail_yc), "getro": (stubs_getro, detail_getro),
+                  "builtin": (stubs_builtin, detail_builtin)}
 
 
-def to_row(posting: Posting) -> dict:
+ATS_LINKS = [(re.compile(r"^https://(?:job-boards|boards)\.greenhouse\.io/([^/]+)/jobs/(\d+)", re.I), "greenhouse"),
+             (re.compile(r"^https://jobs\.lever\.co/([^/]+)/([0-9a-f-]{36})", re.I), "lever"),
+             (re.compile(r"^https://jobs\.ashbyhq\.com/([^/]+)/([0-9a-f-]{36})", re.I), "ashby")]
+SOURCE_PRIORITY = {"greenhouse": 0, "lever": 0, "ashby": 0, "yc-product": 1, "getro-accel": 1, "getro-primary": 1,
+                   "builtin-product": 1}
+
+
+TRACKING_PARAMS = re.compile(r"^(utm_.*|ref|referrer|source|src|gh_src|lever-source|lever-origin|fbclid|gclid|"
+                             r"campaign|medium|trk|tracking.*)$", re.I)
+
+
+def canonical_key(url: str) -> str:
+    """The employer's own posting identity when the link names it, else the URL minus tracking.
+
+    Query parameters that identify a job (for example `gh_jid=<id>` on a company careers page) are
+    kept, so distinct jobs sharing one page path are never mistaken for one posting.
+    """
+    for pattern, kind in ATS_LINKS:
+        match = pattern.match(url)
+        if match:
+            return f"{kind}:{match.group(1).lower()}:{match.group(2).lower()}"
+    parts = urlsplit(url)
+    pairs = sorted((k.lower(), v) for k, v in parse_qsl(parts.query) if not TRACKING_PARAMS.match(k))
+    query = "&".join(f"{k}={v}" for k, v in pairs)
+    return f"{parts.scheme}://{parts.hostname}{parts.path.rstrip('/')}".lower() + (f"?{query}" if query else "")
+
+
+def _similar(posting: Posting) -> str:
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", f"{posting.company} {posting.title}".lower()).split())
+
+
+def dedupe(postings):
+    """[(posting, note)]: merge only identical employer links/requisitions; flag look-alikes.
+
+    Company/title similarity alone never merges (PLAN): it adds a review note and keeps both rows.
+    Company boards win over aggregators; the winner's note lists the other discovery sources.
+    """
+    def rank(posting):
+        return SOURCE_PRIORITY.get(posting.source_id.split(":")[0], SOURCE_PRIORITY.get(posting.source_id, 2))
+    ordered = sorted(postings, key=rank)  # stable: first-seen order inside a priority
+    kept, by_key, by_similar = [], {}, {}
+    for posting in ordered:
+        key = canonical_key(posting.apply_url)
+        if key in by_key and by_key[key]["posting"].source_id != posting.source_id:
+            by_key[key]["also"].append(posting.source_id)
+            continue
+        entry = {"posting": posting, "also": [], "similar": by_similar.get(_similar(posting))}
+        by_key.setdefault(key, entry)
+        by_similar.setdefault(_similar(posting), posting.job_id)
+        kept.append(entry)
+    notes = []
+    for entry in kept:
+        parts = []
+        if entry["also"]:
+            parts.append("Also listed by: " + ", ".join(sorted(set(entry["also"]))))
+        if entry["similar"]:
+            parts.append(f"Possible duplicate of {entry['similar']} (same company and title, different link; needs review)")
+        notes.append((entry["posting"], "\n".join(parts)))
+    return notes
+
+
+def to_row(posting: Posting, note: str = "") -> dict:
     """Deterministic Jobs row; the description is an exact leading excerpt of source text."""
     quote = posting.text[:300].rstrip()
     rank = {"ai": 1, "bigtech": 2, "other": 3}[posting.tag]
+    details = f"Source: {posting.apply_url}\nEvidence: {quote}" + (f"\n{note}" if note else "")
     return {"Job ID": posting.job_id, "Date found": posting.captured_at[:10],
             "Job title": posting.title, "Company": posting.company, "Salary": posting.salary,
             "Location": posting.location, "Brief description": quote, "Apply link": posting.apply_url,
             "Source": posting.source_id, "Rank (prelim)": rank, "Fit": "", "Next step": "",
-            "Status": "New", "Notes": "", "My rating": "",
-            "More details": f"Source: {posting.apply_url}\nEvidence: {quote}"}
+            "Status": "New", "Notes": "", "My rating": "", "More details": details}
 
 
 def absolute(base: str, url: str) -> str:
