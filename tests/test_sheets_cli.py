@@ -93,3 +93,14 @@ def test_unexpected_writer_failure_is_distinct_from_bad_input_and_sanitized(tmp_
     assert 'check pending state and lock before another run' in output
     assert 'invalid_sync_input' not in output and 'private workbook' not in output
     assert len(backend.tables['Jobs']) == 2  # failure can follow an applied mutation
+
+
+def test_missing_input_file_is_reported_before_google_access(tmp_path, monkeypatch, capsys):
+    from scripts import sheets_sync
+    def unexpected_google_access():
+        raise AssertionError('Google must not open for missing input')
+    monkeypatch.setattr(sheets_sync, 'open_workbook', unexpected_google_access)
+    assert sheets_sync.main(['--input', str(tmp_path / 'missing-private.json')]) == 2
+    output = capsys.readouterr().out
+    assert 'sync_failed: invalid_sync_input' in output
+    assert 'unexpected_sync_error' not in output and 'missing-private' not in output
