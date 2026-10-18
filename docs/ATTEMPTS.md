@@ -1,5 +1,22 @@
 # Implementation attempt log
 
+## October 18 PR #14 watcher — review/repair cycle 1
+
+- Codex reviewed Claude head `5cf687c1e3cfde90def9eab9f2cd2f74f8b3b633`:
+  P1 stale-head clean result and P2 earlier-request usage-limit termination.
+  `scripts/wait_codex_review.sh 14 <head> 1` returned findings (exit 1).
+- Codex took over repairs on `codex/review-watcher-fixes`. Three regression
+  failures reproduced both defects, including a push during response retrieval.
+  The watcher now compares the live head before polling and before clean exit,
+  and dates usage-limit replies against the latest human review request (or the
+  wait start if none exists). Five focused tests pass; full offline suite:
+  384 tests / 10 subtests passed. Bash syntax and diff checks passed.
+- This fix set requires opposite-agent Claude review of its pushed full SHA;
+  the original Codex review does not approve the new Codex-authored repairs.
+  Linux/Windows CI and current review are still required. No runtime/deployment
+  proof or source collection was performed. Claude's previous review action
+  failed with `is_error:true`, not a completed review; do not bypass a required check.
+
 ## October 18 source cycle13 — Claude salary-modifier follow-up
 
 - Claude's exact5710dd3 review found no blocking issue but noted the concrete

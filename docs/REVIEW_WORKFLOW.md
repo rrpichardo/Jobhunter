@@ -20,8 +20,11 @@ substantive fixes. Existing three-cycle counters apply across handoffs and PRs.
    does not satisfy the gate. After fixes, push and request another review.
    Use `scripts/wait_codex_review.sh <pr> <full-head-sha> [minutes]` to wait: it recognises
    Codex's clean receipt, a review with inline findings, the summary state and a usage-limit
-   reply (exit 0 clean, 1 findings, 2 usage limit, 3 timeout). Only exit 0 for the exact
-   current head counts as a clean review.
+   reply (exit 0 clean, 1 findings, 2 usage limit, 3 timeout or changed head). It checks
+   the live PR head before polling and again before reporting clean. Usage-limit
+   replies before the latest human review request are ignored; without a request,
+   only replies since the wait began count. Only exit 0 for the exact current head
+   counts as a clean review. Recheck the SHA at merge time as well.
 4. If the GitHub integration is unavailable, have Codex review the PR in the
    Codex app/IDE, or use the already-installed local Codex CLI in a clean separate
    checkout of the PR: `git fetch origin`, `gh pr checkout <number>`, then
