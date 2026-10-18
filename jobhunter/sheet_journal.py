@@ -94,7 +94,7 @@ class SheetJournal:
             raise ValueError('journal_payload_too_large')
         digest = hashlib.sha256(raw.encode('ascii')).hexdigest()
         _, entries = self._entries()
-        if f'{QUARANTINE}{identity}/manifest' in entries:
+        if any(key.startswith(f'{QUARANTINE}{identity}/') for key in entries):
             raise ValueError('run_id_quarantined')
         manifest_key = f'{PREFIX}{identity}/manifest'
         if manifest_key in entries:

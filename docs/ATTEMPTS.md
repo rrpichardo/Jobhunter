@@ -1,5 +1,22 @@
 # Implementation attempt log
 
+## October 18 Codex review repairs — user-authorized extension
+
+- Codex reviewed exact writer head `6a61f356d1e472f34ea6242a3c0b76bb02a88f6b`
+  (the previously undelivered cycle 3). It reproduced reuse of a quarantined run ID
+  when the damaged journal has no manifest. The #7 completed-Run-Log recovery issue
+  is already fixed in #8 and is not a new outstanding repair.
+- The user then instructed "Implement the changes", authorizing one additional
+  writer fix/review cycle (4). Prior counters remain intact; this does not authorize
+  an unlimited extension. Codex is the sole active implementation owner.
+- Added an end-to-end regression: remove a pending run's manifest, quarantine its
+  remaining chunks without changing their values, and refuse that ID before Jobs
+  mutation. It failed on the reviewed code. Preparation now checks any quarantined
+  key for the identity, including orphan chunks. Locked full suite: 155 tests and
+  10 subtests passed; `git diff --check` passed. Fresh Claude review is required.
+- This repair does not repeat live collection or Google writes, change deployment
+  status, or satisfy the outstanding cloud/schedule acceptance gates.
+
 This is the durable log for implementation blockers and milestone repair cycles.
 Read it before retrying work. Maximum: three distinct attempts per blocker and
 three repair/review cycles per milestone. Counters survive handoffs and restarts.
