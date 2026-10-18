@@ -295,3 +295,30 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
   connectivity, not write endpoints, recovery or serialization. No Google writes.
 - Cycle 2 / 3 is the fresh review of the safe-discriminator and handoff fixes.
   Local locked suite: 71 tests/10 subtests passed. No secret value in tracked files.
+
+## M0 writer/recovery implementation — continuation
+
+- PR #6 merged at `fa899c32de3267507c51658274d5bc2509ef7193` after exact-head
+  Claude cycle-2 review, 71 tests/10 subtests locally and in JobHunterEnv, plus
+  Linux/Windows CI. Main rerun passed 71 tests/10 subtests. Code is a connection
+  foundation only. User then directed Codex to continue rather than hand off now.
+- New owner branch: `codex/m0-sheet-sync`; Codex remains sole implementer.
+- Write-endpoint proof attempt 1 / 3 succeeded in actual JobHunterEnv at229a97b:
+  one atomic addSheet/updateCells structural call created hidden `_M0AuthProbe`
+  (sheet ID 2026101801), and one RAW values batch wrote a harmless literal.
+  FORMULA readback exactly matched `=jobhunter_probe_literal`; it was not executed
+  as a formula. All reported booleans true, exit 0, clean tree. Tool output
+  expanded/verified. No retry, user cells unchanged, probe tab retained.
+  This proves endpoint compatibility, not application writer/recovery/concurrency.
+- Wrote failing planner, lock and adapter tests, then implementations. Planner
+  tests preserve user fields/first seen, reordered headers, sorted rows, duplicate
+  identities, ambiguous headers and RAW-ready literal values. Lock tests cover
+  overlap and uncertain acquisition/deletion. Adapter tests prove atomic owner
+  creation, RAW range writes, append-only grid growth and sanitized HTTP evidence.
+
+- Journal, engine and CLI now pass test-first behavior checks, including bounded
+  retries, exact long-delay stop, explicit pending Run Log before job mutation,
+  same-ID repeat verification, multi-chunk replay and corruption rejection.
+- `uv run --locked python -m pytest -q`: 107 tests/10 subtests passed locally;
+  diff whitespace check passed. Application writer live proof and fresh Claude
+  review remain outstanding; no milestone completion or deployment claim.

@@ -1,6 +1,7 @@
 # Claude Code continuation handoff
 
-Updated October 17, 2026. Read this first, then AGENTS.md, docs/PLAN.md,
+Updated October 17, 2026. Codex remains the active implementation owner; the user
+chose to continue here after preparing this handoff. Read this first, then AGENTS.md, docs/PLAN.md,
 docs/SETUP.md and docs/ATTEMPTS.md. This is an implementation handoff, not the
 daily routine prompt. V0 is **not deployed**. Do not restart completed milestones.
 
@@ -20,7 +21,9 @@ daily routine prompt. V0 is **not deployed**. Do not restart completed milestone
 
 - Repository: `rrpichardo/Jobhunter` (private). Main includes PR #4 (`7f77cb5`)
   and PR #5 (`d77842dc91ebb236f959a3dc1702cbff561856d4`).
-- Current work started on `codex/m0-sheet-writer`. Its initial commit is
+- PR #6 merged at `fa899c32de3267507c51658274d5bc2509ef7193`. Current writer
+  work continues on `codex/m0-sheet-sync`; check for newer commits/open PRs.
+- The connection checkpoint started on `codex/m0-sheet-writer`. Its initial commit is
   `4ebb680`; later handoff/review commits may follow. Inspect `git status`,
   `git log`, remote main and open PRs; do not assume this file is the latest SHA.
 - PR #5 is merged: https://github.com/rrpichardo/Jobhunter/pull/5 . It implements
@@ -29,7 +32,8 @@ daily routine prompt. V0 is **not deployed**. Do not restart completed milestone
 - The current change adds `jobhunter/google_auth.py` and tests: explicit
   `network-secret` mode, AnonymousCredentials for gspread, workbook-by-ID access,
   20-second timeout, sanitized failure. It is a connection foundation, **not a
-  Sheet writer**. Initial cloud read access is proven; write paths remain unproved.
+  Sheet writer**. Initial cloud read and isolated structural/RAW endpoints are
+  proven; full writer, locking, recovery and schedule remain unproved.
 - User specifically requests all work committed/pushed, reviewed merges, and
   this ready-to-use handoff so Claude Code can continue when Codex runs out.
   Verify the current PR's status/review rather than treating this text as approval.
@@ -104,7 +108,8 @@ read-only code review; local review is not cloud-execution evidence.
 - Claude docs say the network proxy mints/injects tokens after requests leave
   the VM; the key stays outside the VM. The current Python candidate uses
   `gspread.Client(auth=AnonymousCredentials())`; read access succeeded. Write-path
-  compatibility must still be proven.
+  compatibility passed an isolated hidden-tab test; application behavior remains
+  unproved. See the latest ATTEMPTS.md entries.
 - Non-secret config has been saved: `JOBHUNTER_GOOGLE_AUTH_MODE=network-secret` and
   `JOBHUNTER_SPREADSHEET_ID` set to the ID above. Existing sessions may need a
   fresh session for changed environment variables. Don't dump environment values.
@@ -120,8 +125,9 @@ read-only code review; local review is not cloud-execution evidence.
 
 Follow `docs/superpowers/plans/2026-10-17-m0-sheet-writer.md` and the binding plan:
 
-1. Read access is proven; verify harmless RAW write/readback and the lock batch
-   endpoint before calling writer authentication ready. Implement safe Jobs upserts keyed by
+1. Read and isolated structural/RAW write/readback endpoints are proven. Finish
+   the writer and its live recovery/lock checks; endpoint proof is not concurrency
+   or application proof. Implement safe Jobs upserts keyed by
    Job ID, RAW writes, chunking, header/duplicate checks and readback. Preserve
    Status, Notes, My rating and original Date found on existing rows. Sampling
    records are not eligibility decisions.
