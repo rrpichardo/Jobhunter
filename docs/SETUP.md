@@ -14,6 +14,10 @@
   patterns, then test a fresh dedicated-account alert through destination labeling
   and cloud collection. Old main-account subscriptions/messages are a separate,
   deferred user-assisted cleanup. See PLAN.md's current operator checklist.
+- Starter filters were prepared but not installed: three UI investigations hit
+  unexpected navigation, including to Drafts at the forwarding-checkbox action.
+  Further UI attempts are paused pending user manual completion or relevant tool
+  changes. No existing alert was deleted, archived or unsubscribed.
 
 ## October 18 continuation — Gmail setup in progress
 

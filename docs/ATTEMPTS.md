@@ -1,5 +1,38 @@
 # Implementation attempt log
 
+## October 18 PR #15 cycle 3 result — further work authorized
+
+- Claude reviewed exact `8fc2a7c12a8129b0e27f8f9472a62db0cee52ef6`, confirmed
+  the automatic-review old-limit finding resolved, and manually checked jq on three
+  timestamp scenarios. It did not run the suite. Current-head local verification
+  passed 386 tests / 10 subtests, Bash syntax and diff checks; Linux, Windows and
+  the Claude action are green. A green action is not the actual review report.
+- One actionable low-severity documentation issue remains: REVIEW_WORKFLOW says
+  to post the request before starting the watcher; a fast usage-limit reply in
+  between is intentionally ignored and can become a timeout. Proposed docs-only
+  repair: start the watcher before a manual request and explain pre-start replies
+  for automatic reviews. No new code repair has been made for this finding.
+- Three watcher review/repair cycles were exhausted. User then explicitly said
+  not to worry about the cap for this PR, authorizing continued watcher repair
+  and review. This exception does not reset other source/setup blocker counters.
+  The docs now start the watcher before a manual request and explain pre-start
+  automatic-review replies. Obtain fresh exact-head Claude review and CI before
+  merging; non-blocking severity alone is not resolution.
+
+## October 18 Gmail filter UI — three attempts exhausted
+
+- Forwarding destination registration is verified; destination `JobHunter` label
+  exists. Global forwarding remains disabled. No JobHunter filter is installed.
+- Three source-filter UI investigations encountered unexpected navigation: the
+  existing tab first returned to settings during a narrow search, then switched
+  to Drafts at the forwarding-checkbox action. A fresh owned tab using DOM-only
+  controls also switched to Drafts at that action. The agent stopped without
+  saving any filter; no fourth investigation is authorized.
+- Stop this UI blocker until the user manually selects the forwarding action or
+  a relevant tool/UI capability changes. Prepared conservative sender/subject
+  rules are not installed or delivered-mail proof. Dedicated-account alerts still
+  need enabling; user-assisted old-main-account subscription cleanup is deferred.
+
 ## October 18 PR #15 watcher — review/repair cycle 2
 
 - After the reported session-limit reset, Claude CLI reviewed exact head

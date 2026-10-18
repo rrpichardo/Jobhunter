@@ -2,6 +2,13 @@
 
 ## Latest continuation — PR review and operator checklist
 
+- Cycle-3 Claude review of `8fc2a7c` confirmed the code findings fixed but found
+  request-before-watcher documentation could miss fast usage-limit replies. User
+  explicitly waived this PR's repair cap. Corrected the manual request order and
+  documented pre-start automatic-review limits; fresh pushed-head review/CI remain
+  required. The Gmail UI blocker has three attempts and is still paused; no filter
+  was installed. Dedicated alerts still need enabling. See ATTEMPTS.md.
+
 - PLAN.md now records the unresolved user setup/decision list, including enabling
   dedicated-account alerts and later cleanup of old main-account subscriptions.
   Forwarding registration is verified, but fresh alert delivery/cloud Gmail access

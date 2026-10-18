@@ -21,6 +21,9 @@ resources already provisioned. Pending choices do not silently change current li
   may inform initial rules under the user's explicit setup-only permission, but
   does not prove current dedicated-account delivery. Verify a fresh forwarded alert
   and actual cloud label-only access; routine Gmail scope remains unchanged.
+  Filter installation encountered three unexpected UI navigations to Drafts;
+  no filter was saved. Pause that UI blocker pending user manual completion of
+  the forwarding action or a relevant tool/UI change (see ATTEMPTS.md).
 - [ ] Later, when the user asks, help stop/clean up old job-alert subscriptions in
   the main mailbox. No unsubscribe, archive or deletion is authorized by this
   checklist; the user expressly deferred that cleanup.
