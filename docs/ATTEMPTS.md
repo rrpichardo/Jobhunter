@@ -1,5 +1,12 @@
 # Implementation attempt log
 
+## October 18 source cycle 6 — propagated input diagnostic
+
+- Propagated writer cycle 7 after resolving the input-read merge while retaining
+  schema-2 dispatch. Geography code is unchanged from source cycle 5. Locked full
+  suite: 290 tests and 10 subtests passed; no live calls or pushes. The next source
+  review covers only this additional diagnostic patch and the updated count.
+
 ## October 18 source review cycle 5 — US location collisions
 
 - Claude reviewed local `dda10ef` and found US cities named for regional
