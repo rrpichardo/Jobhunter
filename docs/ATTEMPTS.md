@@ -721,12 +721,14 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
   attempt from the social-auth blocker counter.
 - Gmail: connector `list_labels` shows no `JobHunter` label; forwarding/label setup is open.
 
-### Merged main verified in JobHunterEnv (October 18, 2026)
+### Cloud run of main at 36539f4, before PR #11 (October 18, 2026)
 
 - PRs #4-#10 are merged and CI is green on the merge commits. `main` at `36539f4`, which contains
   repair commits written after the earlier cloud runs, was run in JobHunterEnv: 304 tests, the 8-scenario
   harness (0 failures) and a real delivery with an identical repeat, all exit 0. Details and the one
   behavior change (a work-mode line appended to `More details` on 21 earlier rows) are in
   V0_VERIFICATION.md. No new blocker attempt was consumed.
-- Codex review of the writer (cycle 3 of 3) was never delivered; the merges followed the user's
-  explicit instruction with Claude reviews of the repaired heads. That gap stays recorded.
+- This is evidence for `36539f4` only. Codex's post-merge review later found three P2 defects in that
+  revision and PR #11 (`cf1424f`) fixed them, so the current `main` has not been run in the cloud.
+  The pre-merge Codex cycle-3 review was never delivered (usage limit); the later Codex reviews are
+  post-merge and are described in V0_VERIFICATION.md, not repeated here.

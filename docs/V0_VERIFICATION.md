@@ -319,7 +319,7 @@ all code were unaffected. Both files were restored from `6a61f35` with the later
 new commits (no history rewrite). Check with `git diff --stat` that docs changes have no unexpected
 deletions before committing.
 
-## Merged main verified in JobHunterEnv — October 18, 2026
+## Cloud run of main at 36539f4, before PR #11 — October 18, 2026
 
 Scope: after PRs #4-#10 were merged, `main` at `36539f4` (which includes repair commits written by
 another session after the last cloud runs of `c6bcf8c`) was run end to end in the actual Claude cloud
@@ -348,5 +348,9 @@ scheduled run and not the daily trial.
   untouched).
 - Same four "Possible duplicate ... needs review" flags as before (three Databricks pairs, one Harvey
   pair); both rows of each pair are kept.
-- Not proven: scheduled M0 (no routine exists), Codex review of the merged code (cycle 3/3 of the writer
-  review was never delivered), Gmail, LinkedIn, X, and the sources that need keys, accounts or logins.
+- **Superseded:** Codex's later post-merge review found three P2 defects in exactly this revision
+  (`36539f4`; see "Post-merge Codex review scope" above), and PR #11 (merged as `cf1424f`) fixed them in
+  `postings.py` and `sheet_records.py`. This run therefore proves only `36539f4`. The current `main` and the
+  `More details` behavior above were **not** re-run in the cloud, so the 21-row note may no longer match.
+- Not proven: scheduled M0 (no routine exists), Gmail, LinkedIn, X, the sources that need keys, accounts
+  or logins, and a cloud run of anything after `36539f4`.
