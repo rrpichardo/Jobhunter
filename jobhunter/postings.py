@@ -150,10 +150,14 @@ def regional_salary_match(salary: str) -> bool:
         if not (annual_after or annual_before):
             continue  # another currency figure elsewhere is not evidence of annual pay
         non_salary = r'(?:bonus|commission|benefits?|allowance|reimbursement)'
-        labelled_before = re.search(rf'\b{non_salary}(?:\s+of)?\s*[:=]?\s*$', before, re.I)
+        # Use the current compensation clause, keeping decimal/thousands separators intact.
+        context = re.split(r'[;+\n]|(?<!\d)[,.]|[,.](?!\d)', before)[-1]
+        labels = re.findall(rf'\b(?:{non_salary}|salary|base)\b', context, re.I)
+        labelled_before = labels and labels[-1].casefold() not in {'salary', 'base'}
+        non_salary_after = r'(?:bonus|commission|allowance|reimbursement|benefits?\b(?!\s+(?:included|available|offered)\b))'
         labelled_after = annual_after and re.match(
-            rf'\s*(?:(?:performance|cash|target|guaranteed|retention|signing|discretionary|in)\s+)*'
-            rf'{non_salary}\b', after[annual_after.end():], re.I)
+            rf'\s*(?:(?:performance|cash|target|guaranteed|retention|sign(?:ing|[- ]on)|discretionary|in)\s+)*'
+            rf'{non_salary_after}\b', after[annual_after.end():], re.I)
         if labelled_before or labelled_after:
             continue
         pay = match.group(1) or match.group(2)

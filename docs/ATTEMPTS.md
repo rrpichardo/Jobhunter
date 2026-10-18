@@ -1,5 +1,17 @@
 # Implementation attempt log
 
+## October 18 source cycle13 — Claude salary-modifier follow-up
+
+- Claude's exact5710dd3 review found no blocking issue but noted the concrete
+  "bonus up to" salary bypass and a benefits-included false exclusion. Four
+  regressions failed for capped bonus, sign-on bonus, target-bonus labels and a
+  qualifying salary with benefits included. Current-clause compensation labels
+  now distinguish those amounts without requiring the label to touch the figure.
+- Remote/provenance implementation is unchanged. Full locked suite: 330 tests
+  and 10 subtests passed; diff whitespace check passed. Only Claude is requested
+  to review these Codex-authored changes, per the user's exclusive review rule.
+  No same-agent approval gate is requested. CI/Claude review still precede merge.
+
 ## October 18 review ownership clarified by the user
 
 - The user explicitly requires Codex to review Claude's changes and Claude to

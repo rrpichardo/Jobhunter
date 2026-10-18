@@ -15,7 +15,7 @@ The historical cloud runs below prove only the revisions they name. Review repai
 were developed under a local-only restriction. The user has now authorized their
 push and integration; they have not been exercised against live sources/Google
 Sheets. Integration does not extend the historical cloud evidence.
-The current local full suite passes 325 tests and 10 subtests; this is offline
+The current local full suite passes 330 tests and 10 subtests; this is offline
 evidence, not a Claude reviewer test run or deployment proof.
 
 Identity policy after review: merge verified ATS requisitions and matching explicit

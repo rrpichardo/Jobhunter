@@ -355,6 +355,11 @@ def test_row_is_deterministic_and_excerpt_is_exact_prefix():
     ('USD 50,000 - 60,000 per year + USD 100,000 annual bonus', False),
     ('USD 50,000 - 60,000 per year; Annual bonus: USD 100,000', False),
     ('USD 80,000 per year + USD 100,000 annual bonus', True),
+    ('USD 50,000 per year, bonus up to USD 100,000 per year', False),
+    ('USD 120,000 per year benefits included', True),
+    ('USD 50,000 per year + USD 100,000 annual sign-on bonus', False),
+    ('USD 50,000 per year; annual bonus (target): USD 100,000 per year', False),
+    ('USD 80,000 per year, bonus up to USD 100,000 per year', True),
 ])
 def test_regional_salary_uses_currency_linked_amounts_only(salary, expected):
     assert p.regional_salary_match(salary) is expected
