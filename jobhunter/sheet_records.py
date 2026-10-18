@@ -139,14 +139,23 @@ def reconcile_jobs(rows, records):
         if identity not in known and identity not in planned and key is not None:
             matches = [candidate for candidate in by_link.get(key, ())
                        if (planned.get(candidate) or known[candidate])['Source'] != record['Source']]
-            if len(matches) > 1 or (matches and key.startswith('https://')):
+            if len(matches) > 1:
                 # Never choose between rows whose user-owned cells may disagree.
                 # A shared generic/custom URL does not verify which requisition
                 # from another source an existing row represents.
                 raise ValueError('ambiguous_existing_job_identity')
-            if matches:
+            if matches and key.startswith('https://'):
+                record = record | {'More details': record['More details'] +
+                    f'\nPossible duplicate of {matches[0]} (shared application link; requisition identity unverified; needs review)'}
+            elif matches:
                 identity = matches[0]
         previous = planned.get(identity) or known.get(identity)
+        if previous:
+            details = record['More details'].splitlines()
+            details.extend(line for line in previous['More details'].splitlines()
+                           if line.startswith('Possible duplicate of ') and 'needs review' in line
+                           and line not in details)
+            record = record | {'More details': '\n'.join(details)}
         record = record | {'Job ID': identity, 'More details': _discovery_details(record, previous),
                            'Source': previous['Source'] if previous else record['Source']}
         planned[identity] = record

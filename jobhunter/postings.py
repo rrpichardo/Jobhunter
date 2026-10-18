@@ -459,10 +459,12 @@ def dedupe(postings):
     kept, by_key, by_similar = [], {}, {}
     for posting in ordered:
         key = canonical_key(posting.apply_url)
-        if key in by_key and by_key[key]["posting"].source_id != posting.source_id:
+        if (not key.startswith('https://') and key in by_key
+                and by_key[key]["posting"].source_id != posting.source_id):
             by_key[key]["also"].append(posting.source_id)
             continue
-        entry = {"posting": posting, "also": [], "similar": by_similar.get(_similar(posting))}
+        entry = {"posting": posting, "also": [], "similar": by_similar.get(_similar(posting)),
+                 'shared': by_key[key]['posting'].job_id if key.startswith('https://') and key in by_key else None}
         by_key.setdefault(key, entry)
         by_similar.setdefault(_similar(posting), posting.job_id)
         kept.append(entry)
@@ -471,7 +473,9 @@ def dedupe(postings):
         parts = []
         if entry["also"]:
             parts.append("Also listed by: " + ", ".join(sorted(set(entry["also"]))))
-        if entry["similar"]:
+        if entry['shared']:
+            parts.append(f"Possible duplicate of {entry['shared']} (shared application link; requisition identity unverified; needs review)")
+        elif entry["similar"]:
             parts.append(f"Possible duplicate of {entry['similar']} (same company and title, different link; needs review)")
         notes.append((entry["posting"], "\n".join(parts)))
     return notes

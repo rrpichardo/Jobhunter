@@ -84,7 +84,11 @@ def test_a_historical_generic_link_cannot_collapse_new_source_requisitions():
     store.writes.clear()
     incoming = [row(f'himalayas:{n}', 'himalayas', 'https://example.com/careers')
                 | {'Job title': f'Product Manager, AI {n}'} for n in (1, 2)]
-    with pytest.raises(ValueError, match='ambiguous_existing_job_identity'):
-        deliver(store, incoming, 'second')
-    assert all(title != 'Jobs' for title, _ in store.writes)
+    deliver(store, incoming, 'second')
+    deliver(store, incoming, 'second')
+    assert len(store.tables['Jobs']) == 4
     assert store.tables['Jobs'][1][0] == 'remotive:1'
+    headers = store.tables['Jobs'][0]
+    for values in store.tables['Jobs'][2:]:
+        assert 'Possible duplicate of remotive:1' in values[headers.index('More details')]
+        assert 'needs review' in values[headers.index('More details')]

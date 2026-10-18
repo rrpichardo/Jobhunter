@@ -265,6 +265,16 @@ def test_dedupe_merges_identical_employer_links_and_prefers_company_boards():
     assert [(posting.job_id, note) for posting, note in kept] == [("greenhouse:acme:123", "Also listed by: remotive")]
 
 
+def test_shared_custom_links_retain_distinct_requisitions_for_review():
+    first = make('remotive:1', 'remotive', 'https://example.com/careers', title='PM, AI Search')
+    others = [make(f'himalayas:{n}', 'himalayas', 'https://example.com/careers', title=f'PM, AI {n}')
+              for n in (1, 2)]
+    kept = p.dedupe([first, *others])
+    assert [job.job_id for job, note in kept] == ['remotive:1', 'himalayas:1', 'himalayas:2']
+    assert all('Possible duplicate of remotive:1' in note and 'needs review' in note
+               for job, note in kept[1:])
+
+
 def test_distinct_jobs_sharing_one_careers_page_path_are_not_merged():
     one = make("greenhouse:acme:1", "greenhouse:acme", "https://acme.com/careers/job?gh_jid=111", title="PM, AI Search")
     two = make("greenhouse:acme:2", "greenhouse:acme", "https://acme.com/careers/job?gh_jid=222", title="PM, AI Ads")

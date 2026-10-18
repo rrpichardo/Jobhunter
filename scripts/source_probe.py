@@ -111,7 +111,7 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep):
             stubs, rejected = DETAIL_SOURCES[kind][0](data, {**ctx, "url": url})
             shortlist = [s for s in stubs if is_pm_title(s["title"])
                          and (collection_location_match(s["location"], s["salary"])
-                              or ONSITE_COUNTRIES.search(s["location"]))]
+                              or (not s['salary'] and ONSITE_COUNTRIES.search(s["location"])))]
             postings, failed, problem, detail_attempts = fetch_details(
                 client, entry, shortlist[:PER_SOURCE_LIMIT], stamp, delay=delay, sleep=sleep)
             attempts += detail_attempts

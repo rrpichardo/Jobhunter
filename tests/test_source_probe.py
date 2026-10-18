@@ -216,6 +216,26 @@ def test_detail_collection_uses_regional_location_and_salary_preferences(locatio
         assert jobs[0].location == location
 
 
+def test_known_low_regional_salary_does_not_consume_a_detail_slot():
+    from html import escape
+    listing = '<div data-page="' + escape(json.dumps({'props': {'jobPostings': [
+        {'id': i, 'title': 'Product Manager, AI', 'url': f'/companies/acme/jobs/{i}',
+         'location': 'Colombia', 'companyName': 'Acme', 'salaryRange': salary}
+        for i, salary in [(1, '40,000 USD YEAR'), (2, '80,000 USD YEAR')]
+    ]}}), quote=True) + '"></div>'
+    seen = []
+
+    def serve(request):
+        seen.append(str(request.url))
+        return httpx.Response(200, text=listing if 'jobs/role' in str(request.url) else YC_PAGE)
+
+    entry = {'id': 'yc-product', 'kind': 'yc', 'url': 'https://www.ycombinator.com/jobs/role/product-manager'}
+    with httpx.Client(transport=httpx.MockTransport(serve)) as client:
+        source, jobs, _ = probe.probe_source(client, entry, '2026-10-18T00:00:00+00:00')
+    assert [job.job_id for job in jobs] == ['yc-product:2']
+    assert all(not url.endswith('/1') for url in seen)
+
+
 def test_duplicates_across_sources_are_merged_and_counted():
     gh = {"jobs": [{"id": 1, "title": "Product Manager, AI Agents", "location": {"name": "Remote"},
                     "content": "<p>Agents.</p>", "absolute_url": "https://job-boards.greenhouse.io/good/jobs/1"}]}

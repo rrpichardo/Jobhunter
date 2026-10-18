@@ -57,8 +57,10 @@ work; incomplete Claude extraction batches are rejected before Google access.
   the same source remain separate. `ambiguous_existing_job_identity` means more
   than one existing row could match; reconcile those rows manually while keeping
   user notes before retrying. The writer never deletes or combines existing rows.
-  Automatic cross-source matching requires a known ATS requisition identity.
-  Shared custom/generic links remain ambiguous and require operator review.
+  Automatic cross-source merging requires a known ATS requisition identity.
+  A single shared custom/generic link keeps the incoming row separate with a
+  possible-duplicate note for review. Multiple existing candidate rows remain an
+  error rather than choosing which row's user notes should win.
 - A source blocked partway through detail collection remains `blocked` with its
   actual HTTP/error evidence. Jobs validated before that failure may still be
   delivered when the artifact explicitly accounts for them. That does not turn

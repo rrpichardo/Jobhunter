@@ -70,6 +70,31 @@
   kept; missing pay currency/period is not invented. No live collection or Sheet
   writes ran. Claude review of this exact local candidate remains outstanding.
 
+### Claude review of local patch and source repair cycle 2
+
+- Claude reviewed the proposed `5487aa5` patch statically on PR #10, comment
+  https://github.com/rrpichardo/Jobhunter/pull/10#issuecomment-6246077240 . It did not
+  reconstruct the tree, verify the hash, or run tests; no such reviewer verification
+  is claimed. Its medium finding was that a single unknown/custom-link match could
+  block an entire daily run. That supersedes the initial conservative hard stop.
+- Added failing regressions and fixed it: one uncertain custom-link match is now
+  retained as a separate row with a stable possible-duplicate note. The collector
+  also retains distinct unverified custom-link requisitions instead of merging
+  them. Multiple existing candidates still stop before choosing between user data.
+- Fixed the low finding about regional detail slots: a nonempty stub salary must
+  satisfy the collection preference before fetching. Missing salary may still
+  justify a bounded detail lookup for Colombia/the Dominican Republic. Tests prove
+  a known USD 40k role does not consume a detail slot ahead of a matching role.
+- Kept partial-source `failed` evidence after individual HTTP/transport failures:
+  jobs still deliver, and valid/rejected counts explain the partial result. This
+  preserves actual failure diagnostics rather than relabeling a failed request.
+  Claude described that policy as defensible. Its informational YC salary-format
+  concern remains a live-source verification limitation: ambiguous currency/units
+  never qualify as USD annual pay by assumption; no new live fetch was performed.
+- Source repair/review cycle 2 requires a fresh Claude review of the corrected local
+  patch. Writer cycle 4's code is unchanged. Locked suite: 267 tests and 10 subtests
+  passed; diff whitespace check passed. No further pushes, merges or deployment.
+
 This is the durable log for implementation blockers and milestone repair cycles.
 Read it before retrying work. Maximum: three distinct attempts per blocker and
 three repair/review cycles per milestone. Counters survive handoffs and restarts.
