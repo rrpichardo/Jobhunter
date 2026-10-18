@@ -1,5 +1,63 @@
 # Claude Code continuation handoff
 
+## Latest clarification — full source scope and decisions still pending
+
+The user asked for another commit/push/PR handoff after the plain-language
+explanation. Continue on `codex/social-next-handoff`, existing PR #18:
+https://github.com/rrpichardo/Jobhunter/pull/18 . It is the documentation-only
+continuation PR, not a completed social implementation. Obtain actual Claude
+review of the latest pushed revision and required CI before merging; an older
+review or green action alone is insufficient.
+
+**Do not narrow the project to LinkedIn and X.** The user specifically reminded
+us about Hacker News and YC. Preserve all planned sources; the LinkedIn-posts ->
+X -> real-test sequence is the next work order, not replacement of other sources.
+Read the full PLAN.md and registry, not only this shortened inventory:
+
+- Company boards: Greenhouse, Lever, Ashby and the other planned ATS adapters.
+- Public boards: Remotive, Remote OK, Himalayas, Jobicy, The Muse, WWR, Built In.
+- YC public Product Manager jobs AND separate logged-in Work at a Startup.
+- VC boards: Accel/Primary Getro, a16z and other planned portfolio/discovery paths.
+- Hacker News Who Is Hiring; current registry only retrieves thread listings,
+  not complete hiring-comment extraction/delivery. That integration is unfinished.
+- a16z is also listing-only in the current registry; do not claim it delivers jobs.
+- Approved newsletters/RSS and forwarded job alerts: Next Play, Ali Rohde,
+  LinkedIn/TrueUp/Indeed/Glassdoor and other plan-approved senders; current Gmail
+  routing/live binding and some feed URLs remain incomplete.
+- Configured JSearch and Jooble APIs. Adzuna was excluded as paid-only; no new
+  spending, services, credits, proxies or paid API plans are authorized.
+- LinkedIn job listings AND hiring posts, X hiring posts; Cosign and school/MBA
+  sources still need correct URLs/setup. Missing sources remain visible with an
+  honest status. Historical public-source success does not prove current readiness.
+
+**Unanswered choices — no approval inferred:** user said they were considering
+keeping every matching job found, batch delivery and saved AI backlog, but were
+not sure and explicitly requested a simple explanation followed by another ask.
+The explanation covered all sources after the user corrected the narrow scope.
+No answer selecting either option arrived before this handoff request.
+
+Ask again in simple language when resuming dependent changes:
+1. Keep every matching job found across all planned sources, send ready jobs to
+   the Sheet in batches, and save unfinished AI processing for later, without
+   buying anything? This means retaining discoveries within bounded searches,
+   not unlimited searching or asserting unknown eligibility.
+2. LinkedIn: keep the current five-search daily start, or choose a 50-search
+   daily ceiling? Searches and opening individual result details are different.
+
+Until answered, preserve eight-per-source / 150-total collection and 150-per-input
+writer caps, and the current LinkedIn <=5 searches / <=50 details per daily run.
+The existing plan includes randomized pauses between actions. The historical
+30-50 searches/day discussion appears farther below as vendor research, not an
+approved change, official LinkedIn limit, or guarantee against restriction.
+Do not silently turn 50 detail views into 50 searches or invent delay timings.
+Existing cloud saved-cookie authorization and no-new-spending rule remain; any
+broader limits/backlog behavior still require the user's pending decision.
+
+No new production code, source fetch, account action or Sheet write occurred
+while preparing this clarification. Prior cloud preflight and test evidence below
+remain scoped to their stated revisions; no daily routine has been deployed.
+
+
 ## Next owner — LinkedIn hiring posts, then X, then real cloud test
 
 User explicitly requested searches of LinkedIn profile posts because people

@@ -8,6 +8,19 @@ USD 70,000 annual minimum; LATAM on-site/hybrid scope remains Colombia and the
 Dominican Republic. This supersedes the earlier any-salary remote LATAM exception.
 Missing salary is unresolved, never evidence of meeting a minimum.
 
+Scope reminder from the latest user clarification: LinkedIn and X are additions
+within the full V0 source set, including Hacker News, YC public jobs and logged-in
+Work at a Startup, company/public/VC boards, newsletters/Gmail and configured
+APIs. Preserve unfinished integrations as explicit gaps. Current HN and a16z
+registry entries are listing-only, not completed job extraction/delivery.
+
+The user is considering retaining every match, batch delivery and a saved AI
+backlog across ALL sources, but requested explanation and another confirmation;
+no final selection has arrived. Likewise 50 LinkedIn searches/day is an unresolved
+alternative to the current five-search start, not an approved limit change.
+Randomized pauses already belong to the social plan; historical vendor guidance
+is not an official safe limit. No new spending remains the standing restriction.
+
 This checklist records the user's pending decisions and setup assistance from the
 continuation conversation. Older setup tables below are historical; do not recreate
 resources already provisioned. Pending choices do not silently change current limits.
