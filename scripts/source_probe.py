@@ -185,10 +185,8 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
         if kind in DETAIL_SOURCES:
             stubs, rejected = DETAIL_SOURCES[kind][0](data, {**ctx, "url": url})
             shortlist = [s for s in stubs if collection_stub_match(s["title"], s["location"], s["salary"])]
-            if cutoff is not None:  # a listing date already outside the window saves a page request
-                stale = [s for s in shortlist if s.get("posted_at") and datetime.fromisoformat(s["posted_at"]) < cutoff]
-                outside = len(stale)
-                shortlist = [s for s in shortlist if s not in stale]
+            # No listing-date prefilter: listing dates are unverified, and a wrong one would silently drop a job.
+            # The window is applied after each page's own posting date is read.
             shortlist.sort(key=lambda stub: collection_title_priority(stub['title'], entry.get('tag', 'other')))
             detail_skipped = max(0, len(shortlist) - DETAIL_SAFETY_STOP)
             postings, failed, problem, detail_attempts = fetch_details(

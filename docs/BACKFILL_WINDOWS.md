@@ -25,9 +25,9 @@ development evidence only: retest in JobHunterEnv before relying on a row.
 | We Work Remotely RSS | RSS `pubDate` | none | Feed depth unknown: **GAP** until measured |
 | JSearch | `job_posted_at_datetime_utc` | yes: `date_posted` today / 3days / week / month, chosen from the window | One request per run (200 requests a month free). A page holds about 10 jobs: **GAP**; more pages cost quota, so that needs your approval |
 | Jooble | `updated` | none verified | Client-side. Page 1 only: **GAP** |
-| YC public product jobs | detail page JSON-LD `datePosted`; listing `createdAt` is a guess | none | Dates unverified, so jobs may count as `date_unknown` and be kept |
-| Built In | detail page JSON-LD `datePosted` | none | Listing has no date, so every shortlisted page is opened (up to the 300 safety stop) |
-| Getro (Accel, Primary) | `createdAt` on the listing is a guess | none | Unverified; same as YC |
+| YC public product jobs | detail page JSON-LD `datePosted` (schema.org; not yet checked live) | none | Listing dates are NOT used. Every shortlisted page is opened, and only its own `datePosted` can set the date; otherwise `date_unknown` and kept |
+| Built In | detail page JSON-LD `datePosted` (not yet checked live) | none | Every shortlisted page is opened (up to the 300 safety stop); the page's own date decides |
+| Getro (Accel, Primary) | no verified date field | none | Always `date_unknown` and kept until a field is verified |
 | a16z | none | none | Listing-only, delivers no jobs yet |
 | Hacker News Who Is Hiring | comment `created_at_i` (checked) | thread per month | Built on branch `claude/hn-hiring-comments`: reads the current thread plus last month's, keeps top-level comments inside the window that mention a collected role. Checked once on the public API October 18: 2 threads, 516 top-level comments, 266 in window, 28 candidates. The Claude extraction step is not yet in a routine prompt |
 | Gmail alerts | message date | Gmail `newer_than:28d` (planned) | Live adapter not built |
