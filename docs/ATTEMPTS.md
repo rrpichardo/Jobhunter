@@ -1,5 +1,16 @@
 # Implementation attempt log
 
+## October 18 integration authorized
+
+- The user now directs "commit merge and push", superseding the earlier no-push
+  restriction for this reviewed repair stack. No additional runtime collection or
+  deployment is authorized by that instruction. Historical counters are retained.
+- Final local patch reports found no actionable findings: writer cycle 8 at
+  52da0f1 and source cycle 7 at 5d20ae0; see CLAUDE_HANDOFF.md for links and scope.
+  Fresh locked checks before integration passed 160 writer tests/10 subtests and
+  304 full-stack tests/10 subtests. Current pushed-head CI/review remains the gate.
+- Integrate #8, then #9, then #10 using preserved commit history. #7 is superseded.
+
 ## October 18 source cycle 7 — common work-mode separators
 
 - Claude's cycle-6 review confirmed the three retained findings resolved. Two

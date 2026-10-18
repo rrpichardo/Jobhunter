@@ -2,8 +2,10 @@
 
 ## Current local repair scope — not new cloud evidence
 
-The historical cloud runs below prove only the revisions they name. Local review
-repairs have not been pushed or exercised against live sources/Google Sheets.
+The historical cloud runs below prove only the revisions they name. Review repairs
+were developed under a local-only restriction. The user has now authorized their
+push and integration; they have not been exercised against live sources/Google
+Sheets. Integration does not extend the historical cloud evidence.
 The current local full suite passes 304 tests and 10 subtests; this is offline
 evidence, not a Claude reviewer test run or deployment proof.
 
