@@ -2,6 +2,16 @@
 
 ## Latest continuation — broader alerts and salary preferences
 
+**Stop checkpoint:** PR16 cycle 3 reviewed code SHA
+`9e1f2ff0de4b9a3163e689ce99831d9f81f46f16` and still found two mixed-location
+defects: US-first regional city/CO/DO order can drop valid leads; ambiguous
+CO/PA/AR US city codes can falsely satisfy LATAM pay. PR16 is open, unmerged,
+three cycles exhausted. User was asked for one additional cycle; do not infer
+approval from silence. See ATTEMPTS.md and PR16 cycle-3 comment for reproductions.
+Current code passed 486/10 locally, in actual JobHunterEnv and required CI, but
+that does not resolve the review findings. Gmail UI blocker remains separately
+3/3, awaiting manual action or a relevant capability change.
+
 PR #16 is the implementation milestone. Cycle-1 and cycle-2 Claude findings
 were reproduced and repaired; latest local suite is 486 tests / 10 subtests.
 Fresh pushed-head cycle 3/3 review and CI remain required. Actual JobHunterEnv

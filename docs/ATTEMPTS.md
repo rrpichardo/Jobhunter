@@ -2,6 +2,21 @@
 
 ## October 18 broader collection and Gmail intake milestone
 
+- Cycle 3 Claude review of `9e1f2ff0de4b9a3163e689ce99831d9f81f46f16`
+  confirmed email links, standalone Colombian suffixes and detail priority fixed,
+  but found two mixed-region defects: US-first regional city/CO/DO combinations
+  can be dropped at the US floor, and ambiguous CO/PA/AR US city codes can falsely
+  satisfy the LATAM floor. Examples and locations are posted on PR16. Claude ran
+  486 tests / 10 subtests successfully; passing tests do not resolve findings.
+- **Three repair/review cycles exhausted; PR16 remains open and unmerged.**
+  User authorization requested for exactly one additional fix/Claude-review
+  cycle. Do not repair this blocker again until that answer arrives. PR15's
+  prior exception does not extend to PR16. Gmail UI remains independently 3/3.
+- Final code revision above also passed actual JobHunterEnv locked tests,
+  486/10, exit 0, exact SHA and clean tree confirmed in expanded tool output.
+  Linux/Windows CI passed. No new live source/Gmail/social fetch or Sheet write
+  occurred during that final check; no production Gmail or scheduling proof.
+
 - Cycle 2 Claude review of `67ca7f8fa9710fbf877a8cb28e85b1fd826dd990`
   confirmed earlier repairs but found LinkedIn `/comm/` email URLs, mixed US
   city/LATAM locations, Colombian department/work-mode suffixes and detail-fetch
