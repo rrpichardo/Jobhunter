@@ -43,6 +43,7 @@ NON_US = re.compile(r"\b(south america|latin america|dominican republic|rep[uú]
 COUNTRY_CODE = re.compile(r",\s*[A-Z]{2},\s*([A-Z]{2})\b")
 LOCATION_US_CODE = re.compile(r",\s*(?:A[LKZR]|C[AOT]|DE|FL|GA|HI|I[ADLN]|K[SY]|LA|M[ADEINOST]|"
                               r"N[CDEHJMVY]|O[HKR]|PA|RI|S[CD]|T[NX]|UT|V[AT]|W[AIVY]|DC)\b")
+# Recheck state/ISO-code collisions in AMBIGUOUS_REGIONAL_CODES if this list changes.
 LATIN_AMERICA = re.compile(r'\b(south america|latin america|latam|colombia|dominican republic|rep[uú]blica dominicana|'
                            r'brazil|brasil|argentina|chile|peru|perú|ecuador|bolivia|uruguay|paraguay|venezuela|'
                            r'(?<!new )mexico|méxico|costa rica|panama|panamá|guatemala|honduras|el salvador|nicaragua|belize)\b', re.I)
@@ -59,8 +60,10 @@ US_STATE_NAME = re.compile(
     r'new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|'
     r'oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|'
     r'texas|utah|vermont|virginia|washington|west virginia|wisconsin|wyoming|district of columbia)\b', re.I)
+US_WORK_MODE = r'(?:hybrid|on[- ]?site|in[- ]?office)'
 US_LOCATION_SUFFIX = re.compile(
-    r'\s*(?:\d{5}(?:-\d{4})?)?\s*(?:\((?:hybrid|onsite|on-site|in-office)\))?\s*', re.I)
+    r'\s*(?:\d{5}(?:-\d{4})?)?\s*'
+    rf'(?:\(\s*{US_WORK_MODE}\s*\)|[-/,]?\s*{US_WORK_MODE})?\s*', re.I)
 
 
 @dataclass(frozen=True)

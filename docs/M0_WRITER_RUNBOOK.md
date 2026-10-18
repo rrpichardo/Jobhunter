@@ -220,5 +220,5 @@ the harness above passed its eight clean scenarios in JobHunterEnv (V0_VERIFICAT
 Regional location ambiguity: a terminal AR, CO, DC or PA is insufficient US
 location evidence when the location also names a South/Latin America country.
 Explicit US country text or a spelled-out US state resolves that ambiguity.
-Recognized state suffixes may include a US ZIP and parenthesized hybrid/on-site
-work mode. Original source text remains in the row; no eligibility is inferred.
+Recognized state suffixes may include a US ZIP and known hybrid/on-site
+work mode in parentheses or after a dash, slash or comma. Original source text remains in the row; no eligibility is inferred.

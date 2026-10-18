@@ -1,5 +1,17 @@
 # Implementation attempt log
 
+## October 18 source cycle 7 — common work-mode separators
+
+- Claude's cycle-6 review confirmed the three retained findings resolved. Two
+  common work-mode separator cases still dropped US leads; both failed first.
+  Known hybrid/on-site modes now accept parentheses or ordinary dash/slash/comma
+  separators. The suffix must still fully match; a trailing foreign country does
+  not establish US location. Hybrid/Remote already passed via the remote rule.
+- Added the review's maintenance note to recheck state/ISO collisions when the
+  regional country list changes. Locked full suite: 304 tests and 10 subtests
+  passed, with a clean whitespace check. Fresh review requested; no live calls,
+  pushes or merges to main. Historical counters remain under the user's waiver.
+
 ## October 18 source cycle 6 — propagated input diagnostic
 
 - Propagated writer cycles 7/8 while retaining schema-2 dispatch. Source cycle 5
