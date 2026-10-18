@@ -10,7 +10,7 @@ import uuid
 from jobhunter.sheet_io import SheetIOError
 from jobhunter.sheet_journal import SheetJournal, _stamp
 from jobhunter.sheet_lock import SheetLock
-from jobhunter.sheet_records import JOB_HEADERS, normalize_jobs, plan_jobs, plan_table, table_index
+from jobhunter.sheet_records import JOB_HEADERS, normalize_jobs, plan_jobs, plan_table, reconcile_jobs, table_index
 
 SOURCE_FIELDS = {'Jobs fetched': 'jobs_fetched', 'Valid jobs': 'valid_jobs',
                  'Rejected items': 'rejected_items', 'PM candidates': 'pm_candidates',
@@ -75,7 +75,12 @@ def _payload(payload):
     if _sources(raw_sources) != sources:
         raise ValueError('invalid_pending_payload')
     healthy = {s['Source ID'] for s in sources if s['Status'] == 'OK'}
-    if any(job['Source'] not in healthy for job in jobs):
+    partial = {s['Source ID'] for s in sources
+               if s['Status'] in {'failed', 'blocked'} and s['Error']
+               and type(s['Selected']) is int and s['Selected'] > 0
+               and type(s['Valid jobs']) is int and s['Valid jobs'] >= s['Selected']
+               and sum(job['Source'] == s['Source ID'] for job in jobs) == s['Selected']}
+    if any(job['Source'] not in healthy | partial for job in jobs):
         raise ValueError('job_source_not_successful')
     return payload
 
@@ -165,12 +170,13 @@ def sync_jobs(store, records, source_records, *, run_id=None, chunk_size=100,
 
         def deliver(run, data, manifest, verify_only=False):
             _payload(data)
+            unique_count = len(reconcile_jobs(store.read('Jobs'), data['jobs']))
             finished = manifest['finished'] if verify_only else _completed_time(store.read('Run Log'), run) or now()
             _stamp(finished)
             status = ('complete' if all(s['Status'] in {'OK', 'OK-zero-jobs'} for s in data['sources'])
                       else 'complete-with-source-failure')
             run_row = {'Run ID': run, 'Started': manifest['started'], 'Completed': finished,
-                'Jobs input': data['input_count'], 'Jobs unique': len(data['jobs']), 'Status': status}
+                'Jobs input': data['input_count'], 'Jobs unique': unique_count, 'Status': status}
             if not verify_only:
                 # Persist explicit incomplete-run evidence before job mutation.
                 # If Google later becomes unavailable, never invent a completed
@@ -193,6 +199,7 @@ def sync_jobs(store, records, source_records, *, run_id=None, chunk_size=100,
                 _table(store, title, planner, chunk_size, sleep, jitter, verify_only=verify_only)
             if not verify_only:
                 _retry(lambda: journal.finish(run, finished), sleep, jitter)
+            return unique_count
 
         pending = _retry(journal.pending, sleep, jitter)
         if len(pending) > 10:
@@ -200,8 +207,8 @@ def sync_jobs(store, records, source_records, *, run_id=None, chunk_size=100,
         for run, data, manifest in pending:
             deliver(run, data, manifest)
         manifest = _retry(lambda: journal.prepare(identity, payload, started), sleep, jitter)
-        deliver(identity, payload, manifest, verify_only=manifest['state'] == 'done')
-        return {'run_id': identity, 'input_jobs': len(records), 'unique_jobs': len(payload['jobs']),
+        unique_count = deliver(identity, payload, manifest, verify_only=manifest['state'] == 'done')
+        return {'run_id': identity, 'input_jobs': len(records), 'unique_jobs': unique_count,
                 'recovered_runs': len(pending)}
     except BaseException as exc:
         failure = exc

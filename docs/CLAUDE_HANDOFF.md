@@ -1,5 +1,34 @@
 # Claude Code continuation handoff
 
+## Current integration checkpoint — October 18, 2026
+
+The user now explicitly directs "commit merge and push", superseding the earlier
+local-only restriction for the reviewed repairs. Codex owns this integration.
+PR #8 replaces #7; preserve its complete history, integrate #8, then retarget and
+integrate #9 and #10 onto main after current checks pass. Close #7 as superseded.
+Use normal merges and fast-forward branch updates; do not force-push.
+
+All four discussed PRs received Claude reviews, including their previously pushed
+heads. Final reviewed local implementation checkpoints:
+
+- Writer: `52da0f1671fd780cfb9077bf4191e3fa36b4011a`, 160 tests/10 subtests.
+  Claude report: https://github.com/rrpichardo/Jobhunter/pull/8#issuecomment-6246294366
+- Evidence: `c11c4235c6375ddc969e51e0399ffb9b7650eb3e`; the evidence clarifications
+  received a clean report before the reviewed writer ancestry was propagated:
+  https://github.com/rrpichardo/Jobhunter/pull/9#issuecomment-6246161060
+- Full source candidate: `5d20ae01f63f3dac42e4b4e9f94e4b920195caf2`, 304 tests/10
+  subtests. Claude report:
+  https://github.com/rrpichardo/Jobhunter/pull/10#issuecomment-6246318332
+
+Those were static patch reviews, with local tests run separately by Codex. No
+confirmed actionable findings remain. This documentation update records the new
+integration authority; obtain pushed-head checks and reviewer acknowledgement.
+Current-head live writer proof, the two lock-retaining live scenarios, durable
+source history, remaining Gmail/social setup and scheduled production remain open.
+Integration does not establish deployment. The material below is historical.
+
+## Historical October 17 checkpoint
+
 Handoff requested October 17, 2026. Codex is stopping implementation after this
 checkpoint; Claude Code becomes the implementation owner when the user resumes
 there. **V0 is not deployed; writer PR #7 is draft and must not be merged yet.**

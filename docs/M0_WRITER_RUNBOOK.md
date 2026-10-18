@@ -51,6 +51,21 @@ work; incomplete Claude extraction batches are rejected before Google access.
   New rows initialize Status=New and blank Notes/My rating. Extra user columns on
   existing rows are preserved. Every value write uses RAW, including formula-like
   job text. This is candidate collection, not a full eligibility decision.
+- Multi-source delivery reconciles matching canonical employer links against
+  existing Jobs rows. It retains the existing Job ID and original Source, and
+  records first-seen discovery dates in More details. Distinct requisitions from
+  the same source remain separate. `ambiguous_existing_job_identity` means more
+  than one existing row could match; reconcile those rows manually while keeping
+  user notes before retrying. The writer never deletes or combines existing rows.
+  Automatic cross-source merging requires a known ATS requisition identity or
+  matching explicit Greenhouse `gh_jid` application parameters. Shared unknown
+  custom/generic links keep incoming rows separate with possible-duplicate notes,
+  even when several other-source rows share the link. Multiple conflicting
+  verified identities remain an error rather than choosing which user data wins.
+- A source blocked partway through detail collection remains `blocked` with its
+  actual HTTP/error evidence. Jobs validated before that failure may still be
+  delivered when the artifact explicitly accounts for them. That does not turn
+  the source into a success or permit further requests to the blocked source.
 - Do not sort, insert, delete or move underlying Jobs rows during a sync. Use
   filter views while writing; edits to existing user-owned cells remain supported.
 - Each bounded retry rereads the identity map. Only a definitively rejected
@@ -134,6 +149,42 @@ the global lock in place (exit 3). Run them only with operator agreement, since 
 lock blocks the real writer until an operator decides how to clear it.
 Read each scenario's PASS/FAIL lines in the real command output.
 
+## Source probe and multi-source delivery
+
+`scripts/source_probe.py` makes one polite GET per source in `sources/v0_sources.yaml` (no
+retries; 401/403/406/429 mark the source `blocked` and stop it at once), parses it with
+`jobhunter/postings.py`, applies the PLAN filter (PM title, AI signal or AI-tagged company,
+US/remote/unknown location, no interns) and keeps at most 8 matches per source and 150 in total.
+The Brief description is an exact leading excerpt (300 characters) of source text, chosen by
+Python, never by a model. Sources needing keys, accounts or a labeled mailbox are recorded
+`needs setup` with no request. YC, a16z, Getro and HN are listing-only: counted and recorded as
+`OK-zero-jobs`, nothing delivered, until a detail fetch exists. Guessed company boards that
+answer 404 are dropped as non-responders. No social, Gmail or logged-in access happens here.
+
+Y Combinator (the same jobs Work at a Startup lists, without its login), Built In and the Getro
+VC boards (Accel, Primary) are detail sources: the listing is parsed, up to 8 shortlisted PM
+titles per source get one polite GET of their own job page for the description, employer and
+place, and a refusal (401/403/406/429) stops that source at once. a16z and Hacker News are
+still count-only. The fetched pages were checked against each site's robots.txt.
+
+Cross-source duplicates are merged only when two different sources link the same employer
+posting (the same Greenhouse/Lever/Ashby requisition, or the same URL once tracking parameters
+are dropped; job-identifying parameters such as `gh_jid` are kept). The company-board row wins
+and lists the other sources in More details. Company-and-title similarity alone never merges:
+it adds a "Possible duplicate ... needs review" note and keeps both rows. A source never merges
+its own postings.
+
+```sh
+uv run --locked python -m scripts.source_probe --output /private/run/probe.json
+uv run --locked python -m scripts.sheets_sync --input /private/run/probe.json --run-id m1-probe-001
+```
+
+The artifact uses `schema_version: 2` (`sources` list plus `jobs`); `sheets_sync` writes every
+source's evidence and all jobs in one locked run. For schema 2 exit 0 means the readback was
+verified; failed, blocked and needs-setup sources are recorded evidence, shown as
+`source_problems_recorded=N`. The Run Log status reads
+`complete-with-source-failure` whenever any source is not OK or OK-zero-jobs, including `needs setup`.
+
 ## Poisoned pending run: manual quarantine
 
 A pending run that can never be replayed (corrupt journal cells, a payload that
@@ -165,3 +216,9 @@ uses isolated hidden data tabs and the same global lock/receipt. It is not expos
 by the production CLI. The live harness must first reject an existing namespace;
 its isolation and failure-injection checks have not been run against Google;
 the harness above passed its eight clean scenarios in JobHunterEnv (V0_VERIFICATION.md).
+
+Regional location ambiguity: a terminal AR, CO, DC or PA is insufficient US
+location evidence when the location also names a South/Latin America country.
+Explicit US country text or a spelled-out US state resolves that ambiguity.
+Recognized state suffixes may include a US ZIP and known hybrid/on-site
+work mode in parentheses or after a dash, slash or comma. Original source text remains in the row; no eligibility is inferred.

@@ -1,5 +1,90 @@
 # Implementation attempt log
 
+## October 18 integration authorized
+
+- The user now directs "commit merge and push", superseding the earlier no-push
+  restriction for this reviewed repair stack. No additional runtime collection or
+  deployment is authorized by that instruction. Historical counters are retained.
+- Final local patch reports found no actionable findings: writer cycle 8 at
+  52da0f1 and source cycle 7 at 5d20ae0; see CLAUDE_HANDOFF.md for links and scope.
+  Fresh locked checks before integration passed 160 writer tests/10 subtests and
+  304 full-stack tests/10 subtests. Current pushed-head CI/review remains the gate.
+- Integrate #8, then #9, then #10 using preserved commit history. #7 is superseded.
+
+## October 18 source cycle 7 — common work-mode separators
+
+- Claude's cycle-6 review confirmed the three retained findings resolved. Two
+  common work-mode separator cases still dropped US leads; both failed first.
+  Known hybrid/on-site modes now accept parentheses or ordinary dash/slash/comma
+  separators. The suffix must still fully match; a trailing foreign country does
+  not establish US location. Hybrid/Remote already passed via the remote rule.
+- Added the review's maintenance note to recheck state/ISO collisions when the
+  regional country list changes. Locked full suite: 304 tests and 10 subtests
+  passed, with a clean whitespace check. Fresh review requested; no live calls,
+  pushes or merges to main. Historical counters remain under the user's waiver.
+
+## October 18 source cycle 6 — propagated input diagnostic
+
+- Propagated writer cycles 7/8 while retaining schema-2 dispatch. Source cycle 5
+  review confirmed the first US-city fix, then identified ambiguous AR/PA country
+  codes and US ZIP/spelled-state formats. Six regressions failed first. Regional
+  shortcuts now require nonambiguous state codes or full state names, with only a
+  ZIP and known on-site/hybrid suffix accepted. AR/CO/DC/PA alone do not prove US
+  in a regional location; explicit US country or full state names resolve it.
+- Reproduced the review's malformed-artifact diagnostic with unhashable Source and
+  source_id fields. Schema-2 validates their string type before aggregation, giving
+  safe validation codes before Google access rather than catching programmer bugs.
+- Locked full suite: 301 tests and 10 subtests passed; diff whitespace check passed.
+  No live calls or pushes. Fresh static review covers this complete follow-up.
+
+## October 18 source review cycle 5 — US location collisions
+
+- Claude reviewed local `dda10ef` and found US cities named for regional
+  countries were excluded. Three regressions failed for Panama City, FL; Mexico,
+  MO; and Peru, IL. Terminal US state codes now preserve those leads while DC/CO
+  alone cannot bypass the Colombia salary condition. Explicit US country evidence
+  remains accepted. Original location and eligibility rules are unchanged.
+- Multiple existing verified identities still stop for operator reconciliation,
+  preserving user data. Current provider parsers always emit their configured
+  source ID; speculative future invariant failures are not a reproduced bug.
+- Propagated writer cycle 6 locally. Locked full suite: 289 tests and 10 subtests
+  passed; diff whitespace checks passed. Fresh Claude patch review is required.
+  The user authorized further cycles; no push, merge to main or live run occurred.
+
+## October 18 current local source follow-up
+
+- The user superseded the three-cycle pause with "do as many as needed" while
+  retaining the no-push/no-merge direction. Keep the historical counts: source
+  review 1 was Codex at `a17bae4`, review 2 was Claude's first `5487aa5` patch
+  review, and review 3 covered the `5976ca3` patch. Earlier wording calling that
+  last review "cycle 2" counted repair iterations, not all reviews; this entry
+  corrects the total rather than resetting it. Current source follow-up is cycle 4.
+- The requested whole-PR Claude checks now cover #7 `9f4fd58` retrospectively,
+  #8 `e3536e4`, #9 `32a54b8`, and #10 `a17bae4` plus the local patch. All were
+  static reviews; Claude did not run the tests. Original #7 findings repaired by
+  #8 remain historical. Current code still needs fresh review after these repairs.
+- Reproduced and fixed the third-custom-source batch stop: unknown links always
+  retain separate flagged rows, with deterministic review references. Multiple
+  conflicting verified requisitions still require operator reconciliation.
+- Reproduced and fixed Colombia's `DC` bypass, New Mexico's false exclusion,
+  punctuated/underscore annual salary tokens, missing same-source repost flags,
+  and matching custom Greenhouse `gh_jid` links across sources/runs. Country and
+  pay units remain explicit; no COP/DOP conversion or eligibility inference.
+- Known AI titles are prioritized inside the existing bounded detail budget;
+  omitted detail and global-limit counts are recorded in the artifact/summary.
+  This remains partial coverage, not a promise that every description-only AI
+  signal was examined. No source request limits were raised.
+- Text-only YC/Getro detail pages cannot establish a missing regional salary, so
+  those on-site candidates no longer consume detail requests. Provider parser
+  recursion errors are isolated to that source, and response bodies are streamed
+  with a decoded-byte limit rather than downloaded whole before the size check.
+- The natural deeply nested JSON fixture was handled by the current parser runtime;
+  an injected parser RecursionError established the error-boundary regression.
+  Do not claim a particular live provider response triggered that exception.
+- Writer diagnostic follow-up and evidence clarifications were propagated locally.
+  Locked full candidate suite: 283 tests and 10 subtests passed; no live calls,
+  pushes, merges to main or deployments. Further Claude review is outstanding.
+
 ## October 18 path diagnostic follow-up — writer cycle 8
 
 - Claude confirmed missing-file classification and noted Path.expanduser/resolve
@@ -67,6 +152,84 @@
   10 subtests passed; `git diff --check` passed. Fresh Claude review is required.
 - This repair does not repeat live collection or Google writes, change deployment
   status, or satisfy the outstanding cloud/schedule acceptance gates.
+
+### Source review repairs — local candidate for PR #10
+
+- Initial Codex review covered source head
+  `a17bae48313ab9b94ba13c97f4bba165dd327305`. The user requested implementation of
+  its findings, then directed finishing locally without further pushes pending
+  Claude Code review. This is the first source repair/review cycle; writer cycle 4
+  above remains shared across #7/#8 and is not reset by these stacked branches.
+- Regressions first reproduced cross-run duplicate rows, distinct URL paths being
+  merged, South/Latin America passing the US filter, omitted Lever responsibility
+  sections, and detail-page blocks being reported as HTTP 200 success.
+- Reconciliation now retains the original Sheet ID/source, Date found and user
+  fields when another source supplies the same employer link. First-seen source
+  dates are retained in More details. Automatic cross-source reconciliation uses
+  verified ATS requisition links; shared custom/generic links stop as ambiguous.
+  Same-source distinct requisitions remain
+  separate; ambiguous existing cross-source rows stop for operator reconciliation.
+  No live rows are merged, deleted or repaired automatically.
+- The collector and writer share URL identity logic. Paths/query keys/ports remain
+  distinct; tracking is removed. Lever combines introduction, responsibility lists
+  and additional description sections. The subsequent user location preference
+  below supersedes the original blanket South/Latin America rejection.
+- Detail HTTP/transport failures now retain their actual status/error. Blocks stop
+  remaining detail requests, while already validated jobs can be delivered with
+  explicit selected/valid-count evidence. Run Log retains the source-failure state.
+- Stacked documentation conflicts were resolved by preserving both sides' counters
+  and evidence. This does not change recorded cloud outcomes or deployment status.
+- Local full suite: 234 tests and 10 subtests passed; `git diff --check` passed.
+  No live source requests, Google writes or schedule tests ran. Fresh Claude review
+  of the complete candidate is outstanding; do not treat old review badges as
+  covering this patch. No further push is authorized by the current user direction.
+
+### User location clarification and local review follow-up
+
+- Keep remote South/Latin America leads regardless of salary. For on-site/hybrid
+  roles in that region, only Colombia and the Dominican Republic qualify when an
+  explicitly annual USD salary range reaches 70,000. Unknown currency/pay units,
+  COP/DOP amounts and total compensation do not prove this exception. The threshold
+  uses range overlap, consistent with PLAN.md. No role is labeled eligible here.
+- Retain explicit Ashby remote metadata without replacing the original location.
+  Built In now retains its actual structured salary currency instead of inventing
+  USD; this matters when applying the regional salary exception.
+- Supplementary Codex review found a generic-link ambiguity in the first local
+  repair candidate: distinct requisitions could overwrite one historical row.
+  A failing regression reproduced it. Such unverified cross-source links now stop
+  before Jobs mutation; known ATS identities still reconcile across runs. This
+  is not the required Claude review or an approval to push.
+- Complete local candidate after the user's preferences and ambiguity repair:
+  locked full suite passed 265 tests and 10 subtests; `git diff --check` passed.
+  Remotive, RemoteOK, Himalayas and Jobicy retain their remote-only collection
+  contract, and Ashby's explicit remote flag is preserved. Original locations are
+  kept; missing pay currency/period is not invented. No live collection or Sheet
+  writes ran. Claude review of this exact local candidate remains outstanding.
+
+### Claude review of local patch and source repair cycle 2
+
+- Claude reviewed the proposed `5487aa5` patch statically on PR #10, comment
+  https://github.com/rrpichardo/Jobhunter/pull/10#issuecomment-6246077240 . It did not
+  reconstruct the tree, verify the hash, or run tests; no such reviewer verification
+  is claimed. Its medium finding was that a single unknown/custom-link match could
+  block an entire daily run. That supersedes the initial conservative hard stop.
+- Added failing regressions and fixed it: one uncertain custom-link match is now
+  retained as a separate row with a stable possible-duplicate note. The collector
+  also retains distinct unverified custom-link requisitions instead of merging
+  them. Multiple existing candidates still stop before choosing between user data.
+- Fixed the low finding about regional detail slots: a nonempty stub salary must
+  satisfy the collection preference before fetching. Missing salary may still
+  justify a bounded detail lookup for Colombia/the Dominican Republic. Tests prove
+  a known USD 40k role does not consume a detail slot ahead of a matching role.
+- Kept partial-source `failed` evidence after individual HTTP/transport failures:
+  jobs still deliver, and valid/rejected counts explain the partial result. This
+  preserves actual failure diagnostics rather than relabeling a failed request.
+  Claude described that policy as defensible. Its informational YC salary-format
+  concern remains a live-source verification limitation: ambiguous currency/units
+  never qualify as USD annual pay by assumption; no new live fetch was performed.
+- Source repair/review cycle 2 requires a fresh Claude review of the corrected local
+  patch. Writer cycle 4's code is unchanged. Locked suite: 267 tests and 10 subtests
+  passed; diff whitespace check passed. No further pushes, merges or deployment.
 
 This is the durable log for implementation blockers and milestone repair cycles.
 Read it before retrying work. Maximum: three distinct attempts per blocker and
@@ -480,3 +643,14 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
   repeat both exited 0 with one Jobs row and one Run Log row; lock released afterwards.
   Evidence and the retained digest are in V0_VERIFICATION.md. No new attempt-counter
   blocker was consumed; scheduled M0 remains the next gate.
+
+### Multi-source probe and delivery (JobHunterEnv, October 18, 2026)
+
+- Built the source registry, per-source parsers and `scripts.source_probe`. The actual cloud
+  run reached 35 sources and recorded 9 as needs setup; 136 AI-PM matches from 24 sources
+  were delivered and verified (V0_VERIFICATION.md). No source was blocked and no
+  429/challenge occurred, so no stop rule fired and no retry was made.
+- LinkedIn and X were **not attempted**: their dedicated accounts and cookies do not exist
+  (the user's step), so they remain `needs setup`, not a completed test. This consumes no
+  attempt from the social-auth blocker counter.
+- Gmail: connector `list_labels` shows no `JobHunter` label; forwarding/label setup is open.

@@ -15,6 +15,7 @@ invalid_chunk_size invalid_pending_journal invalid_journal_timestamp invalid_jou
 journal_payload_too_large journal_write_unconfirmed missing_pending_journal run_id_payload_conflict
 job_source_not_successful ambiguous_headers missing_headers invalid_existing_row unkeyed_existing_row
 duplicate_existing_id writer_locked lock_acquisition_unconfirmed lock_identity_collision invalid_lock_owner
+ambiguous_existing_job_identity
 lock_release_unconfirmed lock_ownership_lost lock_acquisition_already_attempted too_many_pending_runs
 completed_run_changed sheet_write_verification_failed sheet_retry_delay_exceeds_budget sheet_write_too_large
 sheet_mutation_unconfirmed writer_lock_required writes_verified_lock_release_unconfirmed
@@ -22,6 +23,40 @@ sheet_request_failed sheet_tls_error sheet_transport_error invalid_sheet_respons
 invalid_google_configuration google_workbook_unavailable google_proxy_auth_missing google_workbook_not_found
 google_workbook_forbidden google_tls_error google_timeout google_transport_error invalid_json
 artifact_too_large artifact_must_be_outside_checkout invalid_extraction_delivery run_id_quarantined run_not_pending'''.split())
+
+
+def _deliver_many(args, payload, store):
+    """Schema 2: many sources and their jobs in one locked run. Exit 0 once readback verifies;
+    failed, blocked and needs-setup sources are recorded as evidence, not treated as sync failure."""
+    sources, jobs = payload.get('sources'), payload.get('jobs')
+    if not isinstance(sources, list) or not isinstance(jobs, list) or not sources:
+        raise ValueError('invalid_sync_input')
+    if args.run_id is not None and not re.fullmatch('[A-Za-z0-9_-]{1,80}', args.run_id):
+        raise ValueError('invalid_run_id')
+    delivered = {}
+    for job in jobs:
+        if not isinstance(job, dict) or not isinstance(job.get('Source'), str):
+            raise ValueError('invalid_job_fields')
+        delivered[job['Source']] = delivered.get(job['Source'], 0) + 1
+    extraction = payload.get('extraction')
+    if jobs and (not isinstance(extraction, dict) or extraction.get('status') != 'complete'
+                 or extraction.get('selected') != len(jobs) or extraction.get('validated') != len(jobs)):
+        raise ValueError('invalid_extraction_delivery')
+    for source in sources:
+        if not isinstance(source, dict) or not isinstance(source.get('source_id'), str):
+            raise ValueError('invalid_source_records')
+        if source.get('selected_for_m0') != delivered.pop(source['source_id'], 0):
+            raise ValueError('invalid_extraction_delivery')
+    if delivered:  # a job whose source has no record
+        raise ValueError('invalid_extraction_delivery')
+    prepare_payload(jobs, sources)  # validate everything before opening a Google connection
+    backend = GspreadStore(open_workbook()) if store is None else store
+    result = sync_jobs(backend, jobs, sources, run_id=args.run_id, chunk_size=args.chunk_size)
+    problems = sum(source['status'] in {'failed', 'blocked'} for source in sources)
+    print(f"sync_verified: run_id={result['run_id']} unique_jobs={result['unique_jobs']} "
+          f"sources={len(sources)} recovered_runs={result['recovered_runs']}")
+    print(f'source_problems_recorded={problems}')
+    return 0
 
 
 def main(argv=None, *, store=None):
@@ -47,6 +82,8 @@ def main(argv=None, *, store=None):
             if isinstance(exc, ValueError) and str(exc) in SAFE_ERRORS:
                 raise  # retain specific JSON, size and checkout-path diagnostics
             raise ValueError('invalid_sync_input') from None
+        if isinstance(payload, dict) and payload.get('schema_version') == 2:
+            return _deliver_many(args, payload, store)
         if (not isinstance(payload, dict) or type(payload.get('schema_version')) is not int
                 or payload['schema_version'] != 1 or not isinstance(payload.get('source'), dict)
                 or not isinstance(payload.get('jobs'), list)):

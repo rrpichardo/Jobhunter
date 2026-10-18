@@ -1,5 +1,19 @@
 # JobHunter implementation setup
 
+## October 18 collection preference update
+
+The user permits remote South/Latin America roles regardless of salary. For
+on-site/hybrid roles in that region, only Colombia and the Dominican Republic
+qualify, with an annual USD salary range reaching at least 70,000. The numeric
+answer is interpreted as annual USD, following the question presented to the user.
+Retain the source's location and explicit remote evidence. Missing/ambiguous
+currency or annual pay units do not prove that a salary matches; do not convert
+COP/DOP amounts or hourly/monthly/total compensation without an approved rule.
+
+The user directed finishing the PR repairs locally and making no further pushes.
+Claude Code review remains required before any later integration; no merge or
+deployment is authorized by these preference clarifications.
+
 Record non-secret answers here before cloud integration. Never record passwords,
 API keys, service-account JSON, cookies, browser profiles, or routine tokens.
 Decisions below are user-confirmed; deployment/readiness remains unverified unless

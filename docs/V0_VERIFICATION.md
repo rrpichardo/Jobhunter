@@ -1,5 +1,26 @@
 # V0 verification evidence
 
+## Current local repair scope — not new cloud evidence
+
+The historical cloud runs below prove only the revisions they name. Review repairs
+were developed under a local-only restriction. The user has now authorized their
+push and integration; they have not been exercised against live sources/Google
+Sheets. Integration does not extend the historical cloud evidence.
+The current local full suite passes 304 tests and 10 subtests; this is offline
+evidence, not a Claude reviewer test run or deployment proof.
+
+Identity policy after review: merge verified ATS requisitions and matching explicit
+Greenhouse `gh_jid` links; retain unknown shared application URLs as flagged
+possible duplicates, including multiple-source and same-source repost cases.
+The older second-run statement about identical employer links describes that
+historical revision and does not assert that every custom URL is now mergeable.
+
+The bounded probe still selects at most eight jobs per source and 150 globally.
+Detail fetches prioritize explicit AI titles inside the existing eight-page
+budget; skipped detail/global-cap counts are retained in probe notes and its
+summary. Description-only AI matches beyond that budget remain unexamined.
+These notes are artifact evidence; durable per-run source history is still open.
+
 ## Bootstrap prerequisite — October 17, 2026
 
 Scope: reproducible installation and CI plus cloud readiness inventory. This is
@@ -205,3 +226,86 @@ file and the checkout):
   path and affected recovery behavior at the final reviewed writer revision.
   The ephemeral command/readback evidence above is an author's recorded report,
   not a durable raw-output archive that an offline reviewer can reproduce.
+
+## M0 multi-source probe and real delivery in JobHunterEnv — October 18, 2026
+
+Scope: one polite request to every non-login V0 source from the actual Claude cloud
+environment, then delivery of the AI-PM matches and every source's status to the real
+workbook. This is a **source feasibility and first delivery**, not the scheduled daily run,
+not the 14-day trial, and not approval to merge. Same cloud session as above
+(https://claude.ai/code/session_01DsCkZnt2X9EtuQRVq6Gq5u), code `473d7d0` on
+`claude/m1-source-coverage`, tree clean, `uv sync --locked` and **188 tests passed**.
+
+- `scripts.source_probe` (one GET each, no retries, no social, no login, no Google access):
+  exit 0, **`sources=44 delivered_jobs=136 failed_or_blocked=0`**,
+  `probe_sha256 = 812e0e538686382d188621cb79da18c9682ef653952d6f784e42f438ccd04962`
+  (kept in a separate file in the cloud run directory). Expanded output was read.
+- `scripts.sheets_sync --input probe.json --run-id m1-sources-001`: **exit 0**,
+  `sync_verified: run_id=m1-sources-001 unique_jobs=136 sources=44 recovered_runs=0`,
+  `source_problems_recorded=0`; the identical repeat exited 0 with identical output.
+- Read-only readback: Jobs has 136 rows with no duplicate or blank Job ID, every row
+  Status=New with blank Notes and My rating, and the earlier Anthropic "Product Manager,
+  Billing" job (`greenhouse:anthropic:5434361008`) is still exactly one row. Sources has 44
+  rows matching the probe table; Run Log has one row each for `m0-real-001` and
+  `m1-sources-001`, with no extra row after the repeat. The lock was confirmed released
+  afterwards (`lock_owner_is_none= True`); nothing was unlocked by hand.
+- Delivering sources (jobs per source): eight each from ashby:harvey, ashby:openai,
+  greenhouse:anthropic, cloudflare, coinbase, databricks, datadog, pinterest, reddit, scaleai,
+  stripe and weworkremotely; ashby:perplexity 7; ashby:sierra, greenhouse:instacart 6;
+  ashby:ramp, greenhouse:figma 4; greenhouse:airbnb, themuse 3; ashby:elevenlabs, jobicy 2;
+  ashby:linear, ashby:notion, remoteok 1. The cap is 8 per source and 150 in total.
+- Reachable but nothing delivered (`OK-zero-jobs`): lever:palantir (no PM titles),
+  lever:spotify and ashby:cohere (PM titles, none passed the AI/US filter), lever:mistral
+  (the endpoint answers HTTP 200 with an empty list, checked by hand), remotive and
+  himalayas (small partial lists, no PM titles), and the listing-only sources yc-product
+  (19 PM titles), a16z-ai-pm (24), getro-accel, getro-primary and hn-who-is-hiring (393
+  comments). Delivering those needs a detail fetch or model extraction, not built yet.
+- Recorded `needs setup` without any request: jsearch, adzuna, jooble (keys missing),
+  linkedin-logged-in and x-hiring-posts (dedicated accounts and cookies are the user's
+  step), gmail-job-alerts, nextplay-rss, alirohde-rss (feed URLs unverified), cosign.
+  Gmail was checked with `list_labels` only (no message, thread or search): **no label named
+  `JobHunter` exists** (an unrelated label does), so the forwarding/label setup is still open.
+- **Known wart:** the Run Log status for `m1-sources-001` reads
+  `complete-with-source-failure` because `needs setup` counts as a non-OK source in
+  `jobhunter/sheets.py`, although no source failed or was blocked. It was left alone on
+  purpose: changing the rule now would make a replay of this completed run ID report
+  `completed_run_changed`. Treat that status as "some source was not OK".
+- Not proven: scheduled M0, per-run source history, cross-source duplicate detection (the
+  same role on a company board and an aggregator becomes two rows), eligibility decisions,
+  Gmail alerts, LinkedIn, X, and Codex review of any of this code.
+
+### Second multi-source run: detail pages and safe duplicate handling — October 18, 2026
+
+Same cloud session, code `c6bcf8c` on `claude/m1-source-coverage`, tree clean, `uv sync --locked`,
+**206 tests passed**. The probe now fetches individual job pages for Y Combinator, Built In and the
+Getro boards (robots.txt checked; one polite GET each, at most 8 per source, a refusal stops the
+source) and merges duplicates only on identical employer links.
+
+- `scripts.source_probe`: exit 0, **`sources=47 delivered_jobs=148 failed_or_blocked=0
+  duplicates_merged=0`**; no detail page was refused. Run directory `/root/m2_sources_run_002`.
+- `scripts.sheets_sync --run-id m2-sources-002`: **exit 0** (`unique_jobs=148 sources=47`); the
+  identical repeat exited 0 with identical output.
+- Readback (GET only): 148 Jobs rows, no duplicate or blank Job ID, all Status=New with blank
+  Notes and My rating. The 136 rows from the first run are still present exactly once and
+  unchanged (checked against that run's readback), including `greenhouse:anthropic:5434361008`.
+  New rows: yc-product 5, getro-accel 4, getro-primary 2, builtin-product 1. Sources has 47 rows
+  and Run Log has one row each for `m0-real-001`, `m1-sources-001` and `m2-sources-002`. The lock was
+  released afterwards (`lock_owner_is_none= True`).
+- Four "Possible duplicate ... needs review" notes (three Databricks pairs, one Harvey pair: same
+  company and title, different requisition). These are for human review; both rows were kept.
+- A development run found and fixed two bugs before this cloud run: some Greenhouse boards share one
+  careers-page path and differ only by `gh_jid`, which a first canonicalizer wrongly merged; and
+  `City, ST, CC` locations with a non-US country code (for example Bengaluru) passed the US filter.
+  Both have regression tests.
+- Still not delivered: a16z (count only), Hacker News "Who's Hiring" (needs model extraction),
+  Work at a Startup's own site (HTTP 406 login wall; its jobs come through the YC pages),
+  `cosign.com` (now a domain-parking redirect, correct URL needed), MBA/school sites (not named),
+  and everything needing keys, accounts or the Gmail label.
+
+### Documentation incident (October 18, 2026)
+
+Two whitespace cleanups wrongly emptied `docs/ATTEMPTS.md` and `docs/V0_VERIFICATION.md` in commits
+`696ac79` (PR #9) and `b68e572` (PR #10): the file was opened for writing before it was read. PR #8 and
+all code were unaffected. Both files were restored from `6a61f35` with the later evidence re-added in
+new commits (no history rewrite). Check with `git diff --stat` that docs changes have no unexpected
+deletions before committing.
