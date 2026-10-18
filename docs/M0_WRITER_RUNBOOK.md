@@ -216,3 +216,9 @@ uses isolated hidden data tabs and the same global lock/receipt. It is not expos
 by the production CLI. The live harness must first reject an existing namespace;
 its isolation and failure-injection checks have not been run against Google;
 the harness above passed its eight clean scenarios in JobHunterEnv (V0_VERIFICATION.md).
+
+Regional location ambiguity: a terminal AR, CO, DC or PA is insufficient US
+location evidence when the location also names a South/Latin America country.
+Explicit US country text or a spelled-out US state resolves that ambiguity.
+Recognized state suffixes may include a US ZIP and parenthesized hybrid/on-site
+work mode. Original source text remains in the row; no eligibility is inferred.

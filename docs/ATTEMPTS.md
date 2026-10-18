@@ -2,10 +2,17 @@
 
 ## October 18 source cycle 6 — propagated input diagnostic
 
-- Propagated writer cycle 7 after resolving the input-read merge while retaining
-  schema-2 dispatch. Geography code is unchanged from source cycle 5. Locked full
-  suite: 290 tests and 10 subtests passed; no live calls or pushes. The next source
-  review covers only this additional diagnostic patch and the updated count.
+- Propagated writer cycles 7/8 while retaining schema-2 dispatch. Source cycle 5
+  review confirmed the first US-city fix, then identified ambiguous AR/PA country
+  codes and US ZIP/spelled-state formats. Six regressions failed first. Regional
+  shortcuts now require nonambiguous state codes or full state names, with only a
+  ZIP and known on-site/hybrid suffix accepted. AR/CO/DC/PA alone do not prove US
+  in a regional location; explicit US country or full state names resolve it.
+- Reproduced the review's malformed-artifact diagnostic with unhashable Source and
+  source_id fields. Schema-2 validates their string type before aggregation, giving
+  safe validation codes before Google access rather than catching programmer bugs.
+- Locked full suite: 301 tests and 10 subtests passed; diff whitespace check passed.
+  No live calls or pushes. Fresh static review covers this complete follow-up.
 
 ## October 18 source review cycle 5 — US location collisions
 
