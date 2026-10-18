@@ -131,7 +131,12 @@ def regional_salary_match(salary: str) -> bool:
 
 def collection_location_match(location: str, salary: str = '', *, remote: bool = False) -> bool:
     """Collection preference; a regional remote lead does not assert US eligibility."""
-    if LATIN_AMERICA.search(location) and not EXPLICIT_US.search(location):
+    if LATIN_AMERICA.search(location):
+        us_state_at_end = any(not location[match.end():].strip()
+                              and match.group().lstrip(', ').strip() not in {'DC', 'CO'}
+                              for match in LOCATION_US_CODE.finditer(location))
+        if EXPLICIT_US.search(location) or us_state_at_end:
+            return True
         return (remote or bool(REMOTE_TERMS.search(location))
                 or bool(ONSITE_COUNTRIES.search(location) and regional_salary_match(salary)))
     return us_or_unknown(location)
