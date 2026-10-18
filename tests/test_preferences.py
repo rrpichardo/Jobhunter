@@ -185,6 +185,28 @@ def test_attached_remote_labels_and_known_regional_qualifiers_keep_latam_floor(l
     assert p.salary_preference(candidate) == ('satisfied', 70_000)
 
 
+@pytest.mark.parametrize('location', ['Remote, Colombia', 'Remoto, Colombia', 'Remote, LATAM',
+    'Remote, Bogotá, Colombia', 'Remote, Medellín, Antioquia, Colombia', 'Remote, Mexico',
+    'Remote, Santo Domingo, Dominican Republic'])
+def test_comma_prefix_remote_mode_is_attached_to_regional_location(location):
+    assert p.salary_preference(job(location=location, salary='USD 90,000 annually')) == ('satisfied', 70_000)
+
+
+def test_jsearch_remote_latam_metadata_flows_through_salary_and_row_checks():
+    from test_source_probe import JSEARCH_BODY
+    import copy
+    payload = copy.deepcopy(JSEARCH_BODY)
+    item = payload['data'][0]
+    item.update(job_is_remote=True, job_city='Bogotá', job_state='Bogotá, D.C.', job_country='CO',
+                job_min_salary=90_000, job_max_salary=100_000,
+                job_salary_currency='USD', job_salary_period='YEAR')
+    postings, _, _ = p.parse_jsearch(payload, {'source_id':'jsearch', 'captured_at':'2026-10-18T00:00:00+00:00'})
+    candidate = postings[0]
+    assert candidate.remote and candidate.location.startswith('Remote, ')
+    assert p.salary_preference(candidate) == ('satisfied', 70_000)
+    assert 'Salary preference: satisfied (annual USD floor 70000)' in p.to_row(candidate)['More details']
+
+
 def test_unresolved_salary_check_is_in_details_not_next_step():
     row = p.to_row(job(salary=''))
     assert row['Next step'] == ''

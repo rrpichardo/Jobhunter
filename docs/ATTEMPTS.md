@@ -2,6 +2,14 @@
 
 ## October 18 broader collection and Gmail intake milestone
 
+- Cycle 7 Claude reviewed `323eb70ce27ac5b16831995c4c8eea3f8308971e`,
+  confirmed prior repairs and found JSearch's actual `Remote, country` producer
+  format was treated as an alternative mode. Eight failing regressions include
+  a real parser-to-preference-to-row fixture path. Attached comma-prefix modes
+  now normalize; comma suffixes and `or Remote` alternatives stay unresolved.
+  Full local suite: 565 tests / 10 subtests, diff check clean. Fresh exact-head
+  cycle-8 Claude review and CI remain required before merging.
+
 - Cycle 6 Claude reviewed `e158c6beb4089f0ff4bc74effb52e3112b1d274a`,
   confirmed earlier fixes but found comma-separated unknown alternatives could
   satisfy70k and long-dash remote labels became unresolved. Regressions failed

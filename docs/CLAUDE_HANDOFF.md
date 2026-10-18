@@ -2,6 +2,11 @@
 
 ## Latest continuation — broader alerts and salary preferences
 
+Latest cycle-7 repair supports JSearch's `Remote, city/state/country` format,
+with a parser-to-salary-to-row regression. Local565/10 passes; fresh exact-head
+cycle-8 Claude review and CI remain required. Prior ambiguous mode alternatives
+stay unresolved. Continued PR16 repair authorization remains in force.
+
 Latest cycle-6 repair handles comma-separated unknown alternatives and attached
 long-dash/Remoto labels. Explicit known regional hierarchy forms normalize before
 splitting; unfamiliar qualifiers remain unresolved and retained. Local557/10

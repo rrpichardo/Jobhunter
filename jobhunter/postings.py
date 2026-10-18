@@ -251,7 +251,7 @@ def collection_region(location: str, *, remote: bool = False) -> str | None:
         # lower floor either. Strip only attached prefix/suffix work-mode labels:
         # "Remote - Colombia" is one place; "Colombia or Remote" is ambiguous.
         mode = r'(?:remote|remoto|hybrid|on[- ]?site|in[- ]?office)'
-        places = re.sub(rf'^\s*{mode}\s*[-–—/:]\s*|\s*[-–—/:]\s*{mode}\s*$', '', location, flags=re.I)
+        places = re.sub(rf'^\s*{mode}\s*[-–—/:,]\s*|\s*[-–—/:]\s*{mode}\s*$', '', location, flags=re.I)
         places = [part.strip(' -:.,') for part in re.split(
             r'[,|;/&·\n]+|\s+[-–—]\s+|\b(?:or|and|y|o)\b', places, flags=re.I)]
         places = [part for part in places if part]
