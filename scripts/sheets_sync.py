@@ -35,14 +35,17 @@ def _deliver_many(args, payload, store):
         raise ValueError('invalid_run_id')
     delivered = {}
     for job in jobs:
-        delivered[job.get('Source') if isinstance(job, dict) else None] = delivered.get(
-            job.get('Source') if isinstance(job, dict) else None, 0) + 1
+        if not isinstance(job, dict) or not isinstance(job.get('Source'), str):
+            raise ValueError('invalid_job_fields')
+        delivered[job['Source']] = delivered.get(job['Source'], 0) + 1
     extraction = payload.get('extraction')
     if jobs and (not isinstance(extraction, dict) or extraction.get('status') != 'complete'
                  or extraction.get('selected') != len(jobs) or extraction.get('validated') != len(jobs)):
         raise ValueError('invalid_extraction_delivery')
     for source in sources:
-        if not isinstance(source, dict) or source.get('selected_for_m0') != delivered.pop(source.get('source_id'), 0):
+        if not isinstance(source, dict) or not isinstance(source.get('source_id'), str):
+            raise ValueError('invalid_source_records')
+        if source.get('selected_for_m0') != delivered.pop(source['source_id'], 0):
             raise ValueError('invalid_extraction_delivery')
     if delivered:  # a job whose source has no record
         raise ValueError('invalid_extraction_delivery')

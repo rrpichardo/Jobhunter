@@ -322,3 +322,21 @@ def test_duplicates_across_sources_are_merged_and_counted():
     assert (by_id["greenhouse:good"]["selected_for_m0"], by_id["remotive"]["selected_for_m0"],
             by_id["remotive"]["status"]) == (1, 0, "OK-zero-jobs")
     assert payload["probe"]["notes"]["duplicates_merged"] == 1
+
+
+@pytest.mark.parametrize('field,error', [('job', 'invalid_job_fields'), ('source', 'invalid_source_records')])
+def test_unhashable_artifact_source_ids_have_validation_errors_before_google(
+        field, error, tmp_path, monkeypatch, capsys):
+    from scripts import sheets_sync
+    payload = run_probe()
+    if field == 'job':
+        payload['jobs'][0]['Source'] = []
+    else:
+        payload['sources'][0]['source_id'] = []
+    path = tmp_path / 'bad-source.json'
+    path.write_text(json.dumps(payload))
+    calls = []
+    monkeypatch.setattr(sheets_sync, 'open_workbook', lambda: calls.append('Google'))
+    assert sheets_sync.main(['--input', str(path)]) == 2
+    assert f'sync_failed: {error}' in capsys.readouterr().out
+    assert calls == []

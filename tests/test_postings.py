@@ -70,6 +70,13 @@ def test_remote_south_and_latin_america_roles_are_kept_without_salary(location):
     ('Peru, IL', '', True),
     ('Colombia, DC', '', False),
     ('Colombia, CO', '', False),
+    ('Argentina, AR', '', False),
+    ('Panama, PA', '', False),
+    ('Panama City, FL 32401', '', True),
+    ('Panama City, FL (Hybrid)', '', True),
+    ('Mexico, Missouri', '', True),
+    ('Peru, Pennsylvania', '', True),
+    ('Panama City, FL, Panama', '', False),
 ])
 def test_regional_roles_follow_remote_or_country_and_annual_usd_salary_preference(location, salary, expected):
     from dataclasses import replace

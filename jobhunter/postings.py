@@ -50,6 +50,17 @@ ONSITE_COUNTRIES = re.compile(r'\b(colombia|dominican republic|rep[uú]blica dom
 REMOTE_TERMS = re.compile(r'\b(remote|anywhere|worldwide|global)\b', re.I)
 EXPLICIT_US = re.compile(r'(?i:\b(?:united states|usa)\b|\bu\.s\.(?:a\.)?)|\bUS\b')
 MIN_REGIONAL_ANNUAL_USD = 70_000
+# Short country/state collisions are not US evidence on the regional path.
+AMBIGUOUS_REGIONAL_CODES = {'AR', 'CO', 'DC', 'PA'}
+US_STATE_NAME = re.compile(
+    r',\s*(?:alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|'
+    r'georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|'
+    r'massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|'
+    r'new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|'
+    r'oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|'
+    r'texas|utah|vermont|virginia|washington|west virginia|wisconsin|wyoming|district of columbia)\b', re.I)
+US_LOCATION_SUFFIX = re.compile(
+    r'\s*(?:\d{5}(?:-\d{4})?)?\s*(?:\((?:hybrid|onsite|on-site|in-office)\))?\s*', re.I)
 
 
 @dataclass(frozen=True)
@@ -132,10 +143,12 @@ def regional_salary_match(salary: str) -> bool:
 def collection_location_match(location: str, salary: str = '', *, remote: bool = False) -> bool:
     """Collection preference; a regional remote lead does not assert US eligibility."""
     if LATIN_AMERICA.search(location):
-        us_state_at_end = any(not location[match.end():].strip()
-                              and match.group().lstrip(', ').strip() not in {'DC', 'CO'}
-                              for match in LOCATION_US_CODE.finditer(location))
-        if EXPLICIT_US.search(location) or us_state_at_end:
+        us_state = any(US_LOCATION_SUFFIX.fullmatch(location[match.end():])
+                       and match.group().lstrip(', ').strip() not in AMBIGUOUS_REGIONAL_CODES
+                       for match in LOCATION_US_CODE.finditer(location))
+        us_state = us_state or any(US_LOCATION_SUFFIX.fullmatch(location[match.end():])
+                                   for match in US_STATE_NAME.finditer(location))
+        if EXPLICIT_US.search(location) or us_state:
             return True
         return (remote or bool(REMOTE_TERMS.search(location))
                 or bool(ONSITE_COUNTRIES.search(location) and regional_salary_match(salary)))
