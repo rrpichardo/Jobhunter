@@ -1,5 +1,24 @@
 # Implementation attempt log
 
+## October 18 milestone closure — PR #16
+
+- Cycle 9 Claude review of `110ea30d7cc4f97ac78a76ea6a05ea405db11632`
+  returned no actionable findings. It confirmed the final boundary repair and
+  ran 577 tests / 10 subtests, plus parser/location comparisons. Required CI
+  passed at that exact head; actual JobHunterEnv locked tests also passed.
+  Evidence: https://github.com/rrpichardo/Jobhunter/pull/16#issuecomment-6255774750 .
+- PR16 merged as `1df1e7ccbc7579b149085993ded07ca8f9829df7`;
+  post-merge local tests passed 577/10, diff check and worktree clean. Older
+  pending-review/stop checkpoints below are historical, superseded by the
+  user's continued-repair authorization and this clean review/merge.
+- One bounded actual-cloud public-source smoke and identical repeat both
+  passed on the merge SHA (`pr16-broad-001`). Readback verified one added real
+  non-AI PM job, no duplicates or user-field changes, one Run Log row and no
+  lock. V0_VERIFICATION.md records the immutable artifact digest and limits.
+  This successful validation is not a failed blocker attempt.
+- Gmail filter UI remains independently exhausted at 3/3; no retry or reset.
+  No Gmail message ingestion, social restoration or scheduled run was proved.
+
 ## October 18 broader collection and Gmail intake milestone
 
 - Cycle 8 Claude reviewed `c4c82f952f2b1130ecc664eadc4c60763fb7f1dd`,

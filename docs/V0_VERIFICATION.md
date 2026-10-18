@@ -1,5 +1,51 @@
 # V0 verification evidence
 
+## October 18 PR #16 closure and merged-code manual cloud smoke
+
+PR #16 merged as `1df1e7ccbc7579b149085993ded07ca8f9829df7` after a clean
+Claude cycle-9 review of `110ea30d7cc4f97ac78a76ea6a05ea405db11632` and passing
+required checks. Review/cloud-test evidence:
+https://github.com/rrpichardo/Jobhunter/pull/16#issuecomment-6255774750 .
+Reviewed-head JobHunterEnv tests and post-merge local tests each passed
+577 tests / 10 subtests. Earlier counts/checkpoints below are historical.
+
+Actual JobHunterEnv session:
+https://claude.ai/code/session_01Kydab84oh1GMjzuFahVswG . Codex expanded and
+inspected command outputs, not just Claude's summary. The cloud checkout was
+clean, detached at the exact merge SHA, and contained the reviewed ancestor;
+`uv sync --locked` exited 0.
+
+- One approved Stripe Greenhouse request returned HTTP 200: 731 fetched,
+  731 valid, 0 rejected, 46 role-family candidates, 35 collection matches,
+  17 collection matches excluded by the historical AI-PM filter.
+- Python selected one real Product management role from that last set. It
+  retained original location/source evidence and unresolved salary; no salary
+  eligibility was inferred. This controlled subset used partial-response coverage,
+  selected 1, attempts 1. It was not a full source harvest.
+- Private artifact: `/root/pr16-smoke-run/smoke.json`, directory 0700/file 0600,
+  SHA-256 `36313f8aec32ae8bd59ef173d99d02ea60a1c2719a2daf017959e3f0737a1288`.
+  The digest stayed unchanged before/after both writer executions and readback.
+  Artifacts are private cloud recovery data, not committed or guaranteed to
+  survive cloud container reclamation.
+- `scripts.sheets_sync`, run ID `pr16-broad-001`: first sync exit 0; identical
+  artifact/run-ID repeat exit 0. Requests and readback were paced for Sheets quotas.
+- Readback: Jobs 167 -> 168, zero duplicate Job IDs, all 167 prior IDs present
+  exactly once, preexisting Status/Notes/My rating hashes unchanged. Selected
+  job present once by ID and title/company/location; original location retained.
+- Sources: 47 rows with unchanged source-ID set. Stripe row matched the artifact:
+  OK, fetched/valid 731, rejected 0, candidates 46, selected 1, attempts 1,
+  HTTP 200, partial-response, blank error. This intentionally replaced Stripe's
+  earlier complete-response/selected-7 current summary; next full run refreshes it.
+- Run Log: five -> six rows; exactly one `pr16-broad-001`, input/unique 1,
+  status complete. Lock owner absent; no manual unlock/quarantine. Final cloud
+  checkout remained clean at the merge SHA.
+
+This proves one manual cloud public-source-to-Sheet smoke and safe completed-run
+repeat only. It does not prove fresh Gmail delivery, connector message payload
+binding, social session restoration, new recovery-fault injection or scheduling.
+No Gmail/social reads, additional source requests, credential/settings changes,
+applications or contacts occurred. No private note/credential values were printed.
+
 ## October 18 Gmail connector readiness and broader collection candidate
 
 Latest local review repairs pass 486 tests and 10 subtests, with a clean diff
