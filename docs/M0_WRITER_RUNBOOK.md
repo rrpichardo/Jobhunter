@@ -164,4 +164,4 @@ Internal `GspreadStore(namespace='_M0Test_<8–32 lowercase letters/digits>')`
 uses isolated hidden data tabs and the same global lock/receipt. It is not exposed
 by the production CLI. The live harness must first reject an existing namespace;
 its isolation and failure-injection checks have not been run against Google;
-the harness above exists but its live results are not yet recorded.
+the harness above passed its eight clean scenarios in JobHunterEnv (V0_VERIFICATION.md).

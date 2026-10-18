@@ -86,7 +86,9 @@ Repairs included in this checkpoint, still needing fresh independent review:
 3. Run locked tests, push, request **Codex review** of the exact head (cycle 2/3)
    using REVIEW_WORKFLOW.md. Resolve issues and get current review/CI. Missing
    Codex access stays outstanding; a Claude Action reviewing Claude is insufficient.
-4. Build a paced live test harness using a fresh hidden test namespace; reject
+4. **Done (c5e2398, cloud run exit 0; see V0_VERIFICATION.md): lock-retaining cases
+   `timeout_before_apply`/`interrupt_before_apply` remain opt-in and un-run.**
+   Original text: build a paced live test harness using a fresh hidden test namespace; reject
    any preexisting namespace initially, keep the global lock. No destructive
    fixture testing in real Jobs. Disable live social fetches. Test chunks,
    preservation of user fields, sorting between runs, timeout-after-apply,

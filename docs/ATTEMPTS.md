@@ -389,3 +389,18 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
   quarantine completed runs; already fixed in `99b1154`. Cycle 3 / 3 (final) was then
   requested from Codex for `99b1154`. No further cycle remains for this milestone
   without a user decision. The earlier "never returned" note above is superseded.
+
+### Writer live harness result (JobHunterEnv, October 18, 2026)
+
+- Codex cycle 3 / 3 for `99b1154`: the GitHub reviewer answered only that its usage
+  limit was reached (resets Oct 18, 12:12 AM per the local CLI). A local
+  `codex review` fallback hit the same limit. **No cycle-3 review was delivered; no
+  fourth cycle was started.** Request the same review again after the reset; do not
+  buy credits or change plan.
+- Built `scripts/live_harness.py` (commit `c5e2398`); the actual cloud run passed all
+  eight clean scenarios, exit 0. Details: V0_VERIFICATION.md. Counters unchanged:
+  this is a test of the existing writer, not a new blocker attempt.
+- The saved real-posting data from the earlier cloud session no longer exists (the
+  container was reclaimed, as the handoff warned). The user then approved one fresh
+  bounded public harvest with an independently retained hash; see the next section
+  once recorded.
