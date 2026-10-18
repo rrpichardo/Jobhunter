@@ -31,6 +31,15 @@ def test_us_or_unknown_location(location, expected):
     assert p.us_or_unknown(location) is expected
 
 
+@pytest.mark.parametrize('location', ['South America', 'Latin America', 'Remote - South America'])
+def test_ambiguous_america_regions_are_not_assumed_to_allow_us(location):
+    assert not p.us_or_unknown(location)
+
+
+def test_explicit_us_option_is_retained_alongside_foreign_locations():
+    assert p.us_or_unknown('United States or Latin America')
+
+
 def test_ai_pm_needs_ai_signal_or_ai_company():
     assert p.ai_pm_match(posting())
     assert not p.ai_pm_match(posting(title="Product Manager, Billing", text="Invoices and tax."))
@@ -65,6 +74,20 @@ def test_duplicate_ids_fail_the_source():
     data = [{"id": "same", "text": "PM", "descriptionPlain": "x", "hostedUrl": "https://example.com/a"}] * 2
     with pytest.raises(ValueError, match="duplicate_source_id"):
         p.parse_lever(data, CTX)
+
+
+@pytest.mark.parametrize('fields', [
+    {'lists': [{'text': 'Responsibilities', 'content': '<li>Lead the AI platform roadmap.</li>'}]},
+    {'additionalPlain': 'Lead the AI platform roadmap.'},
+    {'additional': '<p>Lead the AI platform roadmap.</p>'},
+])
+def test_lever_ai_signal_in_description_sections_is_used_for_filtering(fields):
+    data = [{'id': 'role-1', 'text': 'Product Manager', 'categories': {'location': 'United States'},
+             'descriptionPlain': 'Join our product team.', 'hostedUrl': 'https://example.com/jobs/role-1', **fields}]
+    jobs, rejected, _ = p.parse_lever(data, CTX)
+    assert rejected == 0
+    assert 'Lead the AI platform roadmap.' in jobs[0].text
+    assert p.ai_pm_match(jobs[0])
 
 
 def test_aggregators_parse():
@@ -160,6 +183,16 @@ def make(job_id, source, url, title="Senior Product Manager, AI", company="Acme"
     ("https://Example.com/jobs/1/?utm_source=x#top", "https://example.com/jobs/1")])
 def test_canonical_keys(url, key):
     assert p.canonical_key(url) == key
+
+
+@pytest.mark.parametrize('left,right', [
+    ('https://example.com/jobs/ABC', 'https://example.com/jobs/abc'),
+    ('https://example.com/jobs?Req=1', 'https://example.com/jobs?req=1'),
+    ('https://example.com:8443/jobs/1', 'https://example.com/jobs/1'),
+])
+def test_canonical_identity_preserves_case_sensitive_components_and_ports(left, right):
+    assert p.canonical_key(left) != p.canonical_key(right)
+    assert len(p.dedupe([make('one:1', 'one', left), make('two:2', 'two', right)])) == 2
 
 
 def test_dedupe_merges_identical_employer_links_and_prefers_company_boards():

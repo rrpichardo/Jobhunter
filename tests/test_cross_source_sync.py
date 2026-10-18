@@ -1,0 +1,78 @@
+"""Cross-run reconciliation uses employer links without changing user-owned cells."""
+
+import pytest
+
+from sheet_fakes import MemoryStore
+from jobhunter.postings import Posting, to_row
+from jobhunter.sheets import sync_jobs
+from scripts.source_probe import record
+
+STAMP = '2026-10-18T00:00:00+00:00'
+URL = 'https://job-boards.greenhouse.io/acme/jobs/123'
+
+
+def row(identity, source, url=URL):
+    return to_row(Posting(identity, source, 'Acme', 'Product Manager, AI', 'United States',
+                          'Build AI products.', url, STAMP))
+
+
+def deliver(store, rows, identity):
+    sources = [record(source, 'OK', STAMP, selected=sum(r['Source'] == source for r in rows))
+               for source in sorted({r['Source'] for r in rows})]
+    return sync_jobs(store, rows, sources, run_id=identity, now=lambda: STAMP,
+                     sleep=lambda _: None, jitter=lambda: 0)
+
+
+@pytest.mark.parametrize('aggregate_first', [False, True])
+def test_cross_source_reconciliation_preserves_existing_id_date_and_user_cells(aggregate_first):
+    direct = row('greenhouse:acme:123', 'greenhouse:acme')
+    aggregate = row('remotive:9', 'remotive', URL + '?ref=remotive')
+    first, second = (aggregate, direct) if aggregate_first else (direct, aggregate)
+    store = MemoryStore()
+    deliver(store, [first], 'first')
+    headers, values = store.tables['Jobs']
+    for name, value in [('Status', 'Applied'), ('Notes', 'Keep this note'), ('My rating', '5'),
+                        ('Date found', '2026-10-01')]:
+        values[headers.index(name)] = value
+    deliver(store, [second], 'second')
+    deliver(store, [second], 'second')
+    deliver(store, [second], 'third')
+    assert len(store.tables['Jobs']) == 2
+    result = dict(zip(headers, store.tables['Jobs'][1]))
+    assert result['Job ID'] == first['Job ID']
+    assert result['Source'] == first['Source']
+    assert (result['Status'], result['Notes'], result['My rating'], result['Date found']) == (
+        'Applied', 'Keep this note', '5', '2026-10-01')
+    assert 'greenhouse:acme' in result['More details'] and 'remotive' in result['More details']
+    assert result['More details'].count('First seen by remotive:') == 1
+
+
+def test_cross_source_reconciliation_handles_old_and_new_identity_in_the_same_batch():
+    store = MemoryStore()
+    direct = row('greenhouse:acme:123', 'greenhouse:acme')
+    aggregate = row('remotive:9', 'remotive', URL + '?ref=remotive')
+    deliver(store, [aggregate], 'first')
+    result = deliver(store, [direct, aggregate], 'second')
+    assert len(store.tables['Jobs']) == 2
+    assert store.tables['Jobs'][1][0] == 'remotive:9'
+    assert result['unique_jobs'] == 1
+    headers = store.tables['Run Log'][0]
+    assert store.tables['Run Log'][-1][headers.index('Jobs unique')] == 1
+
+
+def test_existing_ambiguous_employer_links_require_manual_reconciliation():
+    store = MemoryStore()
+    first = row('greenhouse:acme:123', 'greenhouse:acme')
+    second = row('remotive:9', 'remotive', URL + '?ref=remotive')
+    from jobhunter.sheet_records import JOB_HEADERS
+    store.tables['Jobs'] = [list(JOB_HEADERS), [first[h] for h in JOB_HEADERS], [second[h] for h in JOB_HEADERS]]
+    with pytest.raises(ValueError, match='ambiguous_existing_job_identity'):
+        deliver(store, [row('third:7', 'third')], 'new')
+    assert all(title != 'Jobs' for title, _ in store.writes)
+
+
+def test_distinct_source_requisitions_sharing_a_generic_link_remain_separate():
+    store = MemoryStore()
+    deliver(store, [row('remotive:1', 'remotive', 'https://example.com/careers')], 'one')
+    deliver(store, [row('remotive:2', 'remotive', 'https://example.com/careers')], 'two')
+    assert len(store.tables['Jobs']) == 3

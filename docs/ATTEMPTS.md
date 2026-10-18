@@ -17,6 +17,35 @@
 - This repair does not repeat live collection or Google writes, change deployment
   status, or satisfy the outstanding cloud/schedule acceptance gates.
 
+### Source review repairs — local candidate for PR #10
+
+- Initial Codex review covered source head
+  `a17bae48313ab9b94ba13c97f4bba165dd327305`. The user requested implementation of
+  its findings, then directed finishing locally without further pushes pending
+  Claude Code review. This is the first source repair/review cycle; writer cycle 4
+  above remains shared across #7/#8 and is not reset by these stacked branches.
+- Regressions first reproduced cross-run duplicate rows, distinct URL paths being
+  merged, South/Latin America passing the US filter, omitted Lever responsibility
+  sections, and detail-page blocks being reported as HTTP 200 success.
+- Reconciliation now retains the original Sheet ID/source, Date found and user
+  fields when another source supplies the same employer link. First-seen source
+  dates are retained in More details. Same-source distinct requisitions remain
+  separate; ambiguous existing cross-source rows stop for operator reconciliation.
+  No live rows are merged, deleted or repaired automatically.
+- The collector and writer share URL identity logic. Paths/query keys/ports remain
+  distinct; tracking is removed. Lever combines introduction, responsibility lists
+  and additional description sections. Explicit South/Latin America restrictions
+  are rejected without discarding a separately explicit US option.
+- Detail HTTP/transport failures now retain their actual status/error. Blocks stop
+  remaining detail requests, while already validated jobs can be delivered with
+  explicit selected/valid-count evidence. Run Log retains the source-failure state.
+- Stacked documentation conflicts were resolved by preserving both sides' counters
+  and evidence. This does not change recorded cloud outcomes or deployment status.
+- Local full suite: 234 tests and 10 subtests passed; `git diff --check` passed.
+  No live source requests, Google writes or schedule tests ran. Fresh Claude review
+  of the complete candidate is outstanding; do not treat old review badges as
+  covering this patch. No further push is authorized by the current user direction.
+
 This is the durable log for implementation blockers and milestone repair cycles.
 Read it before retrying work. Maximum: three distinct attempts per blocker and
 three repair/review cycles per milestone. Counters survive handoffs and restarts.

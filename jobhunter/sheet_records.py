@@ -1,7 +1,11 @@
 """Deterministic Sheet plans; no network calls or AI-selected cell updates."""
 
 from dataclasses import dataclass
+from datetime import date
 import re
+
+from jobhunter.job_identity import canonical_key
+from jobhunter.records import https_url
 
 JOB_HEADERS = ('Job ID', 'Date found', 'Job title', 'Company', 'Salary', 'Location',
                'Brief description', 'Apply link', 'Source', 'Rank (prelim)', 'Fit',
@@ -90,6 +94,65 @@ def plan_table(rows, records, headers, key, *, preserved=frozenset()):
     return writes
 
 
+def _discovery_details(record, previous):
+    """Retain first-seen dates for reconciled sources without growing on each replay."""
+    history = {}
+    for item in (previous, record):
+        if item is None:
+            continue
+        for line in str(item.get('More details', '')).splitlines():
+            match = re.fullmatch(r'First seen by ([A-Za-z][A-Za-z0-9_.:-]{0,159}): (\d{4}-\d{2}-\d{2})', line)
+            if match:
+                source, stamp = match.groups()
+                try:
+                    date.fromisoformat(stamp)
+                except ValueError:
+                    continue
+                history[source] = min(history.get(source, stamp), stamp)
+    if not history and (previous is None or previous['Source'] == record['Source']):
+        return record['More details']
+    for item in (previous, record):
+        if item is None or item['Source'] in history:
+            continue
+        stamp = item['Date found']
+        try:
+            date.fromisoformat(stamp)
+        except (TypeError, ValueError):
+            continue
+        history[item['Source']] = stamp
+    lines = [line for line in record['More details'].splitlines() if not line.startswith('First seen by ')]
+    return '\n'.join([*lines, *(f'First seen by {source}: {stamp}' for source, stamp in sorted(history.items()))])
+
+
+def reconcile_jobs(rows, records):
+    mapping, identities = table_index(rows, JOB_HEADERS, 'Job ID')
+    known = {identity: {h: values[mapping[h]] if mapping[h] < len(values) else '' for h in JOB_HEADERS}
+             for identity, (_, values) in identities.items()}
+    by_link = {}
+    for identity, old in known.items():
+        if https_url(old['Apply link']):
+            by_link.setdefault(canonical_key(old['Apply link']), set()).add(identity)
+    planned = {}
+    for record in normalize_jobs(records):
+        identity = record['Job ID']
+        key = canonical_key(record['Apply link']) if https_url(record['Apply link']) else None
+        if identity not in known and identity not in planned and key is not None:
+            matches = [candidate for candidate in by_link.get(key, ())
+                       if (planned.get(candidate) or known[candidate])['Source'] != record['Source']]
+            if len(matches) > 1:
+                # Never choose between rows whose user-owned cells may disagree.
+                raise ValueError('ambiguous_existing_job_identity')
+            if matches:
+                identity = matches[0]
+        previous = planned.get(identity) or known.get(identity)
+        record = record | {'Job ID': identity, 'More details': _discovery_details(record, previous),
+                           'Source': previous['Source'] if previous else record['Source']}
+        planned[identity] = record
+        if key is not None:
+            by_link.setdefault(key, set()).add(identity)
+    return normalize_jobs(list(planned.values()))
+
+
 def plan_jobs(rows, records):
-    return plan_table(rows, normalize_jobs(records), JOB_HEADERS, 'Job ID',
+    return plan_table(rows, reconcile_jobs(rows, records), JOB_HEADERS, 'Job ID',
                       preserved=USER_COLUMNS | {'Date found'})

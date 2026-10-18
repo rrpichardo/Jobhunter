@@ -10,12 +10,13 @@ from html import unescape
 import hashlib
 import json
 import re
-from urllib.parse import parse_qsl, urljoin, urlsplit
+from urllib.parse import urljoin, urlsplit
 
 from bs4 import BeautifulSoup
 import feedparser
 
 from jobhunter.records import https_url
+from jobhunter.job_identity import canonical_key
 
 PM_TITLE = re.compile(r"\b(product manager|product lead|group product manager|head of product|"
                       r"director of product|vp of product|vp,? product|pm)\b", re.I)
@@ -25,11 +26,11 @@ EXCLUDED_TITLE = re.compile(r"\b(intern|internship|summer associate|product mark
 AI_TERMS = re.compile(r"\b(ai|a\.i\.|ml|llms?|genai|gen ai|generative ai|machine learning|"
                       r"artificial intelligence|agentic|ai agents?|foundation models?|"
                       r"language models?|deep learning)\b", re.I)
-US_TERMS = re.compile(r"\b(united states|usa|u\.s\.a?\.?|us|america|new york|nyc|san francisco|"
+US_TERMS = re.compile(r"\b(united states(?: of america)?|usa|u\.s\.a?\.?|us|north america|new york|nyc|san francisco|"
                       r"sf|bay area|seattle|austin|boston|chicago|los angeles|denver|atlanta|"
                       r"washington|dc|miami|california|texas|massachusetts)\b", re.I)
 ANYWHERE = re.compile(r"\b(remote|anywhere|worldwide|global|hybrid)\b", re.I)
-NON_US = re.compile(r"\b(europe|emea|apac|asia|latam|canada|mexico|brazil|uk|united kingdom|london|"
+NON_US = re.compile(r"\b(south america|latin america|europe|emea|apac|asia|latam|canada|mexico|brazil|uk|united kingdom|london|"
                     r"ireland|dublin|germany|berlin|france|paris|spain|netherlands|amsterdam|india|"
                     r"bangalore|singapore|japan|tokyo|australia|sydney|israel|tel aviv|poland|"
                     r"portugal|sweden|switzerland|zurich|dubai|nigeria|kenya|south africa|bengaluru|mumbai|delhi|"
@@ -155,7 +156,11 @@ def parse_lever(data, ctx):
 
     def build(item):
         categories = item.get("categories") or {}
-        text = plain(item.get("descriptionPlain")) or clean_html(item.get("description"))
+        sections = [plain(item.get("descriptionPlain")) or clean_html(item.get("description"))]
+        for section in item.get("lists") or []:
+            sections.extend([plain(section.get("text")), clean_html(section.get("content"))])
+        sections.append(plain(item.get("additionalPlain")) or clean_html(item.get("additional")))
+        text = " ".join(section for section in sections if section)
         return Posting(f"lever:{ctx['board']}:{item['id']}", ctx["source_id"], ctx["company"],
                        plain(item.get("text")), plain(categories.get("location") or ""),
                        text, item.get("hostedUrl"), ctx["captured_at"], tag=ctx["tag"])
@@ -399,31 +404,8 @@ DETAIL_SOURCES = {"yc": (stubs_yc, detail_yc), "getro": (stubs_getro, detail_get
                   "builtin": (stubs_builtin, detail_builtin)}
 
 
-ATS_LINKS = [(re.compile(r"^https://(?:job-boards|boards)\.greenhouse\.io/([^/]+)/jobs/(\d+)", re.I), "greenhouse"),
-             (re.compile(r"^https://jobs\.lever\.co/([^/]+)/([0-9a-f-]{36})", re.I), "lever"),
-             (re.compile(r"^https://jobs\.ashbyhq\.com/([^/]+)/([0-9a-f-]{36})", re.I), "ashby")]
 SOURCE_PRIORITY = {"greenhouse": 0, "lever": 0, "ashby": 0, "yc-product": 1, "getro-accel": 1, "getro-primary": 1,
                    "builtin-product": 1}
-
-
-TRACKING_PARAMS = re.compile(r"^(utm_.*|ref|referrer|source|src|gh_src|lever-source|lever-origin|fbclid|gclid|"
-                             r"campaign|medium|trk|tracking.*)$", re.I)
-
-
-def canonical_key(url: str) -> str:
-    """The employer's own posting identity when the link names it, else the URL minus tracking.
-
-    Query parameters that identify a job (for example `gh_jid=<id>` on a company careers page) are
-    kept, so distinct jobs sharing one page path are never mistaken for one posting.
-    """
-    for pattern, kind in ATS_LINKS:
-        match = pattern.match(url)
-        if match:
-            return f"{kind}:{match.group(1).lower()}:{match.group(2).lower()}"
-    parts = urlsplit(url)
-    pairs = sorted((k.lower(), v) for k, v in parse_qsl(parts.query) if not TRACKING_PARAMS.match(k))
-    query = "&".join(f"{k}={v}" for k, v in pairs)
-    return f"{parts.scheme}://{parts.hostname}{parts.path.rstrip('/')}".lower() + (f"?{query}" if query else "")
 
 
 def _similar(posting: Posting) -> str:

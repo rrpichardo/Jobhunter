@@ -51,6 +51,16 @@ work; incomplete Claude extraction batches are rejected before Google access.
   New rows initialize Status=New and blank Notes/My rating. Extra user columns on
   existing rows are preserved. Every value write uses RAW, including formula-like
   job text. This is candidate collection, not a full eligibility decision.
+- Multi-source delivery reconciles matching canonical employer links against
+  existing Jobs rows. It retains the existing Job ID and original Source, and
+  records first-seen discovery dates in More details. Distinct requisitions from
+  the same source remain separate. `ambiguous_existing_job_identity` means more
+  than one existing row could match; reconcile those rows manually while keeping
+  user notes before retrying. The writer never deletes or combines existing rows.
+- A source blocked partway through detail collection remains `blocked` with its
+  actual HTTP/error evidence. Jobs validated before that failure may still be
+  delivered when the artifact explicitly accounts for them. That does not turn
+  the source into a success or permit further requests to the blocked source.
 - Do not sort, insert, delete or move underlying Jobs rows during a sync. Use
   filter views while writing; edits to existing user-owned cells remain supported.
 - Each bounded retry rereads the identity map. Only a definitively rejected

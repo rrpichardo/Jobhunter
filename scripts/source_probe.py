@@ -57,15 +57,19 @@ def fetch_once(client, url):
 
 def fetch_details(client, entry, stubs, stamp, *, delay, sleep):
     """One polite GET per shortlisted job page; a refusal stops the rest for this source."""
-    postings, rejected = [], 0
+    postings, rejected, problem, attempts = [], 0, None, 0
     detail = DETAIL_SOURCES[entry["kind"]][1]
     for stub in stubs:
         sleep(delay)
+        attempts += 1
         status, body, error = fetch_once(client, stub["url"])
         if error or status != 200:
             rejected += 1
             if status in BLOCKED:
+                problem = ('blocked', f'http_{status}', status)
                 break  # stop this source immediately; never retry or probe further
+            if problem is None:
+                problem = ('failed', error or f'http_{status}', status)
             continue
         try:
             found = detail(body)
@@ -74,7 +78,7 @@ def fetch_details(client, entry, stubs, stamp, *, delay, sleep):
                                     salary=found.get("salary") or stub["salary"], tag="other"))
         except (ValueError, TypeError, KeyError, AttributeError, RecursionError):
             rejected += 1
-    return postings, rejected
+    return postings, rejected, problem, attempts
 
 
 def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep):
@@ -96,6 +100,7 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep):
         data = json.loads(body) if kind in JSON_KINDS else body
     except (ValueError, RecursionError):
         return record(source_id, "failed", stamp, error="invalid_json", http=200), [], "invalid_json"
+    problem, attempts = None, 1
     try:
         if kind in LISTING_ONLY:
             counts = LISTING_ONLY[kind](data, ctx)
@@ -105,7 +110,9 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep):
         if kind in DETAIL_SOURCES:
             stubs, rejected = DETAIL_SOURCES[kind][0](data, {**ctx, "url": url})
             shortlist = [s for s in stubs if is_pm_title(s["title"]) and us_or_unknown(s["location"])]
-            postings, failed = fetch_details(client, entry, shortlist[:PER_SOURCE_LIMIT], stamp, delay=delay, sleep=sleep)
+            postings, failed, problem, detail_attempts = fetch_details(
+                client, entry, shortlist[:PER_SOURCE_LIMIT], stamp, delay=delay, sleep=sleep)
+            attempts += detail_attempts
             rejected += failed
             total = len(stubs)
         else:
@@ -120,12 +127,17 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep):
         candidates = shortlist
     if rejected:
         coverage += "-with-rejections"
+    if problem is not None:
+        status, error, http = problem
+        return record(source_id, status, stamp, error=error, http=http, listed=total,
+                      valid=len(postings), rejected=rejected, candidates=len(candidates),
+                      selected=len(selected), coverage=coverage, attempts=attempts), selected, error
     if not postings and rejected:
         return record(source_id, "failed", stamp, error="invalid_items_quarantined", http=200, listed=total,
                       valid=0, rejected=rejected, candidates=0, coverage=coverage), [], "invalid_items"
     status = "OK" if selected else "OK-zero-jobs"
     return record(source_id, status, stamp, http=200, listed=total, valid=len(postings), rejected=rejected,
-                  candidates=len(candidates), selected=len(selected), coverage=coverage), selected, "ok"
+                  candidates=len(candidates), selected=len(selected), coverage=coverage, attempts=attempts), selected, "ok"
 
 
 def entries(registry):

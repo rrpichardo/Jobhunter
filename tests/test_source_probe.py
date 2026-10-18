@@ -1,6 +1,7 @@
 import json
 
 import httpx
+import pytest
 
 from scripts import source_probe as probe
 
@@ -144,6 +145,58 @@ def test_a_refused_detail_page_stops_that_source_and_is_never_retried():
     payload = probe.run(registry, httpx.Client(transport=httpx.MockTransport(refuse)), delay=0,
                         sleep=lambda s: None, environ={})
     assert payload["jobs"] == [] and sum("companies" in url for url in seen) == 1
+
+
+@pytest.mark.parametrize('blocked_status', [401, 403, 406, 429])
+@pytest.mark.parametrize('successful_details', [0, 1])
+def test_detail_blocks_keep_actual_evidence_and_deliver_prior_valid_jobs(
+        blocked_status, successful_details, tmp_path):
+    from html import escape
+    from scripts.sheets_sync import main as sync
+    from sheet_fakes import MemoryStore
+    listing = '<div data-page="' + escape(json.dumps({'props': {'jobPostings': [
+        {'id': i, 'title': 'Product Manager, AI', 'url': f'/companies/acme/jobs/{i}',
+         'location': 'United States', 'companyName': 'Acme'} for i in range(3)
+    ]}}), quote=True) + '"></div>'
+    registry = {'boards': {}, 'needs_setup': [], 'detail_sources': [
+        {'id': 'yc-product', 'kind': 'yc', 'url': 'https://www.ycombinator.com/jobs/role/product-manager'}]}
+    seen = []
+
+    def serve(request):
+        seen.append(str(request.url))
+        if 'jobs/role' in str(request.url):
+            return httpx.Response(200, text=listing)
+        if request.url.path.endswith(f'/{successful_details}'):
+            return httpx.Response(blocked_status)
+        return httpx.Response(200, text=YC_PAGE)
+
+    with httpx.Client(transport=httpx.MockTransport(serve)) as client:
+        payload = probe.run(registry, client, delay=0, sleep=lambda _: None, environ={})
+    source = payload['sources'][0]
+    assert (source['status'], source['http_status'], source['error']) == (
+        'blocked', blocked_status, f'http_{blocked_status}')
+    assert source['selected_for_m0'] == successful_details == len(payload['jobs'])
+    assert len(seen) == successful_details + 2  # listing, successful details, then stop
+    path = tmp_path / 'partial.json'
+    path.write_text(json.dumps(payload))
+    store = MemoryStore()
+    assert sync(['--input', str(path), '--run-id', 'partial'], store=store) == 0
+    assert len(store.tables['Jobs']) == successful_details + 1
+    headers, values = store.tables['Sources']
+    assert values[headers.index('Status')] == 'blocked'
+    assert values[headers.index('HTTP status')] == blocked_status
+
+
+@pytest.mark.parametrize('change', [
+    {'valid_jobs': None}, {'valid_jobs': 0}, {'selected_for_m0': 2}, {'error': ''},
+])
+def test_partial_source_jobs_require_explicit_successful_item_evidence(change):
+    from test_sheet_records import job
+    from jobhunter.sheets import prepare_payload
+    source = probe.record('greenhouse:example', 'blocked', '2026-10-18T00:00:00+00:00',
+                          error='http_429', http=429, valid=1, selected=1)
+    with pytest.raises(ValueError, match='job_source_not_successful'):
+        prepare_payload([job()], [source | change])
 
 
 def test_duplicates_across_sources_are_merged_and_counted():
