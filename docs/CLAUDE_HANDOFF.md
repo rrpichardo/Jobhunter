@@ -47,8 +47,9 @@ lifted. Locations to change together, with tests:
   (used at lines 172-184 and 256-259, plus `fair_order`).
 - `jobhunter/sheet_records.py:24` `normalize_jobs` rejects more than 150 records.
 - `jobhunter/sheets.py:61` pending payload `input_count` must be <= 150.
-- `jobhunter/gmail_alerts.py:138,143` 150 is an AI-extraction budget, not a job
-  cap. Per PLAN.md decision 2 the goal is to AI-process every new job in the
+- `jobhunter/gmail_alerts.py:138` (`extractions >= 150`) is an AI-extraction
+  budget, not a job cap. Line 143 (`len(facts) > 150`) is a separate sanity bound
+  on one extractor reply; review it, but it is not the budget. Per PLAN.md decision 2 the goal is to AI-process every new job in the
   daily run; replace 150 with a generous safety stop that queues leftovers
   visibly in the Run Log. Real limits come after measuring the first big run.
 Larger runs must split into recoverable batches, never drop jobs silently.
@@ -61,11 +62,12 @@ approved change, official LinkedIn limit, or guarantee against restriction.
 Do not silently turn 50 detail views into 50 searches or invent delay timings.
 Existing cloud saved-cookie authorization and no-new-spending rule remain.
 
-**PR #18 review status (checked October 18):** the only Claude comment ("No issues
-found", 22:25:31Z) predates head `abefbc3` (committed 22:25:47Z) and belongs to the
-run on `cb24054`. The `claude-review` and CI jobs on `abefbc3` are green but posted
-no report. Per REVIEW_WORKFLOW.md a green job is not a review, so the latest head
-still needs an actual Claude review. Pushing this note creates a newer head.
+**PR #18 review status (October 18):** Claude reviewed head `4177f4e` (posted on the PR
+at 23:22Z; verdict: no blockers, four minor doc issues, now
+fixed in a later commit). That review does not cover any later push; the final
+head still needs its own review before merge. Codex has not reviewed this PR: it
+holds Codex-written commits (reviewed by Claude) plus Claude-written doc commits
+that the reciprocal rule says Codex should review.
 
 No new production code, source fetch, account action or Sheet write occurred
 while preparing this clarification. Prior cloud preflight and test evidence below
@@ -190,7 +192,7 @@ those entries preserve chronology, not current status.
   on a genuine alert plus precise forwarding/label filters. Do not retry the
   exhausted filter UI blocker without manual completion or a relevant change.
 - User input still needed: correct Cosign and desired school/MBA URLs; settle
-  the saved-cookie collector approach and proposed collection-cap change.
+  the saved-cookie collector approach and proposed collection-cap change (answered October 18, see top of file).
   Current caps remain eight per source / 150 per batch. Do not ask for account
   credentials in chat. PR16's extra repair authorization did not lift Gmail's cap.
 
@@ -299,7 +301,7 @@ reset counters or replace cloud execution with local Gmail collection.
   no forwarding/filter enabled yet. See SETUP.md. Preserve all label-only rules.
 - User questioned the eight-jobs-per-source / 150-jobs-total collection caps.
   Proposed retaining all matching jobs found with safe batch delivery and a
-  separate AI-processing budget; answer/implementation still pending. Existing
+  separate AI-processing budget; answered October 18 (see top of file); implementation still pending. Existing
   caps remain unchanged. Explain browser/social setup in plain language before
   relying on the user's tentative preference as a final scope decision.
 - No new social access, source harvest, Sheet write or deployment evidence.
