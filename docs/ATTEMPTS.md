@@ -55,6 +55,16 @@
   Locked full candidate suite: 283 tests and 10 subtests passed; no live calls,
   pushes, merges to main or deployments. Further Claude review is outstanding.
 
+## October 18 path diagnostic follow-up — writer cycle 8
+
+- Claude confirmed missing-file classification and noted Path.expanduser/resolve
+  can raise ValueError/RuntimeError. Both boundary regressions failed first.
+  Input-read failures of those classes now become invalid_sync_input while known
+  safe ValueError codes (including invalid_json and artifact_too_large) re-raise.
+  Later writer errors retain unexpected_sync_error. No lock or retry logic changed.
+- Locked writer suite: 160 tests and 10 subtests passed. Fresh local static review
+  requested under the user's unlimited repair-cycle instruction; no push/live run.
+
 ## October 18 input diagnostic follow-up — writer cycle 7
 
 - Claude confirmed the unexpected writer failure fix, then reproduced that missing

@@ -78,7 +78,9 @@ def main(argv=None, *, store=None):
             return 0
         try:
             payload = read_artifact(args.input)
-        except OSError:
+        except (OSError, ValueError, RuntimeError) as exc:
+            if isinstance(exc, ValueError) and str(exc) in SAFE_ERRORS:
+                raise  # retain specific JSON, size and checkout-path diagnostics
             raise ValueError('invalid_sync_input') from None
         if isinstance(payload, dict) and payload.get('schema_version') == 2:
             return _deliver_many(args, payload, store)
