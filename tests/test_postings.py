@@ -419,11 +419,16 @@ def test_parse_jsearch_remote_keeps_place_and_falls_back_to_google_link():
     assert p.ai_pm_match(job)
     bare = p.parse_jsearch({"data": [{**item, "job_country": None}]}, JS_CTX)[0][0]
     assert bare.location == "Remote" and p.ai_pm_match(bare)
-    # A remote flag must not turn a non-US job into a US-eligible one.
-    foreign = p.parse_jsearch({"data": [{**item, "job_city": "Berlin", "job_country": "DE"}]}, JS_CTX)[0][0]
-    assert foreign.location == "Remote, Berlin, DE" and not p.ai_pm_match(foreign)
-    onsite = {**JS_ITEM, "job_city": "Berlin", "job_state": "BE", "job_country": "DE"}
-    assert not p.ai_pm_match(p.parse_jsearch({"data": [onsite]}, JS_CTX)[0][0])
+    # A remote flag must not turn a non-US job into a US-eligible one: the structured country decides.
+    for country, city in (("DE", "Berlin"), ("EE", "Tallinn"), ("IN", "Pune")):
+        for remote in (True, False):
+            foreign = {**item, "job_is_remote": remote, "job_city": city, "job_state": None, "job_country": country}
+            postings, rejected, total = p.parse_jsearch({"data": [foreign, JS_ITEM]}, JS_CTX)
+            assert [job.job_id for job in postings] == [p.parse_jsearch({"data": [JS_ITEM]}, JS_CTX)[0][0].job_id]
+            assert (rejected, total) == (0, 2)  # skipped, not counted as a broken item
+    # Latin American countries keep their regional rule, using the country name.
+    latam = p.parse_jsearch({"data": [{**item, "job_city": "Bogota", "job_country": "co"}]}, JS_CTX)[0][0]
+    assert latam.location == "Remote, Bogota, Colombia" and p.ai_pm_match(latam)
 
 
 @pytest.mark.parametrize("change", [

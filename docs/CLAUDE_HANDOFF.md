@@ -30,8 +30,8 @@ image ships uv 0.11.32; install the pin with `python3 -m venv ~/uvvenv && ~/uvve
 uv==0.13.1`.
 
 **User decisions recorded this session.** Adzuna skipped (paid-only, £8/month); removed from the
-registry. Gmail uses the original plan: dedicated `rrpichardo.jobs@gmail.com` forwards job-alert
-senders to the connector account `rrpichardo@gmail.com`, where a filter applies label `JobHunter`;
+registry. Gmail uses the original plan: the dedicated job-alert account forwards job-alert senders to
+the Gmail account connected to Claude, where a filter applies label `JobHunter`;
 the user is doing the forwarding/filter setup (not yet verified). Real-sheet delivery is approved
 for sources that pass their cloud test. PR grouping: low-risk sources bundled; LinkedIn and X each
 get their own PR. The user asked to drop the fixed LinkedIn/X volume limits and wants a decision

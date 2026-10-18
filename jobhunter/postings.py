@@ -342,6 +342,23 @@ def _first_https(*links):
     raise ValueError("no_https_link")
 
 
+# JSearch gives an ISO country code. Latin American codes become names so the regional rules in
+# collection_location_match apply; any other non-US country is not a collection candidate.
+JSEARCH_LATAM_COUNTRIES = {
+    "AR": "Argentina", "BO": "Bolivia", "BR": "Brazil", "BZ": "Belize", "CL": "Chile", "CO": "Colombia",
+    "CR": "Costa Rica", "DO": "Dominican Republic", "EC": "Ecuador", "GT": "Guatemala", "HN": "Honduras",
+    "MX": "Mexico", "NI": "Nicaragua", "PA": "Panama", "PE": "Peru", "PY": "Paraguay", "SV": "El Salvador",
+    "UY": "Uruguay", "VE": "Venezuela"}
+
+
+def _jsearch_country(item):
+    """'US', a Latin American country name, '' when absent, or None for any other country."""
+    code = plain(item.get("job_country")).upper() if isinstance(item, dict) else ""
+    if code in {"", "US", "USA"}:
+        return "US" if code else ""
+    return JSEARCH_LATAM_COUNTRIES.get(code)
+
+
 def parse_jsearch(data, ctx):
     """JSearch (RapidAPI) results; any field may be missing or null."""
     if not isinstance(data, dict) or data.get("status", "OK") != "OK":
@@ -357,8 +374,9 @@ def parse_jsearch(data, ctx):
         if not isinstance(job_id, str) or not job_id.strip():
             raise ValueError
         remote = item.get("job_is_remote") is True
-        place = ", ".join(plain(item.get(key)) for key in ("job_city", "job_state", "job_country")
-                          if plain(item.get(key)))
+        country = _jsearch_country(item)
+        place = ", ".join(part for part in (plain(item.get("job_city")), plain(item.get("job_state")), country)
+                          if part)
         # Keep the place beside "Remote" so a remote job tied to a non-US country is not read as US.
         location = ", ".join(part for part in ("Remote" if remote else "", place) if part)
         return Posting(f"jsearch:{_digest(job_id)}", ctx["source_id"], plain(item.get("employer_name")),
@@ -368,7 +386,10 @@ def parse_jsearch(data, ctx):
                        salary=_salary(item.get("job_min_salary"), item.get("job_max_salary"),
                                       item.get("job_salary_currency"), item.get("job_salary_period")),
                        tag="other", remote=remote)
-    return (*_collect(jobs, build), len(jobs))
+    # Non-US, non-Latin-American countries are skipped here (not counted as rejected items) because the
+    # flattened location text alone cannot reliably exclude every foreign country.
+    candidates = [item for item in jobs if not isinstance(item, dict) or _jsearch_country(item) is not None]
+    return (*_collect(candidates, build), len(jobs))
 
 
 def parse_jooble(data, ctx):
