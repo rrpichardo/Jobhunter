@@ -472,3 +472,11 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
   container was reclaimed, as the handoff warned). The user then approved one fresh
   bounded public harvest with an independently retained hash; see the next section
   once recorded.
+
+### Real posting write result (JobHunterEnv, October 18, 2026)
+
+- One fresh bounded Greenhouse harvest (655 items, 1 selected) was approved and run
+  because the earlier saved data was lost. Real write `m0-real-001` and its identical
+  repeat both exited 0 with one Jobs row and one Run Log row; lock released afterwards.
+  Evidence and the retained digest are in V0_VERIFICATION.md. No new attempt-counter
+  blocker was consumed; scheduled M0 remains the next gate.

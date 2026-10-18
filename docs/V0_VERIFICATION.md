@@ -161,3 +161,47 @@ scratch virtualenv outside the checkout. No tracked file or setting changed.
   Jobs/Run Log, scheduled M0, per-run source history, and Codex review of the writer
   (cycle 3 / 3 requested for `99b1154`; Codex reported its usage limit, so no review
   of that revision has been delivered).
+
+## M0 real posting write in JobHunterEnv — October 18, 2026
+
+Scope: first application-level write to the real workbook tabs from the actual Claude
+cloud environment, plus an identical repeat. **Not** a scheduled run, the full V0
+source set, or a merge approval. Same cloud session as the harness run above
+(https://claude.ai/code/session_01DsCkZnt2X9EtuQRVq6Gq5u, code `c5e2398`).
+
+The earlier session's saved posting data was gone, so with the user's approval one new
+bounded public harvest was run (single Greenhouse board request, no social source).
+It is a **different posting** from the earlier validated one; the old trusted digest
+`84423ba3...ff49a8e` does not apply to it. Independently retained digest for this
+harvest (also saved to a separate file in the cloud run directory, outside the harvest
+file and the checkout):
+
+`harvest_sha256 = d7849a78f6e81b637ef35dfeff9275a0be9c6180ab79b912311f8bcda33c7019`
+
+- Harvest: Greenhouse `anthropic` board, 655 items fetched, 15 PM candidates, 1 selected,
+  coverage `complete-response`. Selected: "Product Manager, Billing", Anthropic, job ID
+  `greenhouse:anthropic:5434361008`, source `greenhouse:anthropic`. The posting text was
+  treated as untrusted data and held no embedded instructions.
+- Extraction (job_id + description_quote only) validated by `scripts.validate_extractions`:
+  1 record, exit 0, Status=New.
+- `scripts.sheets_sync --input records.json --run-id m0-real-001`: **exit 0**,
+  `sync_verified: run_id=m0-real-001 unique_jobs=1 recovered_runs=0`. The identical repeat
+  command: **exit 0**, same line. Command/output copies were kept in the cloud run
+  directory (`sync1_*`, `sync2_*`, `harvest_stdout.txt`, `validate_stdout.txt`); they may
+  disappear with the container.
+- Read-only readback (GET only): real Jobs tab has exactly one data row for that Job ID
+  (Status New, Notes and My rating blank, rank 1); Run Log has exactly one row,
+  `m0-real-001`, Status `complete`, Jobs input 1 / unique 1, and no second row after the
+  repeat; Sources has one `greenhouse:anthropic` row (OK); hidden `_State` holds only the
+  run's chunk and a manifest with a finished time (no pending work).
+- Lock: afterwards `GspreadStore(open_workbook()).lock_owner() is None` printed
+  `lock_owner_is_none= True`. Nothing was unlocked or deleted by hand. The workbook has
+  38 tabs at that point: the real tabs plus `Sheet1`, `_M0AuthProbe` and 32 hidden
+  `_M0Test_*` fixture tabs.
+- **Not proven:** scheduled M0 (no routine exists), per-run source history, Gmail,
+  LinkedIn/X, the exact daily runbook, and Codex review of the writer revision.
+  This historical live write used `c5e2398`, before the quarantine-retirement fix
+  at `e3536e4`; it is not current-head proof for #8. Recheck the real writer/repeat
+  path and affected recovery behavior at the final reviewed writer revision.
+  The ephemeral command/readback evidence above is an author's recorded report,
+  not a durable raw-output archive that an offline reviewer can reproduce.
