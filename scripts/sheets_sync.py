@@ -113,7 +113,7 @@ def main(argv=None, *, store=None):
         if 'lock_cleanup_failed' in getattr(exc, '__notes__', []):
             print('lock_cleanup_failed: inspect lock before retry')
         if code not in SAFE_ERRORS and not re.fullmatch('(sheet|google)_http_[1-5][0-9]{2}', code):
-            code = 'invalid_sync_input'
+            code = 'unexpected_sync_error'
         print(f'sync_failed: {code}; check pending state and lock before another run')
         return 2
 
