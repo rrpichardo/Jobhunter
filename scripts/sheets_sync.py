@@ -22,7 +22,7 @@ sheet_mutation_unconfirmed writer_lock_required writes_verified_lock_release_unc
 sheet_request_failed sheet_tls_error sheet_transport_error invalid_sheet_response unapproved_tab
 invalid_google_configuration google_workbook_unavailable google_proxy_auth_missing google_workbook_not_found
 google_workbook_forbidden google_tls_error google_timeout google_transport_error invalid_json
-artifact_too_large invalid_extraction_delivery run_id_quarantined'''.split())
+artifact_too_large invalid_extraction_delivery run_id_quarantined run_not_pending'''.split())
 
 
 def _deliver_many(args, payload, store):

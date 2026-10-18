@@ -1,5 +1,22 @@
 # Implementation attempt log
 
+## October 18 user continuation instruction — review limits superseded
+
+- After the source milestone reached its original three-review cap, the user
+  explicitly directed "do as many as needed" for local fix/review cycles.
+  Continue the necessary cycles while retaining the historical counters. This
+  removes the prior numeric pause for this repair task; it does not authorize
+  further pushes, merges, new services or deployment. Keep source stop rules.
+- Whole-PR Claude reviews were requested for #7, #8, #9 and #10, including already
+  pushed heads. #7 is superseded; its retrospective findings are not instructions
+  to revive it. #8 review at `e3536e4` found the missing `run_not_pending` CLI label.
+  A failing CLI regression reproduced it, then the error was allowlisted.
+- The reported sticky-lock-on-429 issue was not reproduced: 429 is already a
+  rejected 4xx, and the existing fresh-receipt retry regression passed. Never
+  treat a stale receipt as rejection proof for genuinely uncertain writes.
+- This is writer repair/review cycle 5, authorized by the user's updated direction.
+  No live calls ran; fresh Claude review of the local diagnostic fix is required.
+
 ## October 18 Codex review repairs — user-authorized extension
 
 - Codex reviewed exact writer head `6a61f356d1e472f34ea6242a3c0b76bb02a88f6b`
