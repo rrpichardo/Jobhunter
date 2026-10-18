@@ -200,6 +200,11 @@ file and the checkout):
   `_M0Test_*` fixture tabs.
 - **Not proven:** scheduled M0 (no routine exists), per-run source history, Gmail,
   LinkedIn/X, the exact daily runbook, and Codex review of the writer revision.
+  This historical live write used `c5e2398`, before the quarantine-retirement fix
+  at `e3536e4`; it is not current-head proof for #8. Recheck the real writer/repeat
+  path and affected recovery behavior at the final reviewed writer revision.
+  The ephemeral command/readback evidence above is an author's recorded report,
+  not a durable raw-output archive that an offline reviewer can reproduce.
 
 ## M0 multi-source probe and real delivery in JobHunterEnv — October 18, 2026
 
