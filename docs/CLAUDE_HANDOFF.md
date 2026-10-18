@@ -67,8 +67,10 @@ has Node Playwright1.56.1 under `/opt/node-tools/node_modules/playwright`, Node
 `/opt/node22/bin/node`, and Chromium141.0.7390.37 under `/opt/pw-browsers`.
 An empty headless context launched, had zero cookies, stayed on `about:blank`
 and closed cleanly, exit0. This is browser availability only, not social login.
-Workbook readiness output was still pending when preparing this checkpoint;
-inspect the final preflight receipt before reserving a social allowance.
+Expanded final read-only workbook outputs: writer_lock_present=False,
+pending_writer_runs=0; no social/allowance key exists, including October18 in
+America/New_York. Both commands exited0 and tree remained clean. These are
+readiness observations, not an implemented allowance or serialization proof.
 
 Primary upstream references checked October 18:
 - https://github.com/stickerdaniel/linkedin-mcp-server : current README lists
