@@ -630,7 +630,7 @@ def stubs_yc(text, ctx):
                           "title": _stub_text(job.get("title")), "location": _stub_text(job.get("location")),
                           "url": absolute("https://www.ycombinator.com", job["url"]),
                           "salary": _stub_text(job.get("salaryRange")),
-                          "posted_at": parse_posted(job.get("createdAt"))})
+                          "posted_at": ""})  # the listing date is unverified; the job page's datePosted decides
         except (KeyError, TypeError, AttributeError):
             rejected += 1
     return stubs, rejected
@@ -720,7 +720,7 @@ def stubs_getro(text, ctx):
                           "title": _stub_text(job.get("title")),
                           "location": ", ".join(_stub_text(x) for x in locations if isinstance(x, str)),
                           "url": f"{base}/companies/{org['slug']}/jobs/{job['slug']}", "salary": salary,
-                          "posted_at": parse_posted(job.get("createdAt"))})
+                          "posted_at": ""})  # the listing date is unverified
         except (KeyError, TypeError, AttributeError):
             rejected += 1
     return stubs, rejected
@@ -728,7 +728,7 @@ def stubs_getro(text, ctx):
 
 def detail_getro(text):
     job = _getro_state(text).get("currentJob") or {}
-    return {"text": clean_html(job.get("description")), "posted_at": parse_posted(job.get("createdAt"))}
+    return {"text": clean_html(job.get("description")), "posted_at": ""}  # no verified Getro date field yet
 
 
 def count_a16z(text, ctx):

@@ -122,7 +122,7 @@ def test_the_window_edge_is_inclusive_and_future_dates_are_kept():
     assert p.within_lookback(future, now, 28)
 
 
-def test_a_listing_date_outside_the_window_saves_the_detail_page_request():
+def test_an_unverified_listing_date_never_hides_a_job_the_detail_page_dates_as_recent():
     from html import escape
     jobs = [{'id': 1, 'title': 'Product Manager', 'url': '/companies/acme/jobs/1', 'location': 'United States',
              'companyName': 'Acme', 'createdAt': '2026-10-10T00:00:00Z'},
@@ -138,9 +138,18 @@ def test_a_listing_date_outside_the_window_saves_the_detail_page_request():
     with httpx.Client(transport=httpx.MockTransport(serve)) as client:
         _, found, note = probe.probe_source(client, {'id': 'yc-product', 'kind': 'yc',
             'url': 'https://www.ycombinator.com/jobs/role/product-manager'}, STAMP, lookback_days=28)
-    assert [job.job_id for job in found] == ['yc-product:1']
-    assert found[0].posted_at == '2026-10-10T00:00:00+00:00'
-    assert len(seen) == 2 and 'outside_window=1' in note  # the listing plus only the in-window page
+    # The listing says job 2 is old, but the listing date is unverified: both pages are opened and the
+    # authoritative datePosted on each page decides.
+    assert sorted(job.job_id for job in found) == ['yc-product:1', 'yc-product:2']
+    assert all(job.posted_at == '2026-10-10T00:00:00+00:00' for job in found)
+    assert len(seen) == 3 and 'outside_window=0' in note
+    old_page = page.replace('2026-10-10', '2026-07-01')
+    seen.clear()
+    with httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(
+            200, text=listing if 'jobs/role' in str(r.url) else old_page))) as client:
+        _, found, note = probe.probe_source(client, {'id': 'yc-product', 'kind': 'yc',
+            'url': 'https://www.ycombinator.com/jobs/role/product-manager'}, STAMP, lookback_days=28)
+    assert found == [] and 'outside_window=2' in note  # a page-dated old job is excluded after its page is read
 
 
 @pytest.mark.parametrize('days,bucket', [(1, 'today'), (2, '3days'), (3, '3days'), (7, 'week'), (8, 'month'), (28, 'month')])
