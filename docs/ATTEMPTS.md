@@ -2,6 +2,14 @@
 
 ## October 18 broader collection and Gmail intake milestone
 
+- Cycle 8 Claude reviewed `c4c82f952f2b1130ecc664eadc4c60763fb7f1dd`,
+  confirmed the real JSearch path fixed, and found one low-severity mode-label
+  boundary issue: `Remote, or Colombia` lost its alternative meaning. Twelve
+  failing regressions reproduced prefix/suffix conjunction and double-separator
+  cases; boundary checks now preserve ambiguity while normal prefixes still work.
+  Full local suite: 577 tests / 10 subtests, diff check clean. Fresh exact-head
+  cycle-9 Claude review and current CI remain required before merge.
+
 - Cycle 7 Claude reviewed `323eb70ce27ac5b16831995c4c8eea3f8308971e`,
   confirmed prior repairs and found JSearch's actual `Remote, country` producer
   format was treated as an alternative mode. Eight failing regressions include

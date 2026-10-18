@@ -154,7 +154,11 @@ def test_unverified_city_or_department_form_stays_unresolved(location):
 @pytest.mark.parametrize('location', ['Colombia or Boulder CO', 'Colombia or Pittsburgh PA',
     'Bogotá, Colombia - Boulder CO', 'LATAM/Houston TX', 'Colombia or boulder co',
     'Boulder CO or Colombia', 'Colombia or Unclassified place', 'Remote - LATAM / Unclassified place',
-    'Colombia or Remote', 'Remote or Colombia', 'Colombia or (Remote)'])
+    'Colombia or Remote', 'Remote or Colombia', 'Colombia or (Remote)',
+    'Remote, or Colombia', 'Remote, or Bogotá, Colombia', 'Remote, and Colombia',
+    'Remoto, o Colombia', 'Remoto, y Colombia', 'Remote, & Colombia', 'Remote, / Colombia',
+    'Remote - or Colombia', 'Remote: or Colombia', 'Remote / or Colombia',
+    'Colombia or - Remote', 'Colombia and / Remote'])
 def test_alternative_places_need_resolution_even_without_us_city_comma(location):
     candidate = job(location=location, salary='USD 90,000 annually')
     assert p.collection_match(candidate)

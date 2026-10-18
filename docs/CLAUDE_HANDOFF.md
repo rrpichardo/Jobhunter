@@ -2,6 +2,11 @@
 
 ## Latest continuation — broader alerts and salary preferences
 
+Latest cycle-8 repair preserves mode alternatives at conjunction/double-separator
+boundaries while keeping the verified JSearch Remote, country path. Local577/10
+passes; fresh exact-head cycle-9 Claude review and CI remain required. Continued
+PR16 repair authorization remains in force; no Gmail deployment is claimed.
+
 Latest cycle-7 repair supports JSearch's `Remote, city/state/country` format,
 with a parser-to-salary-to-row regression. Local565/10 passes; fresh exact-head
 cycle-8 Claude review and CI remain required. Prior ambiguous mode alternatives
