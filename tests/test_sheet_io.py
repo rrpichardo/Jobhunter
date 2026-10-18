@@ -192,3 +192,57 @@ def test_test_namespace_isolated_data_tabs_still_use_global_lock_receipts():
     assert body['data'][0]['range'] == "'_M0Test_abcd1234_Jobs'!B2"
     assert body['data'][-1]['range'] == "'_JobHunterLock'!C1"
     with pytest.raises(ValueError, match='invalid_test_namespace'): GspreadStore(workbook, namespace='Jobs')
+
+
+def api_error(status):
+    response = Response()
+    response.status_code = status
+    response._content = ('{"error": {"code": %d, "message": "private body"}}' % status).encode()
+    return APIError(response)
+
+
+def test_failed_receipt_read_after_uncertain_write_keeps_the_outcome_unknown():
+    from jobhunter.sheet_io import GspreadStore
+    from jobhunter.sheet_records import CellWrite
+    from requests.exceptions import Timeout
+    workbook = Workbook()
+    workbook.values_batch_update = lambda body: (_ for _ in ()).throw(Timeout())
+    workbook.values_get = lambda *a, **kw: (_ for _ in ()).throw(Timeout('read failed too'))
+    store = GspreadStore(workbook)
+    store.activate_owner('owner')
+    with pytest.raises(ValueError, match='sheet_mutation_unconfirmed'):
+        store.write('Jobs', [CellWrite(2, 2, [['new']])])
+    assert store.mutation_unknown
+
+
+def test_definitive_429_rejection_allows_a_retry_with_a_fresh_receipt():
+    from jobhunter.sheet_io import GspreadStore, SheetIOError
+    from jobhunter.sheet_records import CellWrite
+    workbook = Workbook()
+    bodies = []
+    def limited_then_ok(body):
+        bodies.append(body)
+        if len(bodies) == 1: raise api_error(429)
+        return {}
+    workbook.values_batch_update = limited_then_ok
+    store = GspreadStore(workbook)
+    store.activate_owner('owner')
+    with pytest.raises(SheetIOError, match='sheet_http_429'):
+        store.write('Jobs', [CellWrite(2, 2, [['new']])])
+    assert not store.mutation_unknown
+    store.write('Jobs', [CellWrite(2, 2, [['new']])])
+    assert bodies[0]['data'][-1]['values'] != bodies[1]['data'][-1]['values']
+
+
+@pytest.mark.parametrize('status', [408, 500, 503])
+def test_timeouts_and_server_errors_are_not_treated_as_rejections(status):
+    from jobhunter.sheet_io import GspreadStore
+    from jobhunter.sheet_records import CellWrite
+    workbook = Workbook()
+    workbook.values_batch_update = lambda body: (_ for _ in ()).throw(api_error(status))
+    workbook.values_get = lambda *a, **kw: {'values': [['owner', 'stamp', 'old']]}
+    store = GspreadStore(workbook)
+    store.activate_owner('owner')
+    with pytest.raises(ValueError, match='sheet_mutation_unconfirmed'):
+        store.write('Jobs', [CellWrite(2, 2, [['new']])])
+    assert store.mutation_unknown

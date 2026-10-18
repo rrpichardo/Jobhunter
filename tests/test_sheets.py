@@ -182,3 +182,76 @@ def test_verified_write_with_failed_release_reports_that_writes_are_verified():
     with pytest.raises(ValueError, match='writes_verified_lock_release_unconfirmed'):
         sync(backend, [job()], 'verified')
     assert len(backend.tables['Jobs']) == 2
+
+
+def test_recovery_after_crash_before_journal_finish_keeps_completed_run_log_row():
+    from jobhunter.sheet_journal import SheetJournal
+    backend = MemoryStore()
+    original = SheetJournal.finish
+    def crash(self, identity, finished): raise KeyboardInterrupt()
+    SheetJournal.finish = crash
+    try:
+        with pytest.raises(KeyboardInterrupt): sync(backend, [job()], 'crashed')
+    finally:
+        SheetJournal.finish = original
+    assert backend.tables['Run Log'][1][-1] == 'complete'
+    backend.writes.clear()
+    sync(backend, [job(2)], 'next')
+    statuses = [w.values[0][0] for title, ws in backend.writes if title == 'Run Log'
+                for w in ws if w.column == 6 and w.row == 2]
+    assert 'pending' not in statuses
+    assert backend.tables['Run Log'][1][-1] == 'complete'
+    assert backend.tables['Run Log'][1][2] != ''
+
+
+def poison(backend, identity='poison'):
+    from jobhunter.sheet_journal import SheetJournal
+    SheetJournal(backend).prepare(identity, {'jobs': [], 'sources': [], 'input_count': 0}, STAMP)
+    rows = backend.tables['_State']
+    for row in rows[1:]:
+        if row[0].endswith('/chunk/0'): row[1] = '{not json'
+
+
+def test_poisoned_journal_blocks_sync_until_operator_quarantines_it_without_data_loss():
+    from jobhunter.sheets import quarantine_run
+    backend = MemoryStore()
+    sync(backend, [job()], 'first')
+    poison(backend)
+    with pytest.raises(ValueError, match='invalid_pending_journal'): sync(backend, [job(2)], 'blocked')
+    before = [list(r) for r in backend.tables['_State'] if 'poison' in r[0]]
+    result = quarantine_run(backend, 'poison', now=lambda: STAMP)
+    assert result == {'run_id': 'poison', 'cells_moved': len(before)}
+    after = [list(r) for r in backend.tables['_State'] if 'poison' in r[0]]
+    assert sorted(v for _, v in after) == sorted(v for _, v in before)  # nothing discarded
+    assert all(k.startswith('m0/quarantined/poison/') for k, _ in after)
+    assert backend.owner is None
+    assert sync(backend, [job(2)], 'unblocked')['recovered_runs'] == 0
+    with pytest.raises(ValueError, match='run_id_quarantined'): sync(backend, [], 'poison')
+
+
+def test_quarantine_requires_an_existing_run_and_the_lock():
+    from jobhunter.sheets import quarantine_run
+    backend = MemoryStore()
+    sync(backend, [job()], 'first')
+    with pytest.raises(ValueError, match='missing_pending_journal'):
+        quarantine_run(backend, 'nope', now=lambda: STAMP)
+    with pytest.raises(ValueError, match='invalid_run_id'):
+        quarantine_run(backend, '../x', now=lambda: STAMP)
+    backend.owner = 'someone-else'
+    with pytest.raises(ValueError, match='writer_locked'):
+        quarantine_run(backend, 'first', now=lambda: STAMP)
+
+
+def test_interrupt_during_job_write_through_the_engine_retains_the_lock():
+    # Interrupt the first Jobs write after the lock exists; owner must remain.
+    backend = MemoryStore()
+    original = backend.write
+    def interrupted(title, writes):
+        if title == 'Jobs':
+            backend.mutation_unknown = True
+            raise KeyboardInterrupt()
+        original(title, writes)
+    backend.write = interrupted
+    with pytest.raises(KeyboardInterrupt) as caught: sync(backend, [job()], 'interrupt')
+    assert backend.owner is not None
+    assert 'lock_retained_unconfirmed_mutation' in caught.value.__notes__

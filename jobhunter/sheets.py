@@ -165,9 +165,17 @@ def sync_jobs(store, records, source_records, *, run_id=None, chunk_size=100,
                 # Persist explicit incomplete-run evidence before job mutation.
                 # If Google later becomes unavailable, never invent a completed
                 # row or make unbounded extra logging attempts after exhaustion.
+                # A recovered run whose final row already landed stays completed.
                 pending_row = run_row | {'Completed': '', 'Status': 'pending'}
-                _table(store, 'Run Log', lambda rows: plan_table(
-                    rows, [pending_row], RUN_HEADERS, 'Run ID'), chunk_size, sleep, jitter)
+                def plan_pending(rows):
+                    headers, known = table_index(rows, RUN_HEADERS, 'Run ID')
+                    if run in known:
+                        _, values = known[run]
+                        column = headers['Status']
+                        if column < len(values) and values[column] not in ('', 'pending'):
+                            return []
+                    return plan_table(rows, [pending_row], RUN_HEADERS, 'Run ID')
+                _table(store, 'Run Log', plan_pending, chunk_size, sleep, jitter)
             plans = [('Jobs', lambda rows: plan_jobs(rows, data['jobs'])),
                 ('Sources', lambda rows: plan_table(rows, data['sources'], SOURCE_HEADERS, 'Source ID')),
                 ('Run Log', lambda rows: plan_table(rows, [run_row], RUN_HEADERS, 'Run ID'))]
@@ -189,14 +197,39 @@ def sync_jobs(store, records, source_records, *, run_id=None, chunk_size=100,
         failure = exc
         raise
     finally:
-        if getattr(store, 'mutation_unknown', False):
-            if failure is not None:
-                failure.add_note('lock_retained_unconfirmed_mutation')
+        _release(store, lock, failure)
+
+
+def _release(store, lock, failure):
+    if getattr(store, 'mutation_unknown', False):
+        if failure is not None:
+            failure.add_note('lock_retained_unconfirmed_mutation')
+        return
+    try:
+        lock.release()
+    except Exception:
+        if failure is not None:
+            failure.add_note('lock_cleanup_failed')
         else:
-            try:
-                lock.release()
-            except Exception:
-                if failure is not None:
-                    failure.add_note('lock_cleanup_failed')
-                else:
-                    raise ValueError('writes_verified_lock_release_unconfirmed') from None
+            raise ValueError('writes_verified_lock_release_unconfirmed') from None
+
+
+def quarantine_run(store, identity, *, now=lambda: datetime.now(timezone.utc).isoformat()):
+    """Operator-only: stop a poisoned pending run from blocking later syncs. Keeps all data."""
+    if not isinstance(identity, str) or not re.fullmatch('[A-Za-z0-9_-]{1,80}', identity):
+        raise ValueError('invalid_run_id')
+    started = now()
+    _stamp(started)
+    lock = SheetLock(store, uuid.uuid4().hex, started)
+    lock.acquire()
+    failure = None
+    try:
+        store.refresh()
+        store.ensure_tab('_State', ('Key', 'Value'), hidden=True)
+        moved = SheetJournal(store).quarantine(identity)
+        return {'run_id': identity, 'cells_moved': moved}
+    except BaseException as exc:
+        failure = exc
+        raise
+    finally:
+        _release(store, lock, failure)

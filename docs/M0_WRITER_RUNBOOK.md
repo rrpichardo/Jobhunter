@@ -111,12 +111,30 @@ Use sanitized fixture jobs for destructive failure injection and replay; don't
 repeat social collection. Isolated endpoint proof alone does not satisfy these.
 Scheduled M0 and full-source V0 remain separate outstanding gates.
 
+## Poisoned pending run: manual quarantine
+
+A pending run that can never be replayed (corrupt journal cells, a payload that
+now fails validation) blocks every later sync, by design: pending work is never
+silently dropped. Only an operator, with no other writer active, may run:
+
+```sh
+uv run --locked python -m scripts.sheets_sync --quarantine-run <RUN_ID>
+```
+
+It takes the normal global lock and renames the run's `_State` Key cells from
+`m0/run/<RUN_ID>/...` to `m0/quarantined/<RUN_ID>/...`. Values are untouched, so
+nothing is discarded and the evidence stays for audit. Later syncs then ignore the
+run, and that run ID is refused (`run_id_quarantined`). Its Run Log row stays
+`pending`, and any Jobs rows it already wrote stay as they are. Re-harvest and
+submit the data under a fresh run ID. Quarantine only after reading the failure
+code; it does not fix the cause.
+
 ## Handoff limitations
 
-PR #7 remains draft. Cycle-1 repairs are incomplete: a manual poisoned-journal
-quarantine procedure/tool, preventing completed Run Log rows from being downgraded
-on recovery, and per-run source history remain outstanding. No automatic dropping
-of pending work is authorized. See CLAUDE_HANDOFF.md before cloud execution.
+PR #7 is superseded by the Claude-owned replacement PR. Per-run source history
+(Sources currently overwrites its rows) is still absent and is required before
+full V0 acceptance. No live application check has run, and nothing here is
+deployed. See CLAUDE_HANDOFF.md.
 
 Internal `GspreadStore(namespace='_M0Test_<8–32 lowercase letters/digits>')`
 uses isolated hidden data tabs and the same global lock/receipt. It is not exposed

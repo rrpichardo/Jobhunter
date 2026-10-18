@@ -40,3 +40,27 @@ def test_failed_harvest_records_failure_and_returns_nonzero(tmp_path):
     backend = MemoryStore()
     assert main(['--input', str(path), '--run-id', 'failed'], store=backend) == 2
     assert backend.tables['Sources'][1][1] == 'failed'
+
+
+def test_cli_quarantine_moves_a_poisoned_run_and_unblocks_later_syncs(tmp_path, capsys):
+    from scripts.sheets_sync import main
+    from test_sheets import poison
+    path = tmp_path / 'records.json'
+    path.write_text(json.dumps(normalized()))
+    backend = MemoryStore()
+    assert main(['--input', str(path), '--run-id', 'first'], store=backend) == 0
+    poison(backend)
+    assert main(['--input', str(path), '--run-id', 'blocked'], store=backend) == 2
+    assert main(['--quarantine-run', 'poison'], store=backend) == 0
+    assert 'quarantined: run_id=poison' in capsys.readouterr().out
+    assert main(['--input', str(path), '--run-id', 'unblocked'], store=backend) == 0
+
+
+def test_cli_quarantine_of_unknown_run_fails_safely_and_input_is_required_otherwise(tmp_path, capsys):
+    from scripts.sheets_sync import main
+    backend = MemoryStore()
+    assert main(['--quarantine-run', 'missing'], store=backend) == 2
+    assert 'missing_pending_journal' in capsys.readouterr().out
+    import pytest
+    with pytest.raises(SystemExit): main([], store=backend)
+    with pytest.raises(SystemExit): main(['--quarantine-run', 'x', '--input', 'y'], store=backend)

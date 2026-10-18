@@ -6,7 +6,7 @@ import re
 from jobhunter.artifacts import read_artifact
 from jobhunter.google_auth import open_workbook
 from jobhunter.sheet_io import GspreadStore
-from jobhunter.sheets import prepare_payload, sync_jobs
+from jobhunter.sheets import prepare_payload, quarantine_run, sync_jobs
 
 SAFE_ERRORS = frozenset('''invalid_sync_input invalid_pending_payload invalid_source_records
 invalid_source_counts invalid_source_coverage invalid_source_error invalid_job_batch
@@ -21,16 +21,26 @@ sheet_mutation_unconfirmed writer_lock_required writes_verified_lock_release_unc
 sheet_request_failed sheet_tls_error sheet_transport_error invalid_sheet_response unapproved_tab
 invalid_google_configuration google_workbook_unavailable google_proxy_auth_missing google_workbook_not_found
 google_workbook_forbidden google_tls_error google_timeout google_transport_error invalid_json
-artifact_too_large invalid_extraction_delivery'''.split())
+artifact_too_large invalid_extraction_delivery run_id_quarantined'''.split())
 
 
 def main(argv=None, *, store=None):
     parser = argparse.ArgumentParser(description='M0 Python Sheet writer; no source collection.')
-    parser.add_argument('--input', required=True)
+    parser.add_argument('--input')
+    parser.add_argument('--quarantine-run', metavar='RUN_ID',
+                        help='operator only: move a poisoned pending run out of recovery, keeping its data')
     parser.add_argument('--run-id')
     parser.add_argument('--chunk-size', type=int, choices=range(1, 101), default=100)
     args = parser.parse_args(argv)
+    if (args.input is None) == (args.quarantine_run is None):
+        parser.error('give exactly one of --input or --quarantine-run')
     try:
+        if args.quarantine_run is not None:
+            backend = GspreadStore(open_workbook()) if store is None else store
+            result = quarantine_run(backend, args.quarantine_run)
+            print(f"quarantined: run_id={result['run_id']} cells_moved={result['cells_moved']}; "
+                  'data kept under m0/quarantined/ in _State')
+            return 0
         payload = read_artifact(args.input)
         if (not isinstance(payload, dict) or type(payload.get('schema_version')) is not int
                 or payload['schema_version'] != 1 or not isinstance(payload.get('source'), dict)

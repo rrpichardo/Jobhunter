@@ -359,3 +359,19 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
   Automatic review remains blocked on repository connection, not user sign-in.
   No permission, credits, billing or automatic-review setting changed. Local
   installed `codex review --help` verified; manual review route documented.
+
+### Claude Code takeover of writer milestone — review cycle 2 / 3 requested
+
+- Claude Code is now sole implementation owner. Branch `claude/m0-sheet-sync` starts
+  at checkpoint `9f4fd58` (PR #7 head); replacement PR supersedes draft #7. Counters
+  are carried over, not reset: writer review cycle 1 / 3 was consumed by the review
+  of `4c9800c`; this push is the fix set for it and requests **cycle 2 / 3**
+  from Codex (reciprocal review; no self-review).
+- Finished the remaining cycle-1 fixes, tests first (3 failed before the code):
+  a recovered run whose final Run Log row already landed is no longer rewritten to
+  `pending`; manual `--quarantine-run` renames a poisoned run's `_State` keys without
+  discarding values and refuses reuse of that run ID. Added receipt tests: failed
+  receipt read, definitive 429 followed by a fresh-receipt retry, 408/500/503 treated
+  as unknown, and an interrupt through the engine retaining the lock.
+- `.venv/bin/python -m pytest -q`: 136 passed, 10 subtests. Still open: per-run
+  source history, the paced live harness, actual JobHunterEnv proof, scheduled M0.

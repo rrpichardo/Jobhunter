@@ -5,12 +5,13 @@ import hashlib
 import json
 import re
 
-from jobhunter.sheet_records import plan_table, table_index
+from jobhunter.sheet_records import CellWrite, plan_table, table_index
 
 STATE_HEADERS = ('Key', 'Value')
 MAX_BYTES = 1024 * 1024
 CHUNK_SIZE = 40000
 PREFIX = 'm0/run/'
+QUARANTINE = 'm0/quarantined/'
 
 
 def _stamp(value):
@@ -92,6 +93,8 @@ class SheetJournal:
             raise ValueError('journal_payload_too_large')
         digest = hashlib.sha256(raw.encode('ascii')).hexdigest()
         _, entries = self._entries()
+        if f'{QUARANTINE}{identity}/manifest' in entries:
+            raise ValueError('run_id_quarantined')
         manifest_key = f'{PREFIX}{identity}/manifest'
         if manifest_key in entries:
             manifest = self._manifest(entries[manifest_key])
@@ -134,3 +137,27 @@ class SheetJournal:
         records = [{'Key': f'{PREFIX}{identity}/chunk/{i}', 'Value': ''} for i in range(manifest['chunks'])]
         records.append({'Key': key, 'Value': json.dumps(manifest, sort_keys=True)})
         self._save(records)
+
+    def quarantine(self, identity):
+        """Manual operator action: move a run's cells out of recovery, never delete them.
+
+        Works even when the manifest or chunks are unreadable, because it only
+        renames the Key cells; Values are untouched and stay available for audit.
+        """
+        if not isinstance(identity, str) or not re.fullmatch('[A-Za-z0-9_-]{1,80}', identity):
+            raise ValueError('invalid_run_id')
+        rows = self.store.read('_State')
+        headers, identities = table_index(rows, STATE_HEADERS, 'Key')
+        old = f'{PREFIX}{identity}/'
+        moved = [(key, number) for key, (number, _) in identities.items() if key.startswith(old)]
+        if not moved:
+            raise ValueError('missing_pending_journal')
+        if any(key.startswith(f'{QUARANTINE}{identity}/') for key in identities):
+            raise ValueError('run_id_quarantined')
+        self.store.write('_State', [CellWrite(number, headers['Key'] + 1,
+                                              [[f'{QUARANTINE}{identity}/{key[len(old):]}']])
+                                    for key, number in moved])
+        _, actual = self._entries()
+        if any(key in actual for key, _ in moved):
+            raise ValueError('journal_write_unconfirmed')
+        return len(moved)
