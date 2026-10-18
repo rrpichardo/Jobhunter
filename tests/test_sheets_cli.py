@@ -1,3 +1,4 @@
+import pytest
 import json
 
 from sheet_fakes import MemoryStore
@@ -104,3 +105,24 @@ def test_missing_input_file_is_reported_before_google_access(tmp_path, monkeypat
     output = capsys.readouterr().out
     assert 'sync_failed: invalid_sync_input' in output
     assert 'unexpected_sync_error' not in output and 'missing-private' not in output
+
+
+@pytest.mark.parametrize('error', [ValueError('embedded null byte'), RuntimeError('private user lookup')])
+def test_invalid_input_path_resolution_is_sanitized_before_google(
+        tmp_path, monkeypatch, capsys, error):
+    from pathlib import Path
+    from scripts import sheets_sync
+    path = str(tmp_path / 'private-input.json')
+    original = Path.expanduser
+    def invalid_expansion(value):
+        if str(value) == path:
+            raise error
+        return original(value)
+    monkeypatch.setattr(Path, 'expanduser', invalid_expansion)
+    calls = []
+    monkeypatch.setattr(sheets_sync, 'open_workbook', lambda: calls.append('Google'))
+    assert sheets_sync.main(['--input', path]) == 2
+    output = capsys.readouterr().out
+    assert 'sync_failed: invalid_sync_input' in output
+    assert 'private' not in output and 'embedded null' not in output
+    assert calls == []
