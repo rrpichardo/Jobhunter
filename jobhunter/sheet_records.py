@@ -139,8 +139,10 @@ def reconcile_jobs(rows, records):
         if identity not in known and identity not in planned and key is not None:
             matches = [candidate for candidate in by_link.get(key, ())
                        if (planned.get(candidate) or known[candidate])['Source'] != record['Source']]
-            if len(matches) > 1:
+            if len(matches) > 1 or (matches and key.startswith('https://')):
                 # Never choose between rows whose user-owned cells may disagree.
+                # A shared generic/custom URL does not verify which requisition
+                # from another source an existing row represents.
                 raise ValueError('ambiguous_existing_job_identity')
             if matches:
                 identity = matches[0]

@@ -40,6 +40,32 @@ def test_explicit_us_option_is_retained_alongside_foreign_locations():
     assert p.us_or_unknown('United States or Latin America')
 
 
+@pytest.mark.parametrize('location', ['Remote - South America', 'Latin America (Remote)', 'LATAM remote'])
+def test_remote_south_and_latin_america_roles_are_kept_without_salary(location):
+    assert p.ai_pm_match(posting(location=location))
+
+
+@pytest.mark.parametrize('location,salary,expected', [
+    ('Colombia', 'USD 70,000 per year', True),
+    ('Dominican Republic', 'US$ 70k annually', True),
+    ('República Dominicana', '60,000 - 80,000 USD / year', True),
+    ('Colombia', 'USD 69,999 annually', False),
+    ('Colombia', 'COP 70,000,000 annually', False),
+    ('Dominican Republic', 'DOP 100,000 annually', False),
+    ('Colombia', 'USD 70,000 monthly', False),
+    ('Colombia', 'USD 70,000', False),
+    ('Colombia', '$70,000 annually', False),
+    ('Colombia', 'USD 100,000 total compensation annually', False),
+    ('Brazil', 'USD 100,000 annually', False),
+    ('Remote - Brazil', '', True),
+    ('Colombia (Hybrid)', '', False),
+    ('Costa Rica (Hybrid)', '', False),
+])
+def test_regional_roles_follow_remote_or_country_and_annual_usd_salary_preference(location, salary, expected):
+    from dataclasses import replace
+    assert p.ai_pm_match(replace(posting(location=location), salary=salary)) is expected
+
+
 def test_ai_pm_needs_ai_signal_or_ai_company():
     assert p.ai_pm_match(posting())
     assert not p.ai_pm_match(posting(title="Product Manager, Billing", text="Invoices and tax."))
@@ -151,7 +177,7 @@ BUILTIN_LIST = ('<script type="application/ld&#x2B;json">{"@graph":[{"@type":"It
 BUILTIN_JOB = ('<script type="application/ld&#x2B;json">{"@context":"https://schema.org","@type":"JobPosting",'
                '"description":"<p>Lead AI roadmap.</p>","hiringOrganization":{"name":"Expedia Group"},'
                '"jobLocation":{"address":{"addressLocality":"Seattle","addressRegion":"Washington","addressCountry":"USA"}},'
-               '"baseSalary":{"value":{"minValue":150000,"maxValue":200000,"unitText":"YEAR"}}}</script>')
+               '"baseSalary":{"currency":"USD","value":{"minValue":150000,"maxValue":200000,"unitText":"YEAR"}}}</script>')
 
 
 def test_builtin_listing_and_job_page():
@@ -160,6 +186,43 @@ def test_builtin_listing_and_job_page():
     assert p.detail_builtin(BUILTIN_JOB) == {"text": "Lead AI roadmap.", "company": "Expedia Group",
         "location": "Seattle, Washington, USA", "salary": "150,000 - 200,000 USD YEAR"}
     assert p.detail_builtin("<html></html>")["text"] == ""
+
+
+@pytest.mark.parametrize('currency', ['COP', 'DOP', ''])
+def test_builtin_salary_keeps_source_currency_instead_of_assuming_usd(currency):
+    data = {'@type': 'JobPosting', 'description': 'Build AI.',
+            'baseSalary': {'currency': currency, 'value': {'minValue': 70000, 'unitText': 'YEAR'}}}
+    detail = p.detail_builtin('<script type="application/ld+json">' + json.dumps(data) + '</script>')
+    assert 'USD' not in detail['salary']
+    if currency:
+        assert currency in detail['salary']
+
+
+def test_explicit_ashby_remote_flag_keeps_regional_remote_role_with_original_location():
+    data = {'jobs': [{'id': 'remote-1', 'title': 'Product Manager, AI', 'location': 'Colombia',
+                     'descriptionPlain': 'Build AI products.', 'jobUrl': 'https://example.com/remote-1',
+                     'isRemote': True}]}
+    job = p.parse_ashby(data, CTX)[0][0]
+    assert p.ai_pm_match(job)
+    assert p.to_row(job)['Location'] == 'Colombia'
+
+
+@pytest.mark.parametrize('kind,data', [
+    ('remotive', {'jobs': [{'id': 1, 'title': 'Product Manager, AI', 'company_name': 'Acme',
+                           'candidate_required_location': 'Brazil', 'description': 'Build AI.',
+                           'url': 'https://example.com/jobs/1'}]}),
+    ('remoteok', [{'id': 1, 'position': 'Product Manager, AI', 'company': 'Acme', 'location': 'Brazil',
+                   'description': 'Build AI.', 'url': 'https://example.com/jobs/1'}]),
+    ('himalayas', {'jobs': [{'guid': '1', 'title': 'Product Manager, AI', 'companyName': 'Acme',
+                            'locationRestrictions': ['Brazil'], 'description': 'Build AI.',
+                            'applicationLink': 'https://example.com/jobs/1'}]}),
+    ('jobicy', {'jobs': [{'id': 1, 'jobTitle': 'Product Manager, AI', 'companyName': 'Acme',
+                         'jobGeo': 'Brazil', 'jobDescription': 'Build AI.', 'url': 'https://example.com/jobs/1'}]}),
+])
+def test_remote_only_board_contract_keeps_regional_remote_jobs(kind, data):
+    job = p.PARSERS[kind](data, CTX)[0][0]
+    assert p.ai_pm_match(job)
+    assert p.to_row(job)['Location'] == 'Brazil'
 
 
 def test_listing_only_counters():

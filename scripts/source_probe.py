@@ -18,8 +18,8 @@ import httpx
 import yaml
 
 from jobhunter.artifacts import safe_error_code, write_artifact
-from jobhunter.postings import (DETAIL_SOURCES, LISTING_ONLY, PARSERS, Posting, ai_pm_match, dedupe, is_pm_title,
-                                to_row, us_or_unknown)
+from jobhunter.postings import (DETAIL_SOURCES, LISTING_ONLY, ONSITE_COUNTRIES, PARSERS, Posting, ai_pm_match,
+                                collection_location_match, dedupe, is_pm_title, to_row)
 
 USER_AGENT = "JobHunterBot/0.1 (personal job search; polite single requests)"
 MAX_BYTES = 40 * 1024 * 1024
@@ -109,7 +109,9 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep):
                           coverage="partial-response"), [], "listing_only"
         if kind in DETAIL_SOURCES:
             stubs, rejected = DETAIL_SOURCES[kind][0](data, {**ctx, "url": url})
-            shortlist = [s for s in stubs if is_pm_title(s["title"]) and us_or_unknown(s["location"])]
+            shortlist = [s for s in stubs if is_pm_title(s["title"])
+                         and (collection_location_match(s["location"], s["salary"])
+                              or ONSITE_COUNTRIES.search(s["location"]))]
             postings, failed, problem, detail_attempts = fetch_details(
                 client, entry, shortlist[:PER_SOURCE_LIMIT], stamp, delay=delay, sleep=sleep)
             attempts += detail_attempts

@@ -76,3 +76,15 @@ def test_distinct_source_requisitions_sharing_a_generic_link_remain_separate():
     deliver(store, [row('remotive:1', 'remotive', 'https://example.com/careers')], 'one')
     deliver(store, [row('remotive:2', 'remotive', 'https://example.com/careers')], 'two')
     assert len(store.tables['Jobs']) == 3
+
+
+def test_a_historical_generic_link_cannot_collapse_new_source_requisitions():
+    store = MemoryStore()
+    deliver(store, [row('remotive:1', 'remotive', 'https://example.com/careers')], 'first')
+    store.writes.clear()
+    incoming = [row(f'himalayas:{n}', 'himalayas', 'https://example.com/careers')
+                | {'Job title': f'Product Manager, AI {n}'} for n in (1, 2)]
+    with pytest.raises(ValueError, match='ambiguous_existing_job_identity'):
+        deliver(store, incoming, 'second')
+    assert all(title != 'Jobs' for title, _ in store.writes)
+    assert store.tables['Jobs'][1][0] == 'remotive:1'

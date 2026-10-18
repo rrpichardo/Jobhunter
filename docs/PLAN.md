@@ -252,7 +252,14 @@ WebSearch scouts for public LinkedIn/X posts; code for all APIs and the `twscrap
    following their limits and stop rule. Persist non-secret retry data in Sheet `_State`.
 3. **AI PM filter (code):** title is a PM role (product manager / PM / product lead / group PM …) AND (AI/ML/LLM/GenAI/
    agent/model keyword in title or description, OR company tagged AI company in registry); exclude intern/Summer
-   Associate; keep US / remote-US / unknown location. Preliminary **Rank 1–3** from registry tags (AI co / Big Tech /
+   Associate; keep US / remote-US / unknown location. User update (October 18): also
+   keep remote South/Latin America roles regardless of salary; on-site or hybrid
+   regional roles qualify only in Colombia or the Dominican Republic when an
+   explicitly annual USD salary range overlaps USD 70,000 or higher. Preserve the
+   source location and work-mode evidence; this collection exception does not
+   assert US-based work permission or complete eligibility. Ambiguous currency,
+   pay period or total-compensation figures do not establish the salary exception.
+   Preliminary **Rank 1–3** from registry tags (AI co / Big Tech /
    other). Dedupe by Job ID (source + requisition ID / canonical URL).
 4. **Columns** (Jobs tab): Job ID · Date found · Job title · Company · Salary (when the source gives it) · Location ·
    Brief description (first ~300 chars, cleaned) · Apply link · Source · Rank (prelim) · Fit (blank) · Next step

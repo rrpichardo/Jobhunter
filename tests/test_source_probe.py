@@ -199,6 +199,23 @@ def test_partial_source_jobs_require_explicit_successful_item_evidence(change):
         prepare_payload([job()], [source | change])
 
 
+@pytest.mark.parametrize('location,salary,expected', [
+    ('Colombia', '70,000 USD YEAR', 1), ('Dominican Republic', '80,000 USD YEAR', 1),
+    ('Colombia', '65,000 USD YEAR', 0), ('Brazil', '90,000 USD YEAR', 0),
+    ('Remote - Latin America', '', 1),
+])
+def test_detail_collection_uses_regional_location_and_salary_preferences(location, salary, expected):
+    listing = YC_LIST.replace('San Francisco, CA', location).replace(
+        '&quot;salaryRange&quot;:&quot;&quot;', f'&quot;salaryRange&quot;:&quot;{salary}&quot;')
+    entry = {'id': 'yc-product', 'kind': 'yc', 'url': 'https://www.ycombinator.com/jobs/role/product-manager'}
+    with httpx.Client(transport=httpx.MockTransport(lambda request: httpx.Response(
+            200, text=listing if 'jobs/role' in str(request.url) else YC_PAGE))) as client:
+        source, jobs, _ = probe.probe_source(client, entry, '2026-10-18T00:00:00+00:00')
+    assert source['selected_for_m0'] == len(jobs) == expected
+    if jobs:
+        assert jobs[0].location == location
+
+
 def test_duplicates_across_sources_are_merged_and_counted():
     gh = {"jobs": [{"id": 1, "title": "Product Manager, AI Agents", "location": {"name": "Remote"},
                     "content": "<p>Agents.</p>", "absolute_url": "https://job-boards.greenhouse.io/good/jobs/1"}]}

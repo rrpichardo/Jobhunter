@@ -29,13 +29,15 @@
   sections, and detail-page blocks being reported as HTTP 200 success.
 - Reconciliation now retains the original Sheet ID/source, Date found and user
   fields when another source supplies the same employer link. First-seen source
-  dates are retained in More details. Same-source distinct requisitions remain
+  dates are retained in More details. Automatic cross-source reconciliation uses
+  verified ATS requisition links; shared custom/generic links stop as ambiguous.
+  Same-source distinct requisitions remain
   separate; ambiguous existing cross-source rows stop for operator reconciliation.
   No live rows are merged, deleted or repaired automatically.
 - The collector and writer share URL identity logic. Paths/query keys/ports remain
   distinct; tracking is removed. Lever combines introduction, responsibility lists
-  and additional description sections. Explicit South/Latin America restrictions
-  are rejected without discarding a separately explicit US option.
+  and additional description sections. The subsequent user location preference
+  below supersedes the original blanket South/Latin America rejection.
 - Detail HTTP/transport failures now retain their actual status/error. Blocks stop
   remaining detail requests, while already validated jobs can be delivered with
   explicit selected/valid-count evidence. Run Log retains the source-failure state.
@@ -45,6 +47,28 @@
   No live source requests, Google writes or schedule tests ran. Fresh Claude review
   of the complete candidate is outstanding; do not treat old review badges as
   covering this patch. No further push is authorized by the current user direction.
+
+### User location clarification and local review follow-up
+
+- Keep remote South/Latin America leads regardless of salary. For on-site/hybrid
+  roles in that region, only Colombia and the Dominican Republic qualify when an
+  explicitly annual USD salary range reaches 70,000. Unknown currency/pay units,
+  COP/DOP amounts and total compensation do not prove this exception. The threshold
+  uses range overlap, consistent with PLAN.md. No role is labeled eligible here.
+- Retain explicit Ashby remote metadata without replacing the original location.
+  Built In now retains its actual structured salary currency instead of inventing
+  USD; this matters when applying the regional salary exception.
+- Supplementary Codex review found a generic-link ambiguity in the first local
+  repair candidate: distinct requisitions could overwrite one historical row.
+  A failing regression reproduced it. Such unverified cross-source links now stop
+  before Jobs mutation; known ATS identities still reconcile across runs. This
+  is not the required Claude review or an approval to push.
+- Complete local candidate after the user's preferences and ambiguity repair:
+  locked full suite passed 265 tests and 10 subtests; `git diff --check` passed.
+  Remotive, RemoteOK, Himalayas and Jobicy retain their remote-only collection
+  contract, and Ashby's explicit remote flag is preserved. Original locations are
+  kept; missing pay currency/period is not invented. No live collection or Sheet
+  writes ran. Claude review of this exact local candidate remains outstanding.
 
 This is the durable log for implementation blockers and milestone repair cycles.
 Read it before retrying work. Maximum: three distinct attempts per blocker and

@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from html import unescape
 import hashlib
 import json
+import math
 import re
 from urllib.parse import urljoin, urlsplit
 
@@ -30,7 +31,7 @@ US_TERMS = re.compile(r"\b(united states(?: of america)?|usa|u\.s\.a?\.?|us|nort
                       r"sf|bay area|seattle|austin|boston|chicago|los angeles|denver|atlanta|"
                       r"washington|dc|miami|california|texas|massachusetts)\b", re.I)
 ANYWHERE = re.compile(r"\b(remote|anywhere|worldwide|global|hybrid)\b", re.I)
-NON_US = re.compile(r"\b(south america|latin america|europe|emea|apac|asia|latam|canada|mexico|brazil|uk|united kingdom|london|"
+NON_US = re.compile(r"\b(south america|latin america|dominican republic|rep[uú]blica dominicana|europe|emea|apac|asia|latam|canada|mexico|brazil|uk|united kingdom|london|"
                     r"ireland|dublin|germany|berlin|france|paris|spain|netherlands|amsterdam|india|"
                     r"bangalore|singapore|japan|tokyo|australia|sydney|israel|tel aviv|poland|"
                     r"portugal|sweden|switzerland|zurich|dubai|nigeria|kenya|south africa|bengaluru|mumbai|delhi|"
@@ -42,6 +43,12 @@ NON_US = re.compile(r"\b(south america|latin america|europe|emea|apac|asia|latam
 COUNTRY_CODE = re.compile(r",\s*[A-Z]{2},\s*([A-Z]{2})\b")
 LOCATION_US_CODE = re.compile(r",\s*(?:A[LKZR]|C[AOT]|DE|FL|GA|HI|I[ADLN]|K[SY]|LA|M[ADEINOST]|"
                               r"N[CDEHJMVY]|O[HKR]|PA|RI|S[CD]|T[NX]|UT|V[AT]|W[AIVY]|DC)\b")
+LATIN_AMERICA = re.compile(r'\b(south america|latin america|latam|colombia|dominican republic|rep[uú]blica dominicana|'
+                           r'brazil|brasil|argentina|chile|peru|perú|ecuador|bolivia|uruguay|paraguay|venezuela|'
+                           r'mexico|méxico|costa rica|panama|panamá|guatemala|honduras|el salvador|nicaragua|belize)\b', re.I)
+ONSITE_COUNTRIES = re.compile(r'\b(colombia|dominican republic|rep[uú]blica dominicana)\b', re.I)
+REMOTE_TERMS = re.compile(r'\b(remote|anywhere|worldwide|global)\b', re.I)
+MIN_REGIONAL_ANNUAL_USD = 70_000
 
 
 @dataclass(frozen=True)
@@ -56,6 +63,7 @@ class Posting:
     captured_at: str
     salary: str = ""
     tag: str = "other"  # ai | bigtech | other, from the reviewed registry
+    remote: bool = False  # explicit source metadata; False does not prove on-site
 
     def __post_init__(self):
         for value in (self.job_id, self.source_id, self.company, self.title, self.text):
@@ -63,7 +71,8 @@ class Posting:
                 raise ValueError("invalid_posting_text")
         if (not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9:._~-]{0,300}", self.job_id)
                 or not isinstance(self.location, str) or not isinstance(self.salary, str)
-                or self.tag not in {"ai", "bigtech", "other"} or not https_url(self.apply_url)):
+                or self.tag not in {"ai", "bigtech", "other"} or type(self.remote) is not bool
+                or not https_url(self.apply_url)):
             raise ValueError("invalid_posting")
 
 
@@ -102,9 +111,34 @@ def us_or_unknown(location: str) -> bool:
     return bool(LOCATION_US_CODE.search(location) or ANYWHERE.search(location))
 
 
+def regional_salary_match(salary: str) -> bool:
+    """Annual USD salary range overlaps the user's floor; unknown units stay unknown."""
+    usd = re.compile(r'\bUSD\b|US\$', re.I)
+    if (not usd.search(salary)
+            or not re.search(r'\b(year|yearly|annual|annually|annum|yr)\b', salary, re.I)
+            or re.search(r'\b(COP|DOP|CAD|AUD|MXN|EUR|GBP|hour|hourly|month|monthly|week|weekly|day|daily|'
+                         r'OTE|total compensation|equity)\b|RD\$|R\$', salary, re.I)):
+        return False
+    amounts = []
+    for number, scale in re.findall(r'(?<![\w.])(\d[\d,]*(?:\.\d+)?)\s*([kK]?)(?![\w.])', usd.sub(' ', salary)):
+        value = float(number.replace(',', '')) * (1000 if scale else 1)
+        if math.isfinite(value):
+            amounts.append(value)
+    return bool(amounts and max(amounts) >= MIN_REGIONAL_ANNUAL_USD)
+
+
+def collection_location_match(location: str, salary: str = '', *, remote: bool = False) -> bool:
+    """Collection preference; a regional remote lead does not assert US eligibility."""
+    if LATIN_AMERICA.search(location) and not US_TERMS.search(location):
+        return (remote or bool(REMOTE_TERMS.search(location))
+                or bool(ONSITE_COUNTRIES.search(location) and regional_salary_match(salary)))
+    return us_or_unknown(location)
+
+
 def ai_pm_match(posting: Posting) -> bool:
-    """PLAN filter: PM title and (AI term in title/description or AI-tagged company) and US/unknown."""
-    return (is_pm_title(posting.title) and us_or_unknown(posting.location)
+    """PM role plus AI signal and the user's collection-location preference."""
+    return (is_pm_title(posting.title)
+            and collection_location_match(posting.location, posting.salary, remote=posting.remote)
             and (posting.tag == "ai" or bool(AI_TERMS.search(posting.title))
                  or bool(AI_TERMS.search(posting.text))))
 
@@ -177,7 +211,7 @@ def parse_ashby(data, ctx):
         text = plain(item.get("descriptionPlain")) or clean_html(item.get("descriptionHtml"))
         return Posting(f"ashby:{ctx['board']}:{item['id']}", ctx["source_id"], ctx["company"],
                        plain(item.get("title")), location, text, item.get("jobUrl"),
-                       ctx["captured_at"], tag=ctx["tag"])
+                       ctx["captured_at"], tag=ctx["tag"], remote=item.get('isRemote') is True)
     return (*_collect(listed, build), len(listed))
 
 
@@ -189,7 +223,7 @@ def parse_remotive(data, ctx):
         return Posting(f"remotive:{item['id']}", ctx["source_id"], plain(item.get("company_name")),
                        plain(item.get("title")), plain(item.get("candidate_required_location")),
                        clean_html(item.get("description")), item.get("url"), ctx["captured_at"],
-                       salary=plain(item.get("salary")), tag="other")
+                       salary=plain(item.get("salary")), tag="other", remote=True)
     return (*_collect(data["jobs"], build), len(data["jobs"]))
 
 
@@ -203,7 +237,7 @@ def parse_remoteok(data, ctx):
                        plain(item.get("position")), plain(item.get("location")) or "Remote",
                        clean_html(item.get("description")), item.get("url") or item.get("apply_url"),
                        ctx["captured_at"], salary=_salary(item.get("salary_min"), item.get("salary_max")),
-                       tag="other")
+                       tag="other", remote=True)
     return (*_collect(jobs, build), len(jobs))
 
 
@@ -219,7 +253,7 @@ def parse_himalayas(data, ctx):
                        clean_html(item.get("description")) or plain(item.get("excerpt")),
                        item.get("applicationLink"), ctx["captured_at"],
                        salary=_salary(item.get("minSalary"), item.get("maxSalary"), item.get("currency"),
-                                      item.get("salaryPeriod")), tag="other")
+                                      item.get("salaryPeriod")), tag="other", remote=True)
     return (*_collect(data["jobs"], build), len(data["jobs"]))
 
 
@@ -234,7 +268,7 @@ def parse_jobicy(data, ctx):
                        clean_html(item.get("jobDescription")) or plain(item.get("jobExcerpt")),
                        item.get("url"), ctx["captured_at"],
                        salary=_salary(item.get("salaryMin"), item.get("salaryMax"),
-                                      item.get("salaryCurrency"), item.get("salaryPeriod")), tag="other")
+                                      item.get("salaryCurrency"), item.get("salaryPeriod")), tag="other", remote=True)
     return (*_collect(data["jobs"], build), len(data["jobs"]))
 
 
@@ -344,11 +378,12 @@ def detail_builtin(text):
     requirement = job.get("applicantLocationRequirements")
     if not parts and isinstance(requirement, dict) and isinstance(requirement.get("name"), str):
         parts.append(plain(requirement["name"]))
-    salary = job.get("baseSalary", {}).get("value", {}) if isinstance(job.get("baseSalary"), dict) else {}
+    base_salary = job.get('baseSalary') if isinstance(job.get('baseSalary'), dict) else {}
+    salary = base_salary.get('value', {})
     return {"text": clean_html(job.get("description")),
             "company": plain(org.get("name")) if isinstance(org, dict) else "",
             "location": "; ".join(parts),
-            "salary": _salary(salary.get("minValue"), salary.get("maxValue"), "USD", salary.get("unitText"))
+            "salary": _salary(salary.get("minValue"), salary.get("maxValue"), plain(base_salary.get('currency')), salary.get("unitText"))
             if isinstance(salary, dict) else ""}
 
 
@@ -447,6 +482,8 @@ def to_row(posting: Posting, note: str = "") -> dict:
     quote = posting.text[:300].rstrip()
     rank = {"ai": 1, "bigtech": 2, "other": 3}[posting.tag]
     details = f"Source: {posting.apply_url}\nEvidence: {quote}" + (f"\n{note}" if note else "")
+    if posting.remote:
+        details += '\nWork mode: Remote (source metadata)'
     return {"Job ID": posting.job_id, "Date found": posting.captured_at[:10],
             "Job title": posting.title, "Company": posting.company, "Salary": posting.salary,
             "Location": posting.location, "Brief description": quote, "Apply link": posting.apply_url,
