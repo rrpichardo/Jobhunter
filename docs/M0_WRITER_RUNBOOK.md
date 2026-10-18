@@ -111,6 +111,29 @@ Use sanitized fixture jobs for destructive failure injection and replay; don't
 repeat social collection. Isolated endpoint proof alone does not satisfy these.
 Scheduled M0 and full-source V0 remain separate outstanding gates.
 
+## Live test harness (JobHunterEnv only)
+
+`scripts/live_harness.py` runs the remaining live acceptance checks against Google.
+Each scenario gets a fresh hidden `_M0Test_<12 hex>` namespace and never reads or
+writes the real Jobs, Sources, Run Log or _State tabs. A guard rejects any request
+outside that namespace or the shared lock tab. No source or social fetches happen,
+calls are paced (default 1.5 s apart, `--interval`), and fixture tabs are kept.
+The harness never unlocks: if a lock already exists it stops untouched.
+
+```sh
+uv run --locked python -m scripts.live_harness                      # clean suite
+uv run --locked python -m scripts.live_harness --scenario overlap   # one scenario
+```
+
+Clean scenarios (each must end with the lock released by the writer itself):
+`chunks`, `repeat`, `preserve`, `sorted`, `timeout_after_apply`,
+`timeout_after_apply_structural`, `interrupt_after_apply`, `overlap` (two independent
+processes; exactly one must win, the other must report `writer_locked`).
+Opt-in only: `timeout_before_apply` and `interrupt_before_apply` deliberately leave
+the global lock in place (exit 3). Run them only with operator agreement, since the
+lock blocks the real writer until an operator decides how to clear it.
+Read each scenario's PASS/FAIL lines in the real command output.
+
 ## Poisoned pending run: manual quarantine
 
 A pending run that can never be replayed (corrupt journal cells, a payload that
@@ -140,4 +163,5 @@ deployed. See CLAUDE_HANDOFF.md.
 Internal `GspreadStore(namespace='_M0Test_<8–32 lowercase letters/digits>')`
 uses isolated hidden data tabs and the same global lock/receipt. It is not exposed
 by the production CLI. The live harness must first reject an existing namespace;
-its isolation and failure-injection checks have not been run against Google.
+its isolation and failure-injection checks have not been run against Google;
+the harness above exists but its live results are not yet recorded.
