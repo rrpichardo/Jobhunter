@@ -1,5 +1,47 @@
 # Jobhunter — KISS build plan v5 (Google Sheets = database + CRM)
 
+## Current operator follow-ups — October 18, 2026
+
+This checklist records the user's pending decisions and setup assistance from the
+continuation conversation. Older setup tables below are historical; do not recreate
+resources already provisioned. Pending choices do not silently change current limits.
+
+- [ ] Finish PR #15: fix actionable Claude findings, obtain fresh opposite-agent
+  review of the latest pushed revision, and pass applicable CI before merging.
+- [x] Confirm the intended existing Claude Gmail destination, create its exact
+  `JobHunter` label, and verify the dedicated alert account's forwarding destination.
+  Global forwarding stays disabled; only approved alert filters may forward mail.
+- [ ] Help the user enable job-search email alerts in the dedicated job-alert
+  account. They are not enabled yet. Start with LinkedIn saved-search alerts, then
+  configure the other approved providers as available; user completes private input
+  and account verification. Do not assume old main-account subscriptions cover this.
+- [ ] Configure precise source forwarding and destination `JobHunter` labeling
+  filters using verified alert sender/subject examples. Exclude security, login,
+  verification and password/reset messages. Historical main-account alert metadata
+  may inform initial rules under the user's explicit setup-only permission, but
+  does not prove current dedicated-account delivery. Verify a fresh forwarded alert
+  and actual cloud label-only access; routine Gmail scope remains unchanged.
+  Filter installation encountered three unexpected UI navigations to Drafts;
+  no filter was saved. Pause that UI blocker pending user manual completion of
+  the forwarding action or a relevant tool/UI change (see ATTEMPTS.md).
+- [ ] Later, when the user asks, help stop/clean up old job-alert subscriptions in
+  the main mailbox. No unsubscribe, archive or deletion is authorized by this
+  checklist; the user expressly deferred that cleanup.
+- [ ] Resolve collection caps: the current probe selects at most eight jobs per
+  source and 150 total, and the writer accepts at most 150 per input batch. The user
+  questions these restrictions. Proposed direction: retain all matching jobs found,
+  deliver in safe batches, and budget AI processing separately. Agree the behavior,
+  then update collectors, writer/recovery and tests together; no cap change yet.
+- [ ] Explain and settle the cloud collector approach for Work at a Startup,
+  LinkedIn jobs/posts and X hiring posts in plain language. Dedicated cookies are
+  provisioned per the handoff; actual cloud collection/restoration remains unproved.
+  The user's tentative preference is not a resolved change to volume/stop rules.
+- [ ] Obtain the correct Cosign URL and the names/URLs of the desired school/MBA
+  job sites. Do not substitute a parked domain or an admissions consultancy.
+- [ ] Complete cloud source/delivery/recovery proof, then the daily routine at
+  06:07 America/New_York, current operational docs, an actual scheduled delivery,
+  and separate day-7/day-14 reviews. Source setup and deployment remain incomplete.
+
 ## ▶ V0 — Daily cloud collection across all planned sources
 Goal: pull **AI PM jobs** from as many sources as possible, **prove each source works**, and deliver them in a
 **Google Sheet** with our columns. Include **LinkedIn jobs/posts and X hiring posts** in the V0 test scope.

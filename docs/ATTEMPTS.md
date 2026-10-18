@@ -1,5 +1,79 @@
 # Implementation attempt log
 
+## October 18 PR #15 cycle 3 result — further work authorized
+
+- Claude reviewed exact `8fc2a7c12a8129b0e27f8f9472a62db0cee52ef6`, confirmed
+  the automatic-review old-limit finding resolved, and manually checked jq on three
+  timestamp scenarios. It did not run the suite. Current-head local verification
+  passed 386 tests / 10 subtests, Bash syntax and diff checks; Linux, Windows and
+  the Claude action are green. A green action is not the actual review report.
+- One actionable low-severity documentation issue remains: REVIEW_WORKFLOW says
+  to post the request before starting the watcher; a fast usage-limit reply in
+  between is intentionally ignored and can become a timeout. Proposed docs-only
+  repair: start the watcher before a manual request and explain pre-start replies
+  for automatic reviews. No new code repair has been made for this finding.
+- Three watcher review/repair cycles were exhausted. User then explicitly said
+  not to worry about the cap for this PR, authorizing continued watcher repair
+  and review. This exception does not reset other source/setup blocker counters.
+  The docs now start the watcher before a manual request and explain pre-start
+  automatic-review replies. Obtain fresh exact-head Claude review and CI before
+  merging; non-blocking severity alone is not resolution.
+
+## October 18 Gmail filter UI — three attempts exhausted
+
+- Forwarding destination registration is verified; destination `JobHunter` label
+  exists. Global forwarding remains disabled. No JobHunter filter is installed.
+- Three source-filter UI investigations encountered unexpected navigation: the
+  existing tab first returned to settings during a narrow search, then switched
+  to Drafts at the forwarding-checkbox action. A fresh owned tab using DOM-only
+  controls also switched to Drafts at that action. The agent stopped without
+  saving any filter; no fourth investigation is authorized.
+- Stop this UI blocker until the user manually selects the forwarding action or
+  a relevant tool/UI capability changes. Prepared conservative sender/subject
+  rules are not installed or delivered-mail proof. Dedicated-account alerts still
+  need enabling; user-assisted old-main-account subscription cleanup is deferred.
+
+## October 18 PR #15 watcher — review/repair cycle 2
+
+- After the reported session-limit reset, Claude CLI reviewed exact head
+  `341560c2f8af5ba2a34e779329d20f6d216df8e0`. It confirmed the stale-head fix
+  and found an actionable remaining old-limit case: automatic review for a new
+  commit need not create a new human request. An old request then kept the old
+  usage-limit reply inside the script's time window. No reviewer suite execution
+  is claimed; Claude inspected the diff and exercised jq expressions.
+- A regression reproduced exit 2 for that earlier-round reply before repair.
+  The window now starts no earlier than the watcher start, even with an old human
+  request. Historical replies and same-second timestamp ambiguity are ignored;
+  completed exact-head review receipts are still recognized. Seven focused tests
+  and the full 386-test / 10-subtest suite pass. Bash syntax and diff checks pass.
+- The prior head's Linux/Windows CI and rerun Claude action are green, but do not
+  cover this repair. Push the new revision and obtain fresh Claude review and CI.
+  Cycle counters carry forward: the next fresh review is cycle 3 / 3 for this
+  watcher milestone. A further repair/review cycle requires user authorization.
+
+## October 18 PR #14 watcher — review/repair cycle 1
+
+- Codex reviewed Claude head `5cf687c1e3cfde90def9eab9f2cd2f74f8b3b633`:
+  P1 stale-head clean result and P2 earlier-request usage-limit termination.
+  `scripts/wait_codex_review.sh 14 <head> 1` returned findings (exit 1).
+- Codex took over repairs on `codex/review-watcher-fixes`. Three regression
+  failures reproduced both defects, including a push during response retrieval.
+  The watcher now compares the live head before polling and before clean exit,
+  and dates usage-limit replies against the latest human review request (or the
+  wait start if none exists). Five focused tests pass; full offline suite:
+  384 tests / 10 subtests passed. Bash syntax and diff checks passed.
+- This fix set requires opposite-agent Claude review of its pushed full SHA;
+  the original Codex review does not approve the new Codex-authored repairs.
+  Linux/Windows CI and current review are still required. No runtime/deployment
+  proof or source collection was performed. Claude's previous review action
+  failed with `is_error:true`, not a completed review; do not bypass a required check.
+- Another process switched the shared checkout to main and merged PR #14 at
+  `6c29058d00327b607a95a54a7058d8bfd4bf5e47` during repairs. The repair commit
+  was preserved on `codex/review-watcher-repairs`, follow-up PR #15; no repair
+  implementation was pushed directly to remote main. The authenticated Claude
+  CLI review attempt returned a session limit and no review. Resume opposite-agent
+  review after the limit resets; this is outstanding, not approval.
+
 ## October 18 source cycle13 — Claude salary-modifier follow-up
 
 - Claude's exact5710dd3 review found no blocking issue but noted the concrete

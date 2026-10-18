@@ -1,5 +1,39 @@
 # JobHunter implementation setup
 
+## October 18 forwarding verified; dedicated alerts still pending
+
+- Forwarding destination verification is now complete in the Gmail settings UI.
+  Global forwarding remains disabled. The destination `JobHunter` label exists.
+- User confirmed dedicated-account email job alerts have not yet been enabled
+  and requests setup assistance. Enable and test these before claiming Gmail
+  collection works. Historical main-account alert sender/subject examples were
+  inspected under explicit setup-only authorization; no bodies or unrelated mail
+  were requested, and no cleanup/unsubscribe was performed. Historical metadata
+  is not evidence of fresh forwarding or current source coverage.
+- Configure conservative alert-only starter filters from verified sender/subject
+  patterns, then test a fresh dedicated-account alert through destination labeling
+  and cloud collection. Old main-account subscriptions/messages are a separate,
+  deferred user-assisted cleanup. See PLAN.md's current operator checklist.
+- Starter filters were prepared but not installed: three UI investigations hit
+  unexpected navigation, including to Drafts at the forwarding-checkbox action.
+  Further UI attempts are paused pending user manual completion or relevant tool
+  changes. No existing alert was deleted, archived or unsubscribed.
+
+## October 18 continuation — Gmail setup in progress
+
+- User confirmed the existing Claude-connected Gmail is the intended forwarding
+  destination. Preserve that connector. Created its exact `JobHunter` label in the
+  Gmail setup UI and observed the success notice.
+- Registered the dedicated job-alert account's forwarding destination. Gmail
+  confirmed it sent a verification link; settings now show the address awaiting
+  verification. The user must complete that verification directly. No global
+  forwarding or source/destination filter was enabled. A draft narrow alert filter
+  was inspected but not saved; there were no matching messages in that preview.
+- After user verification: configure only approved job-alert sender/subject rules,
+  exclude security/verification/login/password messages, and label only the
+  forwarded alerts. Then verify label-scoped collection in actual JobHunterEnv.
+  Local label creation does not prove cloud Gmail access or alert delivery.
+
 ## October 18 collection preference update
 
 The user permits remote South/Latin America roles regardless of salary. For

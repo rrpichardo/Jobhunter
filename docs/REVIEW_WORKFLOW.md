@@ -12,16 +12,30 @@ substantive fixes. Existing three-cycle counters apply across handoffs and PRs.
 
 1. Push the feature branch, open the milestone PR and get its head SHA:
    `gh pr view <number> --json headRefOid,url`.
-2. Post `@codex review` on that PR, with the intended acceptance criteria and
-   explicit request for review only. This request is authorized by the user's
-   reciprocal-review instruction. Do not ask Codex to implement fixes concurrently.
+2. Before making a manual review request, start
+   `scripts/wait_codex_review.sh <pr> <full-head-sha> [minutes]` in one terminal.
+   Then, from another terminal or the GitHub UI, post `@codex review` on that PR,
+   with the intended acceptance criteria and explicit request for review only.
+   Starting the watcher first lets it see even an immediate usage-limit reply.
+   This request is authorized by the user's reciprocal-review instruction.
+   Do not ask Codex to implement fixes concurrently.
 3. Wait for an actual Codex review covering that SHA. A reaction, CI badge,
    comment asking for setup, or absence of findings without a completed review
    does not satisfy the gate. After fixes, push and request another review.
    Use `scripts/wait_codex_review.sh <pr> <full-head-sha> [minutes]` to wait: it recognises
    Codex's clean receipt, a review with inline findings, the summary state and a usage-limit
-   reply (exit 0 clean, 1 findings, 2 usage limit, 3 timeout). Only exit 0 for the exact
-   current head counts as a clean review.
+   reply (exit 0 clean, 1 findings, 2 usage limit, 3 timeout or changed head). It checks
+   the live PR head before polling and again before reporting clean. Usage-limit
+   replies must be newer than both the wait start and the latest human review
+   request, if any. Historical usage-limit replies are ignored even when automatic
+   review adds no request comment. A reply in the same timestamp second is also
+   ignored, conservatively waiting for a review or timeout. Only exit 0 for the exact current head
+   counts as a clean review. Recheck the SHA at merge time as well.
+   If an automatic review was already triggered before the watcher started, a
+   usage-limit reply that has already arrived is intentionally ignored by the
+   watcher. Inspect the latest response and its timing manually for that diagnostic
+   rather than waiting the full timeout. A usage-limit reply never establishes
+   approval, and a timeout alone does not establish a quota or access failure.
 4. If the GitHub integration is unavailable, have Codex review the PR in the
    Codex app/IDE, or use the already-installed local Codex CLI in a clean separate
    checkout of the PR: `git fetch origin`, `gh pr checkout <number>`, then

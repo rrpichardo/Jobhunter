@@ -1,5 +1,43 @@
 # Claude Code continuation handoff
 
+## Latest continuation — PR review and operator checklist
+
+- Cycle-3 Claude review of `8fc2a7c` confirmed the code findings fixed but found
+  request-before-watcher documentation could miss fast usage-limit replies. User
+  explicitly waived this PR's repair cap. Corrected the manual request order and
+  documented pre-start automatic-review limits; fresh pushed-head review/CI remain
+  required. The Gmail UI blocker has three attempts and is still paused; no filter
+  was installed. Dedicated alerts still need enabling. See ATTEMPTS.md.
+
+- PLAN.md now records the unresolved user setup/decision list, including enabling
+  dedicated-account alerts and later cleanup of old main-account subscriptions.
+  Forwarding registration is verified, but fresh alert delivery/cloud Gmail access
+  are not. Historical LinkedIn/TrueUp/Glassdoor alert metadata was inspected only
+  under the user's explicit setup permission; it does not broaden routine scope.
+- Claude reviewed `341560c` for PR #15 and confirmed the stale-head fix, but found
+  an old usage-limit reply still ended automatic-review waits without a new human
+  request. A regression failed before repair; fresh suite: 386 tests / 10 subtests.
+  The new repair requires pushed-head Claude review and CI. The old head's green
+  checks do not approve the repair. See ATTEMPTS.md cycle 2; do not reset counters.
+
+## Codex continuation checkpoint — October 18, 2026
+
+- PR #13 is merged. Another process merged PR #14 at `6c29058` while Codex was
+  repairing its actual P1/P2 review findings. Repairs are preserved in follow-up
+  PR #15 (`codex/review-watcher-repairs`), not pushed directly to remote main.
+  Offline verification: 384 tests / 10 subtests, Bash syntax and diff check passed;
+  Linux/Windows CI passed on repair `6f5c9b0`. Claude CLI returned a session limit,
+  and the automatic Claude action failed. No Claude review/merge approval exists.
+- Gmail destination confirmed by the user; `JobHunter` label created. Forwarding
+  destination registration sent a verification link. User must verify directly;
+  no forwarding/filter enabled yet. See SETUP.md. Preserve all label-only rules.
+- User questioned the eight-jobs-per-source / 150-jobs-total collection caps.
+  Proposed retaining all matching jobs found with safe batch delivery and a
+  separate AI-processing budget; answer/implementation still pending. Existing
+  caps remain unchanged. Explain browser/social setup in plain language before
+  relying on the user's tentative preference as a final scope decision.
+- No new social access, source harvest, Sheet write or deployment evidence.
+
 ## Handover from Claude (Opus) — October 18, 2026, evening
 
 Start here in a new conversation or in Codex. Read AGENTS.md (opposite-agent review only:
