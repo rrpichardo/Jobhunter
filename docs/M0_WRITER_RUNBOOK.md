@@ -167,8 +167,7 @@ uv run --locked python -m scripts.sheets_sync --input /private/run/probe.json --
 The artifact uses `schema_version: 2` (`sources` list plus `jobs`); `sheets_sync` writes every
 source's evidence and all jobs in one locked run. For schema 2 exit 0 means the readback was
 verified; failed, blocked and needs-setup sources are recorded evidence, shown as
-`source_problems_recorded=N`. Cross-source duplicate detection is not implemented yet: the same
-role listed on a company board and an aggregator becomes two rows. The Run Log status reads
+`source_problems_recorded=N`. The Run Log status reads
 `complete-with-source-failure` whenever any source is not OK or OK-zero-jobs, including `needs setup`.
 
 ## Poisoned pending run: manual quarantine
