@@ -19,8 +19,9 @@ Decisions confirmed by the user on October 18 after a plain-language explanation
 1. Keep every matching job found across ALL planned sources and deliver ready jobs
    to the Sheet in recoverable batches. The old eight-per-source / 150-per-run
    numbers are no longer a target. Searches stay bounded, and unknown eligibility
-   is never assumed. The code still enforces the old caps until the implementing
-   PR lands.
+   is never assumed. Implemented on branch
+   `claude/keep-every-match-batches` (PR pending review); main keeps the old caps
+   until that PR merges.
 2. The AI work runs INSIDE the daily 06:07 routine, not in a separate job, and
    the goal is that EVERY collected job is processed in that run. Only jobs not
    already processed are sent to AI, so after the first large run the daily
@@ -41,7 +42,7 @@ Decisions confirmed by the user on October 18 after a plain-language explanation
    should apply for, then run daily and process only NEW jobs. The backfill is
    bounded and recoverable: it may take more than one run to drain, but it must
    never drop jobs silently. Sources that cannot filter by posting date are
-   recorded as honest gaps (see the lookback table when the backfill PR lands).
+   recorded as honest gaps (see docs/BACKFILL_WINDOWS.md).
 4. LinkedIn starts at five JOB searches plus five separate HIRING-POST searches
    per daily run, ten in total (the 50-search alternative was declined for now).
    Detail views stay at 50 or fewer and are a separate limit. X stays at 10
@@ -78,14 +79,14 @@ resources already provisioned. Pending choices do not silently change current li
 - [ ] Later, when the user asks, help stop/clean up old job-alert subscriptions in
   the main mailbox. No unsubscribe, archive or deletion is authorized by this
   checklist; the user expressly deferred that cleanup.
-- [ ] Implement the agreed collection behavior (decided October 18): retain all
-  matching jobs found, deliver in safe batches, and budget AI processing
-  separately with a saved backlog. The current probe still selects at most eight
-  jobs per source and 150 total, and the writer accepts at most 150 per input batch.
-  Include the 4-week first-run backfill. Update collectors, writer/recovery
-  and tests together in one PR; the 150-per-sync
-  writer chunk may stay as a batch size, but a larger run must split into batches
-  with recovery instead of dropping jobs. LinkedIn starts at 5 job + 5 post searches per run.
+- [ ] Collection behavior decided October 18 (retain all matching jobs, deliver
+  in recoverable batches, 4-week first-run backfill): the code is on branch
+  `claude/keep-every-match-batches` and awaits Codex review and merge. It removes
+  the eight-per-source and 150-total caps, splits large runs into 150-job writer
+  batches, adds `posted_at` and `--lookback-days`, and leaves the Gmail AI
+  extraction budget as a generous safety stop. Open: pagination gaps and
+  skip-already-delivered, both listed in docs/BACKFILL_WINDOWS.md. The saved AI
+  backlog in `_State` is not built yet. LinkedIn starts at 5 job + 5 post searches per run.
 - [ ] Current user priority: implement LinkedIn hiring-post search in addition
   to job listings, then X hiring-post search, then the real cloud test. Both
   social sources were already in V0; this confirms execution order. See the

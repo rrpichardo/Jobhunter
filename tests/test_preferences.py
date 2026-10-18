@@ -217,7 +217,7 @@ def test_unresolved_salary_check_is_in_details_not_next_step():
     assert 'Check first:' in row['More details']
 
 
-def test_board_caps_prioritize_product_roles_over_adjacent_roles():
+def test_every_board_match_is_kept_with_product_roles_first():
     titles = ['Project Manager'] * 8 + ['Chief of Staff', 'Product Manager, AI']
     data = [{'id': str(i), 'text': title, 'categories': {'location': 'United States'},
              'descriptionPlain': 'Build products.', 'hostedUrl': f'https://jobs.lever.co/acme/{i}'}
@@ -226,10 +226,10 @@ def test_board_caps_prioritize_product_roles_over_adjacent_roles():
         _, jobs, _ = source_probe.probe_source(client, {'id':'lever:acme', 'kind':'lever',
             'board':'acme', 'company':'Acme', 'url':'https://test.example/jobs'}, '2026-10-18T00:00:00+00:00')
     assert jobs[0].title == 'Product Manager, AI'
-    assert len(jobs) == 8
+    assert len(jobs) == 10  # no per-source cap: every matching role is kept
 
 
-def test_detail_fetch_slots_prioritize_product_roles_before_requesting_pages():
+def test_detail_pages_are_fetched_for_every_match_with_product_roles_first():
     import html
     import json
     titles = ['Project Manager'] * 8 + ['Product Manager']
@@ -247,4 +247,4 @@ def test_detail_fetch_slots_prioritize_product_roles_before_requesting_pages():
             'url':'https://www.ycombinator.com/jobs/role/product-manager'}, '2026-10-18T00:00:00+00:00')
     assert jobs[0].title == 'Product Manager'
     assert any(url.endswith('/8') for url in seen)
-    assert len(seen) == 9  # one listing plus eight details, not extra requests
+    assert len(seen) == 10  # one listing plus a page for each of the nine matches

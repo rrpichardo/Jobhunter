@@ -10,7 +10,7 @@ import uuid
 from jobhunter.sheet_io import SheetIOError
 from jobhunter.sheet_journal import SheetJournal, _stamp
 from jobhunter.sheet_lock import SheetLock
-from jobhunter.sheet_records import JOB_HEADERS, normalize_jobs, plan_jobs, plan_table, reconcile_jobs, table_index
+from jobhunter.sheet_records import JOB_BATCH_SIZE, JOB_HEADERS, normalize_jobs, plan_jobs, plan_table, reconcile_jobs, table_index
 
 SOURCE_FIELDS = {'Jobs fetched': 'jobs_fetched', 'Valid jobs': 'valid_jobs',
                  'Rejected items': 'rejected_items', 'PM candidates': 'pm_candidates',
@@ -58,7 +58,7 @@ def _sources(records):
 
 def _payload(payload):
     if (not isinstance(payload, dict) or set(payload) != {'jobs', 'sources', 'input_count'}
-            or type(payload['input_count']) is not int or not 0 <= payload['input_count'] <= 150):
+            or type(payload['input_count']) is not int or not 0 <= payload['input_count'] <= JOB_BATCH_SIZE):
         raise ValueError('invalid_pending_payload')
     jobs = normalize_jobs(payload['jobs'])
     if jobs != payload['jobs'] or len(jobs) > payload['input_count']:
@@ -79,7 +79,8 @@ def _payload(payload):
                if s['Status'] in {'failed', 'blocked'} and s['Error']
                and type(s['Selected']) is int and s['Selected'] > 0
                and type(s['Valid jobs']) is int and s['Valid jobs'] >= s['Selected']
-               and sum(job['Source'] == s['Source ID'] for job in jobs) == s['Selected']}
+               # A run split into batches carries every source's full Selected total in each batch.
+               and sum(job['Source'] == s['Source ID'] for job in jobs) <= s['Selected']}
     if any(job['Source'] not in healthy | partial for job in jobs):
         raise ValueError('job_source_not_successful')
     return payload

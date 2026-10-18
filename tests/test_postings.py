@@ -181,9 +181,9 @@ def test_yc_stubs_and_detail_description():
     stubs, rejected = p.stubs_yc(YC_LISTING, {"source_id": "yc-product"})
     assert rejected == 1 and stubs == [{"job_id": "yc-product:7", "company": "Acme", "title": "Product Manager, AI",
         "location": "San Francisco, CA", "url": "https://www.ycombinator.com/companies/acme/jobs/abc-pm",
-        "salary": "$150K - $200K"}]
-    assert p.detail_yc(YC_DETAIL) == {"text": "Build AI agents."}
-    assert p.detail_yc("<html>no structured data</html>") == {"text": ""}
+        "salary": "$150K - $200K", "posted_at": ""}]
+    assert p.detail_yc(YC_DETAIL) == {"text": "Build AI agents.", "posted_at": ""}
+    assert p.detail_yc("<html>no structured data</html>") == {"text": "", "posted_at": ""}
 
 
 def test_getro_stubs_and_detail_description():
@@ -196,7 +196,7 @@ def test_getro_stubs_and_detail_description():
     stubs, rejected = p.stubs_getro(page, {"source_id": "getro-accel", "url": "https://jobs.accel.com/jobs?q=x"})
     assert rejected == 1 and stubs[0]["url"] == "https://jobs.accel.com/companies/co-1/jobs/5-pm"
     assert (stubs[0]["job_id"], stubs[0]["salary"]) == ("getro-accel:5", "150,000 - 200,000 USD year")
-    assert p.detail_getro(page) == {"text": "Agents."}
+    assert p.detail_getro(page) == {"text": "Agents.", "posted_at": ""}
 
 
 BUILTIN_LIST = ('<script type="application/ld&#x2B;json">{"@graph":[{"@type":"ItemList","itemListElement":['
@@ -211,7 +211,7 @@ BUILTIN_JOB = ('<script type="application/ld&#x2B;json">{"@context":"https://sch
 def test_builtin_listing_and_job_page():
     stubs, rejected = p.stubs_builtin(BUILTIN_LIST, {"source_id": "builtin-product"})
     assert rejected == 1 and stubs[0]["job_id"] == "builtin-product:11735619"
-    assert p.detail_builtin(BUILTIN_JOB) == {"text": "Lead AI roadmap.", "company": "Expedia Group",
+    assert p.detail_builtin(BUILTIN_JOB) == {"text": "Lead AI roadmap.", "company": "Expedia Group", "posted_at": "",
         "location": "Seattle, Washington, USA", "salary": "150,000 - 200,000 USD YEAR"}
     assert p.detail_builtin("<html></html>")["text"] == ""
 

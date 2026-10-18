@@ -40,21 +40,23 @@ ask above was repeated):**
    searches plus 5 separate HIRING-POST searches (10 total) per daily run. Searches and opening individual
    result details are different limits; detail views stay at <=50 per run.
 
-The answers are recorded in PLAN.md but are NOT implemented. The code still
-enforces these caps until the implementing PR lands, so do not describe them as
-lifted. Locations to change together, with tests:
-- `scripts/source_probe.py:30-31` `PER_SOURCE_LIMIT = 8`, `TOTAL_LIMIT = 150`
-  (used at lines 172-184 and 256-259, plus `fair_order`).
-- `jobhunter/sheet_records.py:24` `normalize_jobs` rejects more than 150 records.
-- `jobhunter/sheets.py:61` pending payload `input_count` must be <= 150.
-- `jobhunter/gmail_alerts.py:138` (`extractions >= 150`) is an AI-extraction
-  budget, not a job cap. Line 143 (`len(facts) > 150`) is a separate sanity bound
-  on one extractor reply; review it, but it is not the budget. Per PLAN.md decision 2 the goal is to AI-process every new job in the
-  daily run; replace 150 with a generous safety stop that queues leftovers
-  visibly in the Run Log. Real limits come after measuring the first big run.
-Larger runs must split into recoverable batches, never drop jobs silently.
-First run is a 4-week backfill (PLAN.md decision 3); sources with no date filter
-are recorded as honest gaps.
+The answers are recorded in PLAN.md. On `main` and PR #18 the old caps are still in
+the code. They are removed on branch `claude/keep-every-match-batches` (new PR,
+branched from PR #18's head; needs Codex review because Claude wrote it):
+- `scripts/source_probe.py`: `PER_SOURCE_LIMIT`/`TOTAL_LIMIT` deleted. New
+  `DETAIL_SAFETY_STOP = 300` (job pages per detail source, reported as
+  `details_skipped`), `LOOKBACK_DAYS = 28`, `--lookback-days`.
+- `jobhunter/sheet_records.py`: `JOB_BATCH_SIZE = 150` is now a batch size. Also in
+  `jobhunter/sheets.py`, where a failed source's partial jobs may span batches
+  (`<=` Selected instead of `==`).
+- `scripts/sheets_sync.py`: runs of more than 150 jobs are split into `<run>-b001`,
+  `-b002`, ... each a journaled, recoverable run; one batch keeps the plain run id.
+- `jobhunter/gmail_alerts.py`: `EXTRACTION_SAFETY_STOP = 1000` replaces the 150
+  extraction budget. `len(facts) > 150` is a separate reply-size sanity bound.
+- `jobhunter/postings.py`: `Posting.posted_at`, `parse_posted`, `within_lookback`.
+Not built: the saved AI backlog in `_State`, pagination for Himalayas/The Muse/
+Jooble/JSearch and skipping Job IDs already in the Sheet (all in
+docs/BACKFILL_WINDOWS.md). Do not claim the first-run backfill is complete.
 
 The existing plan includes randomized pauses between actions. The historical
 30-50 searches/day discussion appears farther below as vendor research, not an

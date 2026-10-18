@@ -9,7 +9,7 @@ separately with `scripts.sheets_sync`.
 """
 
 import argparse
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import json
 import logging
 import os
@@ -23,12 +23,14 @@ import yaml
 from jobhunter.artifacts import safe_error_code, write_artifact
 from jobhunter.postings import (AI_TERMS, DETAIL_SOURCES, LISTING_ONLY, PARSERS, Posting, collection_match,
                                 collection_stub_match, collection_priority, collection_title_priority,
-                                dedupe, role_family, to_row)
+                                dedupe, role_family, to_row, within_lookback)
 
 USER_AGENT = "JobHunterBot/0.1 (personal job search; polite single requests)"
 MAX_BYTES = 40 * 1024 * 1024
-PER_SOURCE_LIMIT = 8
-TOTAL_LIMIT = 150
+# Safety stop, not a target: at most this many job pages are opened per detail source per run (one polite request
+# each). Candidates beyond it are reported as details_skipped so a large source is visible, never silently cut.
+DETAIL_SAFETY_STOP = 300
+LOOKBACK_DAYS = 28  # first-run backfill and the default daily window; repeats are harmless (upsert by Job ID)
 BLOCKED = {401, 403, 406, 429}
 URLS = {"greenhouse": "https://boards-api.greenhouse.io/v1/boards/{board}/jobs?content=true",
         "lever": "https://api.lever.co/v0/postings/{board}?mode=json",
@@ -76,7 +78,12 @@ def _send(client, method, url, **request):
         return None, None, "transport_error"
 
 
-def keyed_request(entry, environ):
+def jsearch_date_posted(days):
+    """JSearch accepts only today, 3days, week, month: use the smallest bucket that covers the window."""
+    return "today" if days <= 1 else "3days" if days <= 3 else "week" if days <= 7 else "month"
+
+
+def keyed_request(entry, environ, lookback_days=None):
     """(missing env names, request kwargs). The kwargs hold the secret; never record or print them."""
     values = {name: (environ.get(name) or "").strip() for name in entry["env"]}
     missing = [name for name, value in values.items() if not value]
@@ -84,7 +91,10 @@ def keyed_request(entry, environ):
         return missing, None
     base = {"User-Agent": USER_AGENT, "Accept": "application/json"}
     if entry["kind"] == "jsearch":
-        return [], {"method": "GET", "url": entry["url"], "params": entry["params"],
+        params = dict(entry["params"])
+        if lookback_days is not None:
+            params["date_posted"] = jsearch_date_posted(lookback_days)
+        return [], {"method": "GET", "url": entry["url"], "params": params,
                     "headers": {**base, "X-RapidAPI-Key": values["JSEARCH_API_KEY"],
                                 "X-RapidAPI-Host": "jsearch.p.rapidapi.com"}}
     return [], {"method": "POST", "url": entry["url"].rstrip("/") + "/" + quote(values["JOOBLE_API_KEY"], safe=""),
@@ -125,18 +135,23 @@ def fetch_details(client, entry, stubs, stamp, *, delay, sleep):
             found = detail(body)
             postings.append(Posting(stub["job_id"], entry["id"], found.get("company") or stub["company"], stub["title"],
                                     found.get("location") or stub["location"], found["text"], stub["url"], stamp,
-                                    salary=found.get("salary") or stub["salary"], tag="other"))
+                                    salary=found.get("salary") or stub["salary"], tag="other",
+                                    posted_at=found.get("posted_at") or stub.get("posted_at", "")))
         except (ValueError, TypeError, KeyError, AttributeError, RecursionError):
             rejected += 1
     return postings, rejected, problem, attempts
 
 
-def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=None):
-    """Returns (source record or None for an unresponsive candidate, postings, note)."""
+def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=None, lookback_days=None):
+    """Returns (source record or None for an unresponsive candidate, postings, note).
+
+    lookback_days keeps postings whose source date is inside the window; a posting with no usable date is
+    kept and counted as date_unknown, never dropped on missing data. None disables the window.
+    """
     kind, source_id = entry["kind"], entry["id"]
     url = entry["url"]
     if kind in KEYED_KINDS:
-        missing, request = keyed_request(entry, os.environ if environ is None else environ)
+        missing, request = keyed_request(entry, os.environ if environ is None else environ, lookback_days)
         if missing:
             return (record(source_id, "needs setup", stamp, attempts=0), [],
                     "keys_missing:" + ",".join(missing))
@@ -158,7 +173,8 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
         data = json.loads(body) if kind in JSON_KINDS else body
     except (ValueError, RecursionError):
         return record(source_id, "failed", stamp, error="invalid_json", http=200), [], "invalid_json"
-    problem, attempts, detail_skipped = None, 1, 0
+    problem, attempts, detail_skipped, outside = None, 1, 0, 0
+    cutoff = None if lookback_days is None else datetime.fromisoformat(stamp) - timedelta(days=lookback_days)
     try:
         if kind in LISTING_ONLY:
             counts = LISTING_ONLY[kind](data, ctx)
@@ -168,10 +184,14 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
         if kind in DETAIL_SOURCES:
             stubs, rejected = DETAIL_SOURCES[kind][0](data, {**ctx, "url": url})
             shortlist = [s for s in stubs if collection_stub_match(s["title"], s["location"], s["salary"])]
+            if cutoff is not None:  # a listing date already outside the window saves a page request
+                stale = [s for s in shortlist if s.get("posted_at") and datetime.fromisoformat(s["posted_at"]) < cutoff]
+                outside = len(stale)
+                shortlist = [s for s in shortlist if s not in stale]
             shortlist.sort(key=lambda stub: collection_title_priority(stub['title'], entry.get('tag', 'other')))
-            detail_skipped = max(0, len(shortlist) - PER_SOURCE_LIMIT)
+            detail_skipped = max(0, len(shortlist) - DETAIL_SAFETY_STOP)
             postings, failed, problem, detail_attempts = fetch_details(
-                client, entry, shortlist[:PER_SOURCE_LIMIT], stamp, delay=delay, sleep=sleep)
+                client, entry, shortlist[:DETAIL_SAFETY_STOP], stamp, delay=delay, sleep=sleep)
             attempts += detail_attempts
             rejected += failed
             total = len(stubs)
@@ -180,14 +200,21 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
     except (ValueError, TypeError, KeyError, AttributeError, RecursionError) as exc:
         code = "duplicate_source_id" if str(exc) == "duplicate_source_id" else "invalid_board_response"
         return record(source_id, "failed", stamp, error=code, http=200), [], code
+    if cutoff is not None:
+        inside = [p for p in postings if within_lookback(p, datetime.fromisoformat(stamp), lookback_days)]
+        outside += len(postings) - len(inside)
+        postings = inside
+    undated = sum(not p.posted_at for p in postings)
     candidates = [p for p in postings if role_family(p.title)]
-    selected = sorted((p for p in postings if collection_match(p)), key=collection_priority)[:PER_SOURCE_LIMIT]
+    selected = sorted((p for p in postings if collection_match(p)), key=collection_priority)
     coverage = "complete-response" if entry.get("board") else "partial-response"
     if kind in DETAIL_SOURCES:
         candidates = shortlist
     if rejected:
         coverage += "-with-rejections"
     skipped_note = f'; details_skipped={detail_skipped}' if detail_skipped else ''
+    if cutoff is not None:
+        skipped_note += f'; outside_window={outside}; date_unknown={undated}'
     if problem is not None:
         status, error, http = problem
         return record(source_id, status, stamp, error=error, http=http, listed=total,
@@ -204,8 +231,8 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
 def fair_order(items):
     """Round-robin (posting, note) pairs by source, keeping each source's own order.
 
-    The Sheet writer takes at most TOTAL_LIMIT jobs per run. Without this, sources early in the
-    registry fill the cap and later ones (for example the keyed APIs) never deliver anything.
+    Delivery is split into recoverable writer batches in registry order. Interleaving the sources means
+    a run that stops partway has still delivered every source's best jobs, not just the first sources'.
     """
     queues = {}
     for item in items:
@@ -229,13 +256,13 @@ def entries(registry):
 
 
 def run(registry, client, *, delay=1.0, sleep=time.sleep, environ=None, gmail_result=None,
-        now=lambda: datetime.now(timezone.utc).isoformat()):
+        now=lambda: datetime.now(timezone.utc).isoformat(), lookback_days=LOOKBACK_DAYS):
     environ = os.environ if environ is None else environ
     stamp = now()
     sources, jobs, notes = [], [], {}
     for entry in entries(registry):
         record_, selected, note = probe_source(client, entry, stamp, delay=delay, sleep=sleep,
-                                                    environ=environ)
+                                                    environ=environ, lookback_days=lookback_days)
         notes[entry["id"]] = note
         if record_ is not None:
             sources.append(record_)
@@ -253,21 +280,13 @@ def run(registry, client, *, delay=1.0, sleep=time.sleep, environ=None, gmail_re
         notes[item["id"]] = ("keys_missing:" + ",".join(missing) if missing else "setup_or_collector_pending")
     unique = dedupe(jobs)
     duplicates = len(jobs) - len(unique)
-    unique = fair_order(unique)  # the writer accepts at most TOTAL_LIMIT jobs; share them across sources
-    rows, kept = [], {}
-    for posting, note in unique:
-        if len(rows) >= TOTAL_LIMIT:
-            break
-        rows.append(to_row(posting, note))
+    unique = fair_order(unique)  # share each writer batch fairly across sources
+    rows = [to_row(posting, note) for posting, note in unique]
+    kept = {}
+    for posting, _ in unique:
         kept[posting.source_id] = kept.get(posting.source_id, 0) + 1
     notes["duplicates_merged"] = duplicates
-    omitted = {}
-    for posting, _ in unique[len(rows):]:
-        omitted[posting.source_id] = omitted.get(posting.source_id, 0) + 1
-    notes['total_limit_skipped'] = sum(omitted.values())
-    for source_id, count in omitted.items():
-        notes[source_id] += f'; total_limit_skipped={count}'
-    for source in sources:  # a capped or merged source must report what was actually delivered
+    for source in sources:  # a merged source must report what was actually delivered
         source["selected_for_m0"] = kept.get(source["source_id"], 0)
         if source["status"] == "OK" and not source["selected_for_m0"]:
             source["status"] = "OK-zero-jobs"
@@ -292,12 +311,16 @@ def main(argv=None, *, client=None, sleep=time.sleep) -> int:
     parser.add_argument("--config", default="sources/v0_sources.yaml")
     parser.add_argument("--output", required=True, help="New artifact path outside the checkout")
     parser.add_argument("--delay", type=float, default=1.0, help="seconds between requests")
+    parser.add_argument("--lookback-days", type=int, default=LOOKBACK_DAYS,
+                        help="keep postings dated inside this many days (first run = backfill); undated are kept")
     args = parser.parse_args(argv)
     owned = client is None
     client = client or httpx.Client()
     try:
         registry = yaml.safe_load(Path(args.config).read_text(encoding="utf-8"))
-        payload = run(registry, client, delay=args.delay, sleep=sleep)
+        if not 1 <= args.lookback_days <= 365:
+            raise ValueError('invalid_lookback_days')
+        payload = run(registry, client, delay=args.delay, sleep=sleep, lookback_days=args.lookback_days)
         print(summary(payload))
         failed = sum(s["status"] in {"failed", "blocked"} for s in payload["sources"])
         digest = write_artifact(args.output, payload)
