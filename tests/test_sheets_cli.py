@@ -64,3 +64,15 @@ def test_cli_quarantine_of_unknown_run_fails_safely_and_input_is_required_otherw
     import pytest
     with pytest.raises(SystemExit): main([], store=backend)
     with pytest.raises(SystemExit): main(['--quarantine-run', 'x', '--input', 'y'], store=backend)
+
+
+def test_completed_run_quarantine_reports_the_actionable_reason(tmp_path, capsys):
+    from scripts.sheets_sync import main
+    path = tmp_path / 'records.json'
+    path.write_text(json.dumps(normalized()))
+    backend = MemoryStore()
+    assert main(['--input', str(path), '--run-id', 'done'], store=backend) == 0
+    capsys.readouterr()
+    assert main(['--quarantine-run', 'done'], store=backend) == 2
+    assert 'sync_failed: run_not_pending' in capsys.readouterr().out
+    assert len(backend.tables['Jobs']) == 2
