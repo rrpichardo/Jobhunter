@@ -1,5 +1,23 @@
 # Claude Code continuation handoff
 
+## Codex continuation checkpoint — October 18, 2026
+
+- PR #13 is merged. Another process merged PR #14 at `6c29058` while Codex was
+  repairing its actual P1/P2 review findings. Repairs are preserved in follow-up
+  PR #15 (`codex/review-watcher-repairs`), not pushed directly to remote main.
+  Offline verification: 384 tests / 10 subtests, Bash syntax and diff check passed;
+  Linux/Windows CI passed on repair `6f5c9b0`. Claude CLI returned a session limit,
+  and the automatic Claude action failed. No Claude review/merge approval exists.
+- Gmail destination confirmed by the user; `JobHunter` label created. Forwarding
+  destination registration sent a verification link. User must verify directly;
+  no forwarding/filter enabled yet. See SETUP.md. Preserve all label-only rules.
+- User questioned the eight-jobs-per-source / 150-jobs-total collection caps.
+  Proposed retaining all matching jobs found with safe batch delivery and a
+  separate AI-processing budget; answer/implementation still pending. Existing
+  caps remain unchanged. Explain browser/social setup in plain language before
+  relying on the user's tentative preference as a final scope decision.
+- No new social access, source harvest, Sheet write or deployment evidence.
+
 ## Handover from Claude (Opus) — October 18, 2026, evening
 
 Start here in a new conversation or in Codex. Read AGENTS.md (opposite-agent review only:

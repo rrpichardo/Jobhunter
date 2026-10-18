@@ -16,6 +16,12 @@
   Linux/Windows CI and current review are still required. No runtime/deployment
   proof or source collection was performed. Claude's previous review action
   failed with `is_error:true`, not a completed review; do not bypass a required check.
+- Another process switched the shared checkout to main and merged PR #14 at
+  `6c29058d00327b607a95a54a7058d8bfd4bf5e47` during repairs. The repair commit
+  was preserved on `codex/review-watcher-repairs`, follow-up PR #15; no repair
+  implementation was pushed directly to remote main. The authenticated Claude
+  CLI review attempt returned a session limit and no review. Resume opposite-agent
+  review after the limit resets; this is outstanding, not approval.
 
 ## October 18 source cycle13 — Claude salary-modifier follow-up
 

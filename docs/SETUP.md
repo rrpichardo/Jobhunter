@@ -1,5 +1,20 @@
 # JobHunter implementation setup
 
+## October 18 continuation — Gmail setup in progress
+
+- User confirmed the existing Claude-connected Gmail is the intended forwarding
+  destination. Preserve that connector. Created its exact `JobHunter` label in the
+  Gmail setup UI and observed the success notice.
+- Registered the dedicated job-alert account's forwarding destination. Gmail
+  confirmed it sent a verification link; settings now show the address awaiting
+  verification. The user must complete that verification directly. No global
+  forwarding or source/destination filter was enabled. A draft narrow alert filter
+  was inspected but not saved; there were no matching messages in that preview.
+- After user verification: configure only approved job-alert sender/subject rules,
+  exclude security/verification/login/password messages, and label only the
+  forwarded alerts. Then verify label-scoped collection in actual JobHunterEnv.
+  Local label creation does not prove cloud Gmail access or alert delivery.
+
 ## October 18 collection preference update
 
 The user permits remote South/Latin America roles regardless of salary. For
