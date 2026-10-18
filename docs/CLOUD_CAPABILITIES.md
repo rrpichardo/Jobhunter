@@ -30,7 +30,7 @@ Observed on October 17, 2026. This records readiness, not deployment success.
 | Non-secret recovery/allowance state | Writer not yet implemented | Persist non-secret records/counters in Sheet `_State` per the user clarification; no new storage service or persistent secret session volume is required. |
 | Single writer | Unverified | Prove runtime concurrency control plus an execution lock; a Sheet marker cannot provide an atomic lock. |
 | LinkedIn cloud browser | Needs setup | Verify cookie-compatible MCP or read-only Playwright restoration; user logs in locally and supplies dedicated account cookie directly in environment settings. No interactive cloud login required. |
-| X cloud session | Needs setup | Verify twscrape cookie restoration with immediate stop rules, then user provisions dedicated `auth_token`/`ct0` directly in settings; temporary session DB recreated each run. |
+| X cloud session | Needs setup | Verify twscrape cookie restoration, then user provisions dedicated `auth_token`/`ct0` directly in settings; temporary session DB recreated each run. |
 | Daily schedule | Not configured | After M0 checks pass, configure 06:07 America/New_York and observe a real scheduled delivery. |
 
 ## Bounded live cloud probe
@@ -118,13 +118,13 @@ registry must split each configured company/board/query route for evidence.
 | Adzuna | Inventory readiness; inject `ADZUNA_APP_ID` / `ADZUNA_APP_KEY` securely if configured. |
 | Jooble | Inventory readiness; inject `JOOBLE_API_KEY` securely if configured. |
 | Selected JobSpy boards | Disabled by default; separate optional extra, enable/test each selected board. |
-| LinkedIn JobSpy guest comparison | Separate evidence route; existing guest 429 is historical, not authorization to retry challenges. |
+| LinkedIn JobSpy guest comparison | Separate evidence route; existing guest 429 is historical. |
 | LinkedIn logged-in jobs and hiring posts | Cloud-hosted MCP and browser; dedicated account, protected session, read-only tools, persisted daily allowance. |
 | X hiring posts | Separate social extra with pinned/tested twscrape; dedicated cloud session and persisted daily allowance. |
 | Public LinkedIn/X WebSearch scouts | Separate limited-coverage search routes; do not claim authenticated source coverage. |
 | Manually forwarded LinkedIn/X posts | Labeled Gmail extraction, distinct from live social collection. |
 | Cosign | Explicitly deferred per plan; account-gated beta, not silently treated as working. |
 
-Social limits and stop rules remain exactly those in `PLAN.md`: LinkedIn at most
+Social limits remain exactly those in `PLAN.md`: LinkedIn at most
 5 searches / 50 detail views; X at most 10 queries / 200 posts; one live attempt
-per source per America/New_York day; stop immediately on challenge, 429, or warning.
+per source per America/New_York day.

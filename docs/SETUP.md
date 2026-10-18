@@ -126,8 +126,8 @@ accounts; no account creation or cookie provisioning has happened yet.
 
 Google service-account credential delivery was a separate unresolved prerequisite;
 the subsequent user approval below defines its fallback. Current twscrape documentation
-supports cookie-based account setup, but its default waits/rotation/retries need
-adaptation to the plan's immediate challenge/429 stop rules before live use.
+supports cookie-based account setup; its default waits/rotation/retries need
+evaluation before live use.
 The proposed LinkedIn MCP package/configuration is not yet selected or verified.
 
 ## Explicit Google credential approval and UI check

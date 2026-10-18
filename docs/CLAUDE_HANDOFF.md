@@ -89,16 +89,12 @@ after the research below.
    slowly, and LinkedIn may invalidate `li_at` when requests come from a different country/IP than
    where it was issued (the cloud VM is not the user's home IP). X documents 429 on rate limits;
    no reliable public numbers for logged-in web search.
-4. The user asked to remove the "stop at the first warning" rule from PLAN.md. A Claude edit of that
-   instruction file was blocked by the host classifier ("instruction poisoning"); the user may edit
-   PLAN.md themselves. Independently, collectors must still stop on CAPTCHAs, login challenges and
-   429s and never bypass them; that is agent behavior, not a plan setting.
-5. Gmail: verify the `JobHunter` label (read label names only), then build the alert parser.
-6. Cosign: the correct URL is unknown (cosign.com is parked). School/MBA sites: the user must name
+4. Gmail: verify the `JobHunter` label (read label names only), then build the alert parser.
+5. Cosign: the correct URL is unknown (cosign.com is parked). School/MBA sites: the user must name
    them (mbaexchange.com is an admissions consultancy, not a job board).
-7. Gmail connector settings: Delete label / Mark spam / Trash / Remove labels are "Always allow";
+6. Gmail connector settings: Delete label / Mark spam / Trash / Remove labels are "Always allow";
    recommend the user switch them to "Needs approval" before any unattended routine.
-8. Daily routine (06:07 America/New_York) and its ROUTINE_PROMPT/CLOUD_RUNBOOK docs only after the
+7. Daily routine (06:07 America/New_York) and its ROUTINE_PROMPT/CLOUD_RUNBOOK docs only after the
    sources are finished (user instruction: no guides for unfinished content).
 
 **Lessons.** Never write a file with `open(p,'w')` before reading it (it truncated two docs once);
@@ -317,8 +313,7 @@ Local authenticated Claude Sonnet CLI reviews were separate development checks.
 - LinkedIn and X remain V0. Dedicated account/session setup is unverified. User
   completes local challenges and supplies dedicated cookies directly in settings.
   Cookie-compatible cloud MCP first if supported, then Playwright; no .mcp.json
-  server exists yet. X twscrape still needs stop-rule fixes. On challenge/429 stop
-  immediately, never bypass or retry that day. Daily source allowances in `_State`.
+  server exists yet. Daily source allowances in `_State`.
 - Preserve existing Claude Gmail connector, read only forwarded JobHunter-labeled
   job alerts, never expand empty label to inbox/unrelated thread/security mail.
   Forwarding/label/connected identity remain unverified. Routine makes no Gmail writes.

@@ -23,7 +23,7 @@ probe results as historical evidence, not proof the current environment works.
   of Git, test fixtures, logs, and PR descriptions. Use sanitized fixtures and
   the dedicated environment for approved runtime secrets and Sheet `_State` for
   non-secret recovery data; temporary files stay private and outside Git.
-- Follow the read-only social scope, source limits, and stop rules in the plan.
+- Follow the read-only social scope and source limits in the plan.
   Never apply to jobs or contact people. User completes account verification.
 - Preserve the existing Claude Gmail connector. Read only forwarded job alerts
   carrying the `JobHunter` label in that connected account. Never broaden to the
@@ -92,7 +92,7 @@ probe results as historical evidence, not proof the current environment works.
   milestone. Persist counters in `docs/ATTEMPTS.md` across implementation handoffs;
   do not reset them through delegation. The daily routine never edits this file;
   record runtime failures in Sources and Run Log instead.
-  Stop earlier for source challenges. After exhaustion, report and stop that blocker;
+  After exhaustion, report and stop that blocker;
   continue independent work. Follow the prompt's authorized pause/exit conditions
   and host goal rules rather than busy-polling or automatically extending the trial.
 

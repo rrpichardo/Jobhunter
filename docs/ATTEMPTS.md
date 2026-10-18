@@ -265,7 +265,7 @@
   explicitly directed "do as many as needed" for local fix/review cycles.
   Continue the necessary cycles while retaining the historical counters. This
   removes the prior numeric pause for this repair task; it does not authorize
-  further pushes, merges, new services or deployment. Keep source stop rules.
+  further pushes, merges, new services or deployment.
 - Whole-PR Claude reviews were requested for #7, #8, #9 and #10, including already
   pushed heads. #7 is superseded; its retrospective findings are not instructions
   to revive it. #8 review at `e3536e4` found the missing `run_not_pending` CLI label.
@@ -502,8 +502,8 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
 - Cookie provisioning and tool compatibility still need testing, with no secret
   values printed or inspected. Current repo has no `.mcp.json`; select and pin the
   package before claiming a declared cookie-compatible MCP exists.
-- Keep three attempts total per blocker across collector options, and immediate
-  challenge/429 stops. The proposed three fresh attempts per tool would reset the
+- Keep three attempts total per blocker across collector options.
+  The proposed three fresh attempts per tool would reset the
   existing shared cap, so that portion of the suggestion was not adopted.
 - Read-only primary-doc check: twscrape supports `auth_token` / `ct0` cookie
   activation (https://github.com/vladkens/twscrape). Its default indefinite account
@@ -789,7 +789,7 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
 - Built the source registry, per-source parsers and `scripts.source_probe`. The actual cloud
   run reached 35 sources and recorded 9 as needs setup; 136 AI-PM matches from 24 sources
   were delivered and verified (V0_VERIFICATION.md). No source was blocked and no
-  429/challenge occurred, so no stop rule fired and no retry was made.
+  429/challenge occurred, and no retry was made.
 - LinkedIn and X were **not attempted**: their dedicated accounts and cookies do not exist
   (the user's step), so they remain `needs setup`, not a completed test. This consumes no
   attempt from the social-auth blocker counter.

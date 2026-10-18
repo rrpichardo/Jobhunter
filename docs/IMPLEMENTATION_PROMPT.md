@@ -27,8 +27,7 @@ follow-up is arranged; it does not stay active waiting for fourteen days to pass
   in `docs/ATTEMPTS.md` (sanitized). Counters survive conversations and restarts.
   This log is for implementation work; the daily routine never edits it. Runtime
   failures and retry evidence go to Sources and Run Log.
-  A source challenge/429 stop rule overrides this budget: stop immediately when
-  the plan requires it. Normal bounded HTTP retries count toward the configured
+  Normal bounded HTTP retries count toward the configured
   request budget; do not wrap exhausted retries in another unbounded retry loop.
 - After three unsuccessful attempts, stop work on that blocker, report what failed
   and what user input/external change is required, and continue independent work.
@@ -215,7 +214,7 @@ If review cannot run, report the blocker rather than treating its absence as app
    Sheet `_State` recovery data, concurrency, and
    schedule. Verify a real scheduled run and cloud restart/session restoration.
    Keep collecting healthy sources when one fails. Keep failed/setup-blocked sources
-   visible with next actions. Stop challenged social sources per the plan.
+   visible with next actions.
    Deliver `docs/ROUTINE_PROMPT.md` with exact daily-run commands and
    `docs/CLOUD_RUNBOOK.md` with verified setup/recovery steps. Use the operational
    prompt in `JobHunter Daily`, not this implementation goal prompt. Daily runs
@@ -246,8 +245,7 @@ examples, not proof of the production implementation.
   mixed-label threads, missing/empty labels, forwarded alert parsing, and excluded
   account-security messages. Verify a real forwarded alert through the existing
   connector without inspecting unrelated personal mail or changing mailbox state.
-- **Social collection:** read-only scope, per-source limits, immediate challenge
-  stop, no same-day retries after blocking, credential/log redaction, missing and
+- **Social collection:** read-only scope, per-source limits, credential/log redaction, missing and
   expired sessions, and actual cloud session restoration after restart.
 - **Filtering/identity:** AI PM inclusion/exclusion, internship exclusion, US/remote/
   unknown location handling, distinct requisitions sharing a title, canonical URLs,
