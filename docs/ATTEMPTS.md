@@ -1,5 +1,22 @@
 # Implementation attempt log
 
+## October 18 pre-merge salary re-review
+
+- Claude reviewed exact PR11 head19e9e77 and confirmed the original fixes, with
+  salary-format caveats. Independent Codex source cycle11 found two P2 salary
+  issues before merge: explicit dollar/a-year/parenthesized annual forms regressed,
+  and an explicitly annual-labelled bonus still qualified below-floor salary.
+  Full report: reviews/2026-10-18-codex-followup-review.md. No PR11 merge occurred.
+- Five additional regression cases failed before repair. Qualifying monetary
+  ranges now retain explicit dollar signs and annual-period notation, including
+  gross pay, while locally labelled bonuses/commissions/benefits cannot establish
+  the salary exception. A genuinely qualifying base salary still qualifies when
+  a separate bonus follows it. Preserved attribution/remote code is unchanged.
+- Full locked suite: 325 tests and 10 subtests passed. Source cycle12 = requested
+  Claude re-review; cycle13 = requested independent Codex re-review of the new
+  exact head. Historical counts and the user's unlimited local-cycle direction
+  remain intact. These requests are not approvals; CI/review precede merge.
+
 ## October 18 independent Codex review after integration
 
 - The automated cycle-3 request for 99b1154 failed on a usage limit. A later

@@ -136,17 +136,26 @@ def regional_salary_match(salary: str) -> bool:
                          r'OTE|total compensation|equity)\b|RD\$|R\$', salary, re.I)):
         return False
     # Only amounts attached to currency are pay; benefits such as 401k are not.
-    amount = r'(?<![\w.])\d[\d,]*(?:\.\d+)?\s*[kK]?(?!\w|\.\d)'
+    amount = r'\$?\s*(?<![\w.])\d[\d,]*(?:\.\d+)?\s*[kK]?(?!\w|\.\d)'
     pay_range = rf'{amount}(?:\s*[-–—]\s*{amount})?'
     amounts = []
     for match in re.finditer(rf'(?:\bUSD\b|US\$)\s*({pay_range})|({pay_range})\s*(?:\bUSD\b|US\$)',
                              salary, re.I):
-        annual_after = re.match(r'\s*(?:/\s*|per\s+)?(?:year|yearly|annual|annually|annum|yr)\b',
-                                salary[match.end():], re.I)
+        before, after = salary[:match.start()], salary[match.end():]
+        period = r'(?:year|yearly|annual|annually|annum|yr)\b'
+        annual_after = re.match(rf'\s*(?:(?:gross|base)\s+)?(?:(?:per|a)\s+|/\s*)?'
+                                rf'(?:{period}|\(\s*{period}\s*\))', after, re.I)
         annual_before = re.search(r'\b(?:annual|annually|yearly)(?:\s+(?:base|salary|pay|range))*\s*:?\s*$',
-                                  salary[:match.start()], re.I)
+                                  before, re.I)
         if not (annual_after or annual_before):
             continue  # another currency figure elsewhere is not evidence of annual pay
+        non_salary = r'(?:bonus|commission|benefits?|allowance|reimbursement)'
+        labelled_before = re.search(rf'\b{non_salary}(?:\s+of)?\s*[:=]?\s*$', before, re.I)
+        labelled_after = annual_after and re.match(
+            rf'\s*(?:(?:performance|cash|target|guaranteed|retention|signing|discretionary|in)\s+)*'
+            rf'{non_salary}\b', after[annual_after.end():], re.I)
+        if labelled_before or labelled_after:
+            continue
         pay = match.group(1) or match.group(2)
         for number, scale in re.findall(r'(\d[\d,]*(?:\.\d+)?)\s*([kK]?)', pay):
             value = float(number.replace(',', '')) * (1000 if scale else 1)
