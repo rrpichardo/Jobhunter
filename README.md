@@ -3,6 +3,7 @@
 JobHunter is being built as a daily Claude Code cloud routine. Google Sheets
 will hold the jobs and user notes. **It is not deployed yet.** See
 [the product plan](docs/PLAN.md) and [setup status](docs/SETUP.md).
+For continuation in Claude Code, start with [the current handoff](docs/CLAUDE_HANDOFF.md).
 
 ## Development setup
 

@@ -95,3 +95,27 @@ After review cycle 2, the full local suite passes **61 tests and 10 subtests**.
 Binary artifact publication now makes digest bytes portable to Windows; server
 schema/decode edge cases retain sanitized failure evidence. Final current-revision
 review, Linux/Windows CI and cloud replay evidence will be linked from PR #5.
+
+## M0 first-stage final integration and initial Google read access
+
+PR #5 final head `0f7b43659a496c80a25079dd9107ccda1439e154` received fresh
+Claude Code review with no unresolved actionable findings. Linux/Windows CI
+passed; actual JobHunterEnv locked install and 65 tests/10 subtests passed.
+Saved extraction validated against the original trusted digest: 1 record, exit 0.
+No additional live source fetch. PR #5 merged as `d77842d`; main tests passed again.
+See [final evidence](https://github.com/rrpichardo/Jobhunter/pull/5#issuecomment-6243315386).
+
+The connection foundation at `02603884be0ba98b57094f100ba7eeb76d64b8a5` was
+checked in the same actual JobHunterEnv cloud session after user-approved GCP
+network-secret provisioning. Native copy/paste put the complete JSON directly
+into that secret, without printing the key. The UI confirmed saved restricted
+host/workbook path and non-secret configuration. No credential variable/file was
+placed in the VM. Using gspread with AnonymousCredentials, `open_workbook(cfg)`
+and `worksheets()` printed only `RESULT=success tab_count=1`, exit 0, exact HEAD,
+and clean-tree status. Tool output was expanded and inspected. There was one
+bounded connection attempt (two metadata reads), no write or retry.
+
+This is initial cloud read-access proof, not successful write authorization,
+write-path proxy compatibility, locking, recovery, a scheduled run, or deployment.
+Writer tests and harmless write/readback/structural-endpoint checks remain required.
+The user accepted continued use of the disclosed dedicated key; see SETUP.md.

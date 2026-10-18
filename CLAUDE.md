@@ -4,6 +4,10 @@ Read `AGENTS.md` for shared implementation and review rules, `docs/PLAN.md` for
 product scope, and `docs/SETUP.md` for setup answers. Codex may build the code;
 the full V0 daily workflow runs in the Claude Code cloud environment.
 
+For implementation continuation, read [docs/CLAUDE_HANDOFF.md](docs/CLAUDE_HANDOFF.md)
+first for current commits, setup state, counters and exact next actions. Preserve
+the distinction between local review, manual cloud proof and scheduled production.
+
 ## Review instructions
 
 When reviewing a pull request:

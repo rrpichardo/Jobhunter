@@ -227,3 +227,71 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
 - The user selected a different existing Google account and signed in. The
   Cloud console now opens successfully; an existing free trial is shown. No
   billing settings were changed, and no credentials have been created or entered.
+
+### M0 first-stage integration and Google setup progress
+
+- Cycle 4 review of `0f7b43659a496c80a25079dd9107ccda1439e154`: Claude
+  Code Sonnet found no unresolved actionable findings. Linux/Windows CI passed.
+- Actual JobHunterEnv replay at that exact head: locked sync exit 0; Python
+  3.12.3 / uv 0.13.1; 65 tests and 10 subtests passed; saved harvest/extraction
+  accepted the original trusted digest, 1 validated record, exit 0. No new live
+  fetch, Sheet write or social access. Tool command outputs inspected in UI.
+- PR #5 merged under standing authorization at `d77842d`; main tests passed
+  again. This completes only the first M0 harvest/extraction stage.
+- Dedicated Google project created outside the organization without selecting
+  a billing account. Sheets API enabled. Dedicated writer service account created
+  with no project roles. User explicitly confirmed workbook-only Editor sharing
+  (notifications off) and JSON key creation. UI confirmed shared workbook and
+  downloaded key; agent did not open/read the key.
+- Reinspection now shows Add secret enabled and a GCP access token (with Service
+  Account Key) type. This supersedes the earlier disabled-control evidence.
+  Prepared host sheets.googleapis.com, workbook-specific path prefix and Sheets
+  scope, with no impersonation. User is entering JSON directly; save and live
+  Python compatibility remain outstanding. Do not use the variable fallback
+  unless this preferred mechanism proves unavailable/incompatible.
+
+### M0 writer branch — authentication foundation (not deployed)
+
+- New feature branch `codex/m0-sheet-writer` starts from merged PR #5.
+- Wrote failing connection/configuration/sanitization tests, then the explicit
+  network-secret-only gspread connection helper. Full locked suite: 70 tests,
+  10 subtests passed; diff whitespace check passed. No real Google API call.
+- User is saving the preferred GCP secret directly. Pause screen inspection
+  during private input. Next live action after user confirms saved/closed:
+  read-only Python workbook access in actual JobHunterEnv, with metadata counts
+  only in output. Do not print headers, auth/session internals, keys or tokens.
+- Independent read-only helper checked the proposed sheet-creation lock against
+  Google's atomic batch and unique ID/title documentation. It is a candidate for
+  compliant writers, not a supported lock primitive or protection against human
+  lock deletion. Live overlap proof remains mandatory. No writer code yet.
+
+### Connection checkpoint PR #6 — review cycle 1 / 3
+
+- PR #6: https://github.com/rrpichardo/Jobhunter/pull/6 . Claude reviewed exact
+  `0260388`, found no blocking bug, and identified actionable safe-diagnostic and
+  handoff consistency issues. Its plan-mode restrictions prevented running tests;
+  local and Linux/Windows CI passed 70 tests/10 subtests independently. No invented
+  reviewer test execution is claimed.
+- Add allowlisted error categories / numeric HTTP status so a bounded failed auth
+  attempt is diagnosable without provider bodies. New test first failed, then the
+  full locked suite passed 71 tests/10 subtests. Clarify preferred auth in plan,
+  user-authorized key use, write-endpoint proof still needed, and current counters.
+- Credential-delivery attempt 3 / 3 now tests the newly available GCP network
+  secret after the relevant external capability changed. No counter reset:
+  earlier two delivery investigations remain recorded. Secret configuration
+  succeeded; actual Python connectivity is being checked once. If incompatible,
+  stop this blocker and report evidence/next action rather than trying repeatedly.
+- User pasted the key into chat and expressly accepted disclosure and authorized
+  continued use. Agent recommended replacement; user direction supersedes the
+  earlier mandatory-rotation handoff. No key value is stored in repository or logs.
+  Direct native JSON copy/paste saved the restricted GCP secret; non-secret
+  workbook/auth-mode variables saved too. No application Sheet write occurred.
+- Fresh current-revision review is required after these fixes (cycle 2 / 3).
+
+- Credential delivery attempt 3 result: **initial read access succeeded** in
+  JobHunterEnv at `0260388`. One bounded connection attempt (workbook open plus
+  worksheet metadata read), `RESULT=success tab_count=1`, exit 0, tree clean.
+  Actual command output expanded/verified. This resolves initial delivery/read
+  connectivity, not write endpoints, recovery or serialization. No Google writes.
+- Cycle 2 / 3 is the fresh review of the safe-discriminator and handoff fixes.
+  Local locked suite: 71 tests/10 subtests passed. No secret value in tracked files.

@@ -1,6 +1,10 @@
 # New-conversation implementation prompt
 
-Paste the text below into a new Codex conversation opened on the JobHunter repo.
+For ongoing implementation, first read [CLAUDE_HANDOFF.md](CLAUDE_HANDOFF.md)
+and the latest setup/attempt entries. The initial readiness inventory below is
+historical; do not recreate completed resources.
+
+Paste the text below into a new Codex or Claude Code conversation opened on the JobHunter repo.
 Include any setup answers from the preparation conversation that are not yet in
 `docs/SETUP.md`. This is a request to implement V0, not just to write another plan.
 
