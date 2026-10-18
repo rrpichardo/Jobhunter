@@ -1,4 +1,4 @@
-"""Multi-source postings: one parser per source, the AI-PM filter, deterministic rows.
+"""Multi-source postings: one parser per source, collection preferences, deterministic rows.
 
 Parsers take already-fetched data and never touch the network. Source text is
 untrusted: it is cleaned, never executed, and only an exact leading excerpt of it
@@ -126,15 +126,15 @@ def us_or_unknown(location: str) -> bool:
     return bool(LOCATION_US_CODE.search(location) or ANYWHERE.search(location))
 
 
-def regional_salary_match(salary: str) -> bool:
-    """Annual USD salary range overlaps the user's floor; unknown units stay unknown."""
+def annual_usd_salary_ceiling(salary: str) -> float | None:
+    """Explicit annual USD base-pay ceiling; unsupported compensation is unresolved."""
     usd = re.compile(r'\bUSD\b|US\$', re.I)
     salary = salary.replace('_', ' ')
     if (not usd.search(salary)
             or not re.search(r'\b(year|yearly|annual|annually|annum|yr)\b', salary, re.I)
             or re.search(r'\b(COP|DOP|CAD|AUD|MXN|EUR|GBP|hour|hourly|month|monthly|week|weekly|day|daily|'
                          r'OTE|total compensation|equity)\b|RD\$|R\$', salary, re.I)):
-        return False
+        return None
     # Only amounts attached to currency are pay; benefits such as 401k are not.
     amount = r'\$?\s*(?<![\w.])\d[\d,]*(?:\.\d+)?\s*[kK]?(?!\w|\.\d)'
     pay_range = rf'{amount}(?:\s*[-–—]\s*{amount})?'
@@ -165,7 +165,13 @@ def regional_salary_match(salary: str) -> bool:
             value = float(number.replace(',', '')) * (1000 if scale else 1)
             if math.isfinite(value):
                 amounts.append(value)
-    return bool(amounts and max(amounts) >= MIN_REGIONAL_ANNUAL_USD)
+    return max(amounts) if amounts else None
+
+def regional_salary_match(salary: str) -> bool:
+    """Historical regional probe helper; production uses collection_match."""
+    amount = annual_usd_salary_ceiling(salary)
+    return amount is not None and amount >= MIN_REGIONAL_ANNUAL_USD
+
 
 
 def collection_location_match(location: str, salary: str = '', *, remote: bool = False) -> bool:
@@ -189,6 +195,74 @@ def ai_pm_match(posting: Posting) -> bool:
             and collection_location_match(posting.location, posting.salary, remote=posting.remote)
             and (posting.tag == "ai" or bool(AI_TERMS.search(posting.title))
                  or bool(AI_TERMS.search(posting.text))))
+
+
+# The AI-only helpers above remain for replaying the historical M0 probe. All
+# current source collection uses these broader user-approved role preferences.
+ROLE_EXCLUSIONS = re.compile(r"\b(intern|internship|summer associate|product marketing|"
+                             r"product design(?:er)?|product communications)\b", re.I)
+ROLE_FAMILIES = (
+    ('Product management', PM_TITLE),
+    ('Chief of Staff', re.compile(r'\bchief of staff\b', re.I)),
+    ('Leadership program', re.compile(r'\b(?:leadership (?:development )?program|'
+                                     r'(?:MBA|management) (?:development|rotation(?:al)?) program)\b', re.I)),
+    ('Strategy', re.compile(r'\b(?:strategy (?:manager|lead|director)|'
+                           r'(?:manager|director|head|vp) (?:of )?(?:corporate |business )?strategy)\b', re.I)),
+    ('Entrepreneurship', re.compile(r'\b(?:entrepreneur|founder) in residence\b', re.I)),
+    ('Project management', re.compile(r'\bproject (?:manager|management lead|director)\b', re.I)),
+)
+
+
+def role_family(title: str) -> str | None:
+    if ROLE_EXCLUSIONS.search(title):
+        return None
+    return next((family for family, pattern in ROLE_FAMILIES if pattern.search(title)), None)
+
+
+def collection_region(location: str, *, remote: bool = False) -> str | None:
+    """US / LATAM / unresolved; None means explicitly outside collection scope."""
+    if LATIN_AMERICA.search(location):
+        us_state = any(US_LOCATION_SUFFIX.fullmatch(location[match.end():])
+                       and match.group().lstrip(', ').strip() not in AMBIGUOUS_REGIONAL_CODES
+                       for match in LOCATION_US_CODE.finditer(location))
+        us_state = us_state or any(US_LOCATION_SUFFIX.fullmatch(location[match.end():])
+                                  for match in US_STATE_NAME.finditer(location))
+        if EXPLICIT_US.search(location) or us_state:
+            return 'US'
+        if remote or REMOTE_TERMS.search(location) or ONSITE_COUNTRIES.search(location):
+            return 'LATAM'
+        return None
+    if not us_or_unknown(location):
+        return None
+    if US_TERMS.search(location) or LOCATION_US_CODE.search(location):
+        return 'US'
+    return 'unresolved'
+
+
+def salary_preference(posting: Posting) -> tuple[str, int]:
+    region = collection_region(posting.location, remote=posting.remote)
+    floor = 70_000 if region == 'LATAM' else 140_000
+    amount = annual_usd_salary_ceiling(posting.salary)
+    if region in (None, 'unresolved') or amount is None:
+        return 'unresolved', floor
+    return ('satisfied' if amount >= floor else 'below floor'), floor
+
+
+def collection_stub_match(title: str, location: str, salary: str) -> bool:
+    """Apply known preference evidence before spending a capped detail request."""
+    region = collection_region(location)
+    amount = annual_usd_salary_ceiling(salary)
+    floor = 70_000 if region == 'LATAM' else 140_000
+    return bool(role_family(title) and region is not None
+                and (region == 'unresolved' or amount is None or amount >= floor))
+
+
+def collection_match(posting: Posting) -> bool:
+    """Collect approved roles; retain unresolved requirements without asserting eligibility."""
+    return bool(role_family(posting.title)
+                and collection_region(posting.location, remote=posting.remote) is not None
+                and salary_preference(posting)[0] != 'below floor')
+
 
 
 def _digest(value: str) -> str:
@@ -621,10 +695,20 @@ def to_row(posting: Posting, note: str = "") -> dict:
                f"\nFirst seen by {posting.source_id}: {posting.captured_at}" + (f"\n{note}" if note else ""))
     if posting.remote:
         details += '\nWork mode: Remote (source metadata)'
+    preference, floor = salary_preference(posting)
+    details += f'\nRole family: {role_family(posting.title) or "Unclassified"}'
+    details += f'\nSalary preference: {preference} (annual USD floor {floor})'
+    next_step = ''
+    if preference == 'unresolved':
+        next_step = f'Check first: verify annual USD base salary reaches {floor:,}'
+        if collection_region(posting.location, remote=posting.remote) == 'unresolved':
+            next_step += '; verify permitted work location'
+    elif preference == 'below floor':
+        next_step = 'Below salary preference floor'
     return {"Job ID": posting.job_id, "Date found": posting.captured_at[:10],
             "Job title": posting.title, "Company": posting.company, "Salary": posting.salary,
             "Location": posting.location, "Brief description": quote, "Apply link": posting.apply_url,
-            "Source": posting.source_id, "Rank (prelim)": rank, "Fit": "", "Next step": "",
+            "Source": posting.source_id, "Rank (prelim)": rank, "Fit": "", "Next step": next_step,
             "Status": "New", "Notes": "", "My rating": "", "More details": details}
 
 

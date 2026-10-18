@@ -63,6 +63,12 @@ prompt. Live Claude extraction and connector integration are validated in the ac
 Claude runtime using the approved subscription. Do not add direct paid model API
 calls simply because development is happening in Codex.
 
+Current collection preferences include non-AI product management and the other
+role families in PLAN.md; AI is not a required collection keyword. Salary floors
+are annual USD 140,000 for US/remote-from-US and 70,000 for LATAM including remote.
+LATAM on-site/hybrid scope remains Colombia/Dominican Republic. Missing salary
+is unresolved and must not be treated as meeting a floor.
+
 V0 includes ALL planned source integrations and explicit statuses, with LinkedIn
 jobs/posts and X hiring posts included from the start, plus daily scheduling,
 filtering, deduplication, source history, and safe Google Sheets delivery. Every

@@ -1,5 +1,28 @@
 # Claude Code continuation handoff
 
+## Latest continuation — broader alerts and salary preferences
+
+PR #15 was merged at `974ec2c`; its pending-review entries below are historical.
+LinkedIn dedicated-account UI now confirms 18 daily email/notification alerts,
+including broader non-AI roles and remote US/LATAM PM searches (SETUP.md).
+User confirmed annual USD floors: US including remote-from-US 140,000; LATAM
+including remote 70,000. This replaces the old any-salary remote LATAM exception.
+LATAM on-site/hybrid scope remains Colombia/Dominican Republic.
+
+Codex is continuing broader Python collection filtering and a message-scoped
+Gmail intake boundary on `codex/salary-preferences`. Another Codex agent stopped
+at a usage limit; root took implementation ownership. Tests/review/deployment
+must be checked on the final pushed revision. Gmail intake currently accepts an
+injected connector adapter; the real cloud adapter payload binding and CLI path
+are not implemented or verified. Do not claim production Gmail collection.
+
+Actual Claude cloud label listing verified `JobHunter` exists with zero messages
+and threads; no message fetching occurred. Local dedicated-account job-alert
+metadata search also returned no matches. Wait for a genuine alert to verify
+precise forwarding/labeling rules. The forwarding-checkbox blocker remains at
+three attempts, with manual completion or relevant UI change required. Do not
+reset counters or replace cloud execution with local Gmail collection.
+
 ## Latest continuation — PR review and operator checklist
 
 - Cycle-3 Claude review of `8fc2a7c` confirmed the code findings fixed but found

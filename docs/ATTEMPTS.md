@@ -1,5 +1,32 @@
 # Implementation attempt log
 
+## October 18 broader collection and Gmail intake milestone
+
+- User authorized another agent to finish Gmail routing and broaden collection
+  beyond AI PM. Agent stopped at an account usage limit; root resumed as the sole
+  implementation owner on `codex/salary-preferences`. No counters reset.
+- Python now recognizes the approved role families and applies annual USD salary
+  floors of 140,000 US/remote-from-US and 70,000 LATAM including remote. Missing
+  salary is retained with a Check first next action rather than asserted eligible.
+  Existing source/request/batch caps remain unchanged.
+- Added a message-scoped Gmail intake boundary with injected connector/extractor
+  interfaces, verified metadata rules and exact fact evidence. It can join the
+  probe payload and existing writer in synthetic tests. Real connector payload
+  binding and a production CLI route are not implemented; no Gmail deployment.
+- Fresh `.venv/bin/python -m pytest -q`: 458 tests and 10 subtests passed.
+  The first full run failed only the keyed-source query expectation; updated
+  exact assertions to the approved broader query, retaining request-count/key
+  placement checks. `git diff --check` passed.
+- Actual cloud Gmail check used the existing connector in session
+  `session_01Kydab84oh1GMjzuFahVswG`. Expanded `mcp__Gmail__list_labels` output
+  confirms exact `JobHunter` label, zero messages and threads. No message reads
+  or inbox fallback. Local dedicated-account alert metadata search had no matches.
+- Gmail forwarding-checkbox blocker remains 3/3. Next: receive a real alert,
+  confirm precise metadata rules, user manually completes forwarding action,
+  then verify fresh label-scoped message extraction and Sheet delivery in cloud.
+- Milestone opposite-agent review cycle 1/3 is pending request on the pushed
+  revision. Passing local tests do not establish current CI/review or cloud proof.
+
 ## October 18 PR #15 cycle 3 result — further work authorized
 
 - Claude reviewed exact `8fc2a7c12a8129b0e27f8f9472a62db0cee52ef6`, confirmed
