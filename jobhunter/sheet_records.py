@@ -1,7 +1,7 @@
 """Deterministic Sheet plans; no network calls or AI-selected cell updates."""
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, timezone
 import re
 
 from jobhunter.job_identity import canonical_key, verified_requisition
@@ -95,33 +95,47 @@ def plan_table(rows, records, headers, key, *, preserved=frozenset()):
 
 
 def _discovery_details(record, previous):
-    """Retain first-seen dates for reconciled sources without growing on each replay."""
-    history = {}
+    """Union discovery attribution and earliest observed times, including legacy dates."""
+    history, also, fallback = {}, set(), []
+
+    def remember(source, stamp):
+        try:
+            parsed = datetime.fromisoformat(stamp)
+            if parsed.tzinfo is None:
+                if len(stamp) != 10:
+                    return False  # a timestamp without its timezone is ambiguous
+                date.fromisoformat(stamp)
+                parsed = parsed.replace(tzinfo=timezone.utc)  # order a legacy date, retain its date-only text
+            key = parsed.astimezone(timezone.utc)
+        except (TypeError, ValueError, OverflowError):
+            return False
+        if source not in history or key < history[source][0]:
+            history[source] = (key, stamp)
+        return True
+
     for item in (previous, record):
         if item is None:
             continue
-        for line in str(item.get('More details', '')).splitlines():
-            match = re.fullmatch(r'First seen by ([A-Za-z][A-Za-z0-9_.:-]{0,159}): (\d{4}-\d{2}-\d{2})', line)
-            if match:
-                source, stamp = match.groups()
-                try:
-                    date.fromisoformat(stamp)
-                except ValueError:
-                    continue
-                history[source] = min(history.get(source, stamp), stamp)
-    if not history and (previous is None or previous['Source'] == record['Source']):
-        return record['More details']
-    for item in (previous, record):
-        if item is None or item['Source'] in history:
-            continue
-        stamp = item['Date found']
-        try:
-            date.fromisoformat(stamp)
-        except (TypeError, ValueError):
-            continue
-        history[item['Source']] = stamp
-    lines = [line for line in record['More details'].splitlines() if not line.startswith('First seen by ')]
-    return '\n'.join([*lines, *(f'First seen by {source}: {stamp}' for source, stamp in sorted(history.items()))])
+        own_seen = False
+        for line in item['More details'].splitlines():
+            if line.startswith('Also listed by: '):
+                also.update(source.strip() for source in line.removeprefix('Also listed by: ').split(',')
+                            if re.fullmatch(r'[A-Za-z][A-Za-z0-9_.:-]{0,159}', source.strip()))
+            match = re.fullmatch(r'First seen by ([A-Za-z][A-Za-z0-9_.:-]{0,159}): (.+)', line)
+            if match and remember(*match.groups()) and match[1] == item['Source']:
+                own_seen = True
+        if not own_seen:
+            fallback.append((item['Source'], item['Date found']))
+    if history or (previous is not None and previous['Source'] != record['Source']):
+        # Old rows may have only Date found; never invent a precise time for them.
+        for source, stamp in fallback:
+            remember(source, stamp)
+    lines = [line for line in record['More details'].splitlines()
+             if not line.startswith(('First seen by ', 'Also listed by: '))]
+    if also:
+        lines.append('Also listed by: ' + ', '.join(sorted(also)))
+    lines.extend(f'First seen by {source}: {stamp}' for source, (_, stamp) in sorted(history.items()))
+    return '\n'.join(lines)
 
 
 def reconcile_jobs(rows, records):

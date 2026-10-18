@@ -1,5 +1,30 @@
 # Implementation attempt log
 
+## October 18 independent Codex review after integration
+
+- The automated cycle-3 request for 99b1154 failed on a usage limit. A later
+  manual Codex review at 6a61f35 found bugs, but was not final-head approval and
+  its full report was retained outside the PR. Final pre-merge reports for #8–#10
+  were Claude reports. Do not describe the failed bot request as successful or a
+  post-merge review as satisfying a gate before merge.
+- An independent Codex reviewer in the app reviewed merged main
+  36539f47ee6c550c9cf5e2f521831a17ad13f16c and reproduced three P2 defects. Full
+  scope and evidence: reviews/2026-10-18-codex-postmerge-review.md. The old main
+  suite passed 304 tests/10 subtests; passing tests did not cover the defects.
+- The source counter previously recorded cycle 7. Additional events, retained
+  rather than reset: 8 = pushed-head Claude integration acknowledgement at
+  3f237dd; 9 = this independent post-merge Codex review; 10 = requested follow-up
+  Claude review; 11 = requested independent Codex follow-up review. The user had
+  explicitly authorized "do as many as needed". Pending requests are not approvals.
+- Codex is the implementation owner on codex/fix-postmerge-review. Failing-first
+  regressions reproduce dropped Lever/WWR remote evidence, erased same-harvest
+  attribution, benefits/bonus values qualifying below-floor annual pay and missing
+  precise discovery timestamps. Legacy dates remain dates; unknown historical
+  source times are not invented. Source times compare actual instants.
+- Full locked follow-up suite: 318 tests and 10 subtests passed. All three fixes
+  still require exact-head Codex/Claude review and CI before a follow-up merge.
+  No live source calls, Google writes or deployment were performed.
+
 ## October 18 integration authorized
 
 - The user now directs "commit merge and push", superseding the earlier no-push
