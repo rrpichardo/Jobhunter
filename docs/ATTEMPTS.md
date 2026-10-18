@@ -2,6 +2,17 @@
 
 ## October 18 broader collection and Gmail intake milestone
 
+- User explicitly said **"do it until is fixed"** after the PR16 cycle-cap
+  question, authorizing continued repairs and fresh Claude reviews for PR16.
+  This supersedes its stop checkpoint below; it does not reset counters or
+  extend the separate Gmail UI blocker. Cycle 4 is the next actual review.
+- Cycle-3 mixed-location findings reproduced in 11 failing regressions. Repair
+  normalizes explicit regional city/country pairs anywhere before inspecting US
+  locality codes, so CO/PA/AR codes outside those pairs remain US evidence and
+  mixed listings stay unresolved. Original source location text is preserved.
+  Full local suite: 505 tests and 10 subtests passed; diff check clean. Fresh
+  pushed-head Claude review and CI are still required before merge.
+
 - Cycle 3 Claude review of `9e1f2ff0de4b9a3163e689ce99831d9f81f46f16`
   confirmed email links, standalone Colombian suffixes and detail priority fixed,
   but found two mixed-region defects: US-first regional city/CO/DO combinations

@@ -107,11 +107,28 @@ def test_unknown_location_still_excludes_salary_below_every_floor(location):
 
 @pytest.mark.parametrize('location', ['Remote (US or Colombia)',
     'New York, NY or Bogotá, Colombia', 'San Francisco, CA; Remote - Latin America',
-    'Austin, Texas or Remote (Colombia)', 'Bogotá, Colombia; Seattle', 'Bogotá, CO or New York, NY'])
+    'Austin, Texas or Remote (Colombia)', 'Bogotá, Colombia; Seattle', 'Bogotá, CO or New York, NY',
+    'New York, NY or Bogotá, CO', 'Seattle or Medellín, CO', 'Austin, TX or Santo Domingo, DO',
+    'Bogotá, Colombia or Pittsburgh, PA', 'Colombia or Philadelphia, PA',
+    'Bogotá, Colombia or Boulder, CO', 'Medellín, CO / Boulder, CO',
+    'Remote - LATAM or Little Rock, AR', 'Boulder, CO / Medellín, CO',
+    'Little Rock, AR or Remote - LATAM', 'Pittsburgh, PA or Bogotá, Colombia'])
 def test_mixed_us_latam_location_retained_without_assuming_which_floor_applies(location):
     candidate = job(location=location, salary='USD 90,000 annually')
     assert p.collection_match(candidate)
     assert p.salary_preference(candidate)[0] == 'unresolved'
+
+
+@pytest.mark.parametrize('location', ['Colombia, CO', 'Panama, PA (Remote)',
+    'Argentina, AR (Remote)', 'Medellín, Antioquia, CO', 'Bogota, D.C., CO'])
+def test_explicit_regional_country_codes_do_not_fabricate_a_us_option(location):
+    candidate = job(location=location, salary='USD 90,000 annually')
+    assert p.salary_preference(candidate) == ('satisfied', 70_000)
+
+
+@pytest.mark.parametrize('location', ['Pittsburgh, PA', 'Boulder, CO (Hybrid)', 'Little Rock, AR'])
+def test_standalone_us_ambiguous_state_codes_still_use_us_floor(location):
+    assert p.salary_preference(job(location=location, salary='USD 90,000 annually')) == ('below floor', 140_000)
 
 
 def test_unresolved_salary_check_is_in_details_not_next_step():

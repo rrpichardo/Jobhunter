@@ -2,6 +2,12 @@
 
 ## Latest continuation — broader alerts and salary preferences
 
+**User resumed PR16:** "do it until is fixed" explicitly authorizes continued
+PR16 repair/review cycles, superseding the cap stop below. Gmail UI stays at
+3/3 independently. Root repaired the remaining mixed-location cases with
+regressions; 505 tests / 10 subtests pass locally. Fresh pushed-head Claude
+cycle-4 review and CI are required before merge; do not infer approval.
+
 **Stop checkpoint:** PR16 cycle 3 reviewed code SHA
 `9e1f2ff0de4b9a3163e689ce99831d9f81f46f16` and still found two mixed-location
 defects: US-first regional city/CO/DO order can drop valid leads; ambiguous

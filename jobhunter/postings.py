@@ -221,20 +221,19 @@ def role_family(title: str) -> str | None:
 
 def collection_region(location: str, *, remote: bool = False) -> str | None:
     """US / LATAM / unresolved; None means explicitly outside collection scope."""
-    us_evidence = bool(EXPLICIT_US.search(location) or US_TERMS.search(location)
-        or US_STATE_NAME.search(location)
-        or any(match.group().lstrip(', ').strip() not in AMBIGUOUS_REGIONAL_CODES
-               for match in LOCATION_US_CODE.finditer(location)))
+    # Normalize only explicit regional city/country pairs before inspecting US
+    # state codes. This works anywhere in a multi-location listing and leaves
+    # other CO/PA/AR locality pairs as potentially US evidence. Original source
+    # location text remains on the Posting and Sheet row.
     city = r'(?:bogot[aá]|medell[ií]n)'
-    mode = r'(?:remote|hybrid|on[- ]?site|in[- ]?office)'
-    suffix = rf'\s*(?:\(\s*{mode}\s*\)|[-/,]?\s*{mode})?\s*'
-    country_city = rf'\s*(?:{city}(?:,\s*[^,;()]+)?,\s*CO|santo domingo,\s*DO){suffix}'
-    if re.fullmatch(country_city, location, re.I):
-        if us_evidence:
-            return 'unresolved'
-        return 'LATAM'
-    if re.match(rf'\s*{city}\b', location, re.I) and re.search(r',\s*CO\b', location, re.I):
-        return 'unresolved'  # uncertain CO suffix never silently establishes Colorado
+    department = r'(?:(?!\bor\b|\band\b)[^,;/()])+'
+    location = re.sub(rf'\b{city}(?:,\s*{department})?,\s*CO\b', 'Colombia', location, flags=re.I)
+    location = re.sub(r'\bsanto domingo,\s*DO\b', 'Dominican Republic', location, flags=re.I)
+    for country, code in (('Colombia', 'CO'), ('Panama', 'PA'), ('Argentina', 'AR'),
+                          ('Dominican Republic', 'DO')):
+        location = re.sub(rf'\b{country},\s*{code}\b', country, location, flags=re.I)
+    us_evidence = bool(EXPLICIT_US.search(location) or US_TERMS.search(location)
+                       or US_STATE_NAME.search(location) or LOCATION_US_CODE.search(location))
     if re.fullmatch(r'\s*(?:bogot[aá]|medell[ií]n|santo domingo)\s*', location, re.I):
         return 'unresolved'  # city names alone do not establish the country
     if LATIN_AMERICA.search(location):
