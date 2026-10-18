@@ -255,3 +255,37 @@ def test_interrupt_during_job_write_through_the_engine_retains_the_lock():
     with pytest.raises(KeyboardInterrupt) as caught: sync(backend, [job()], 'interrupt')
     assert backend.owner is not None
     assert 'lock_retained_unconfirmed_mutation' in caught.value.__notes__
+
+
+def test_quarantine_refuses_a_completed_run_and_keeps_it_idempotent():
+    from jobhunter.sheets import quarantine_run
+    backend = MemoryStore()
+    sync(backend, [job()], 'first')
+    with pytest.raises(ValueError, match='run_not_pending'):
+        quarantine_run(backend, 'first', now=lambda: STAMP)
+    assert sync(backend, [job()], 'first')['run_id'] == 'first'
+
+
+def test_quarantine_of_unknown_run_on_a_workbook_without_state_creates_nothing():
+    from jobhunter.sheets import quarantine_run
+    backend = MemoryStore()
+    with pytest.raises(ValueError, match='missing_pending_journal'):
+        quarantine_run(backend, 'typo', now=lambda: STAMP)
+    assert '_State' not in backend.tables
+
+
+def test_recovery_keeps_the_original_completed_time_of_a_finished_run():
+    from jobhunter.sheet_journal import SheetJournal
+    backend = MemoryStore()
+    original = SheetJournal.finish
+    def crash(self, identity, finished): raise KeyboardInterrupt()
+    SheetJournal.finish = crash
+    try:
+        with pytest.raises(KeyboardInterrupt): sync(backend, [job()], 'crashed')
+    finally:
+        SheetJournal.finish = original
+    done_at = backend.tables['Run Log'][1][2]
+    from jobhunter.sheets import sync_jobs
+    sync_jobs(backend, [job(2)], sources(), run_id='next', now=lambda: '2027-01-01T00:00:00+00:00',
+              sleep=lambda d: None, jitter=lambda: 0)
+    assert backend.tables['Run Log'][1][2] == done_at

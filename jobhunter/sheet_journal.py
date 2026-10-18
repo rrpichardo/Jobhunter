@@ -5,6 +5,7 @@ import hashlib
 import json
 import re
 
+from jobhunter.sheet_io import SheetIOError
 from jobhunter.sheet_records import CellWrite, plan_table, table_index
 
 STATE_HEADERS = ('Key', 'Value')
@@ -146,12 +147,30 @@ class SheetJournal:
         """
         if not isinstance(identity, str) or not re.fullmatch('[A-Za-z0-9_-]{1,80}', identity):
             raise ValueError('invalid_run_id')
-        rows = self.store.read('_State')
+        try:
+            rows = self.store.read('_State')
+        except (KeyError, SheetIOError) as exc:
+            # A missing tab means no journal; transient or unknown failures stay failures.
+            if isinstance(exc, SheetIOError) and not exc.rejected:
+                raise
+            raise ValueError('missing_pending_journal') from None
         headers, identities = table_index(rows, STATE_HEADERS, 'Key')
         old = f'{PREFIX}{identity}/'
         moved = [(key, number) for key, (number, _) in identities.items() if key.startswith(old)]
         if not moved:
             raise ValueError('missing_pending_journal')
+        if len(moved) > 28:  # 27 chunks plus the manifest, the most a valid run can have
+            raise ValueError('invalid_pending_journal')
+        manifest = identities.get(f'{old}manifest')
+        if manifest is not None:
+            try:
+                value = manifest[1][headers['Value']]
+                if _json(value).get('state') == 'done':
+                    raise ValueError('run_not_pending')
+            except (IndexError, AttributeError, ValueError) as exc:
+                if str(exc) == 'run_not_pending':
+                    raise
+                # Unreadable manifest is exactly what quarantine is for.
         if any(key.startswith(f'{QUARANTINE}{identity}/') for key in identities):
             raise ValueError('run_id_quarantined')
         self.store.write('_State', [CellWrite(number, headers['Key'] + 1,

@@ -375,3 +375,12 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
   as unknown, and an interrupt through the engine retaining the lock.
 - `.venv/bin/python -m pytest -q`: 136 passed, 10 subtests. Still open: per-run
   source history, the paced live harness, actual JobHunterEnv proof, scheduled M0.
+
+- Codex GitHub review of `d76caef` was started but not delivered (user reports its
+  usage limit was reached). A same-model Claude `/engineering:code-review` was run on
+  the user's instruction; it is **not** the required Codex review and does not count
+  as approval. It produced minor findings, fixed in the next commit (completed runs
+  cannot be quarantined, original Completed time kept on recovery, quarantine no
+  longer creates `_State`, cell-count cap). Suite: 139 passed, 10 subtests.
+  The new head still needs Codex review; no merge until it is obtained. The review
+  counter stays at cycle 2 / 3 because these are self-review fixes, not a Codex cycle.

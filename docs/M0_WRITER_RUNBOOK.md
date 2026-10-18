@@ -121,7 +121,8 @@ silently dropped. Only an operator, with no other writer active, may run:
 uv run --locked python -m scripts.sheets_sync --quarantine-run <RUN_ID>
 ```
 
-It takes the normal global lock and renames the run's `_State` Key cells from
+It refuses a completed run (`run_not_pending`), never creates the `_State` tab, takes
+the normal global lock and renames the run's `_State` Key cells from
 `m0/run/<RUN_ID>/...` to `m0/quarantined/<RUN_ID>/...`. Values are untouched, so
 nothing is discarded and the evidence stays for audit. Later syncs then ignore the
 run, and that run ID is refused (`run_id_quarantined`). Its Run Log row stays

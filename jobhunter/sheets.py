@@ -80,6 +80,16 @@ def _payload(payload):
     return payload
 
 
+def _completed_time(rows, run):
+    """Original completion time of a run whose final Run Log row already landed."""
+    headers, known = table_index(rows, RUN_HEADERS, 'Run ID')
+    if run not in known:
+        return None
+    values = known[run][1]
+    status, done = (values[headers[h]] if headers[h] < len(values) else '' for h in ('Status', 'Completed'))
+    return done if status not in ('', 'pending') and isinstance(done, str) and done else None
+
+
 def _retry(operation, sleep, jitter):
     for attempt in range(3):
         try:
@@ -155,7 +165,7 @@ def sync_jobs(store, records, source_records, *, run_id=None, chunk_size=100,
 
         def deliver(run, data, manifest, verify_only=False):
             _payload(data)
-            finished = manifest['finished'] if verify_only else now()
+            finished = manifest['finished'] if verify_only else _completed_time(store.read('Run Log'), run) or now()
             _stamp(finished)
             status = ('complete' if all(s['Status'] in {'OK', 'OK-zero-jobs'} for s in data['sources'])
                       else 'complete-with-source-failure')
@@ -225,7 +235,6 @@ def quarantine_run(store, identity, *, now=lambda: datetime.now(timezone.utc).is
     failure = None
     try:
         store.refresh()
-        store.ensure_tab('_State', ('Key', 'Value'), hidden=True)
         moved = SheetJournal(store).quarantine(identity)
         return {'run_id': identity, 'cells_moved': moved}
     except BaseException as exc:
