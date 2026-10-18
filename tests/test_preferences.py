@@ -83,7 +83,8 @@ def test_broader_roles_flow_through_probe_without_ai_signal():
 
 @pytest.mark.parametrize('location', ['Bogotá, CO', 'Medellín, CO', 'Santo Domingo, DO',
     'Bogotá, CO (Hybrid)', 'Bogotá, CO - Hybrid', 'Medellín, Antioquia, CO',
-    'Medellín, Antioquia, CO (Remote)', 'Santo Domingo, DO (Hybrid)'])
+    'Medellín, Antioquia, CO (Remote)', 'Santo Domingo, DO (Hybrid)',
+    'Bogotá D.C., CO', 'Bogota DC, CO', 'Bogotá DC, CO'])
 def test_approved_regional_cities_use_latam_floor(location):
     candidate = job(location=location, salary='USD 80,000 annually')
     assert p.collection_region(location) == 'LATAM'
@@ -129,6 +130,22 @@ def test_explicit_regional_country_codes_do_not_fabricate_a_us_option(location):
 @pytest.mark.parametrize('location', ['Pittsburgh, PA', 'Boulder, CO (Hybrid)', 'Little Rock, AR'])
 def test_standalone_us_ambiguous_state_codes_still_use_us_floor(location):
     assert p.salary_preference(job(location=location, salary='USD 90,000 annually')) == ('below floor', 140_000)
+
+
+@pytest.mark.parametrize('separator', [' | ', ' - ', ' · ', ' & ', ' y ', '\n', ' — '])
+def test_locality_normalization_cannot_swallow_another_location(separator):
+    for first, second in [('Bogotá, Colombia', 'Boulder, CO'), ('Medellín, CO', 'Boulder, CO')]:
+        for location in [first + separator + second, second + separator + first]:
+            candidate = job(location=location, salary='USD 90,000 annually')
+            assert p.salary_preference(candidate)[0] == 'unresolved', location
+            assert p.collection_match(candidate), location
+
+
+@pytest.mark.parametrize('location', ['Medellín, Unknown Department, CO', 'Bogotá DC', 'Bogotá D.C.'])
+def test_unverified_city_or_department_form_stays_unresolved(location):
+    candidate = job(location=location, salary='USD 90,000 annually')
+    assert p.collection_match(candidate)
+    assert p.salary_preference(candidate)[0] == 'unresolved'
 
 
 def test_unresolved_salary_check_is_in_details_not_next_step():

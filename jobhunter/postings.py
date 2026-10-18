@@ -225,8 +225,10 @@ def collection_region(location: str, *, remote: bool = False) -> str | None:
     # state codes. This works anywhere in a multi-location listing and leaves
     # other CO/PA/AR locality pairs as potentially US evidence. Original source
     # location text remains on the Posting and Sheet row.
-    city = r'(?:bogot[aá]|medell[ií]n)'
-    department = r'(?:(?!\bor\b|\band\b)[^,;/()])+'
+    city = r'(?:bogot[aá](?:\s+D\.?\s*C\.?)?|medell[ií]n)'
+    # Only known department/capital-district spellings may be consumed. An
+    # arbitrary phrase here could swallow a second city and its US state code.
+    department = r'(?:Antioquia|Cundinamarca|D\.?\s*C\.?|Distrito Capital|Capital District|Colombia)'
     location = re.sub(rf'\b{city}(?:,\s*{department})?,\s*CO\b', 'Colombia', location, flags=re.I)
     location = re.sub(r'\bsanto domingo,\s*DO\b', 'Dominican Republic', location, flags=re.I)
     for country, code in (('Colombia', 'CO'), ('Panama', 'PA'), ('Argentina', 'AR'),
@@ -234,8 +236,11 @@ def collection_region(location: str, *, remote: bool = False) -> str | None:
         location = re.sub(rf'\b{country},\s*{code}\b', country, location, flags=re.I)
     us_evidence = bool(EXPLICIT_US.search(location) or US_TERMS.search(location)
                        or US_STATE_NAME.search(location) or LOCATION_US_CODE.search(location))
-    if re.fullmatch(r'\s*(?:bogot[aá]|medell[ií]n|santo domingo)\s*', location, re.I):
+    if re.fullmatch(rf'\s*(?:{city}|santo domingo)\s*', location, re.I):
         return 'unresolved'  # city names alone do not establish the country
+    if (re.search(r'\b(?:bogot[aá]|medell[ií]n)\b', location, re.I)
+            and re.search(r',\s*CO\b', location, re.I)):
+        return 'unresolved'  # unsupported regional locality syntax is not Colorado evidence
     if LATIN_AMERICA.search(location):
         if us_evidence:
             return 'unresolved'  # mixed US/LATAM availability does not choose a work location

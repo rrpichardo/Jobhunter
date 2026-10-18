@@ -2,6 +2,15 @@
 
 ## October 18 broader collection and Gmail intake milestone
 
+- Cycle 4 Claude review of `38082751bb0deeb7eb15e577e91bfe1a12b36097`
+  confirmed the earlier examples fixed but reproduced optional-department text
+  swallowing a second US locality at additional separators, and Bogotá DC/CO
+  spellings being treated as US. Thirteen failing regressions reproduced these
+  cases before repair. Replaced arbitrary department text with explicit known
+  department/capital-district forms; unknown regional forms remain unresolved.
+  Current local full suite: 518 tests / 10 subtests passed, diff check clean.
+  Fresh cycle-5 pushed-head Claude review and CI remain required before merge.
+
 - User explicitly said **"do it until is fixed"** after the PR16 cycle-cap
   question, authorizing continued repairs and fresh Claude reviews for PR16.
   This supersedes its stop checkpoint below; it does not reset counters or

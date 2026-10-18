@@ -2,6 +2,11 @@
 
 ## Latest continuation — broader alerts and salary preferences
 
+Latest repair after cycle 4 restricts department normalization so it cannot
+consume a second locality and handles Bogotá DC/CO spellings. Unknown forms stay
+unresolved. Local suite passes 518/10; fresh exact-head cycle-5 Claude review and
+CI are required. Continued PR16 repair authorization remains in force.
+
 **User resumed PR16:** "do it until is fixed" explicitly authorizes continued
 PR16 repair/review cycles, superseding the cap stop below. Gmail UI stays at
 3/3 independently. Root repaired the remaining mixed-location cases with
