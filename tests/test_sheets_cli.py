@@ -76,3 +76,20 @@ def test_completed_run_quarantine_reports_the_actionable_reason(tmp_path, capsys
     assert main(['--quarantine-run', 'done'], store=backend) == 2
     assert 'sync_failed: run_not_pending' in capsys.readouterr().out
     assert len(backend.tables['Jobs']) == 2
+
+
+def test_unexpected_writer_failure_is_distinct_from_bad_input_and_sanitized(tmp_path, capsys):
+    from scripts.sheets_sync import main
+    path = tmp_path / 'records.json'
+    path.write_text(json.dumps(normalized()))
+    backend = MemoryStore()
+    def fail_after_jobs_write(title):
+        if title == 'Jobs':
+            raise RuntimeError('private workbook detail / unexpected failure')
+    backend.after_write = fail_after_jobs_write
+    assert main(['--input', str(path), '--run-id', 'unexpected'], store=backend) == 2
+    output = capsys.readouterr().out
+    assert 'sync_failed: unexpected_sync_error' in output
+    assert 'check pending state and lock before another run' in output
+    assert 'invalid_sync_input' not in output and 'private workbook' not in output
+    assert len(backend.tables['Jobs']) == 2  # failure can follow an applied mutation
