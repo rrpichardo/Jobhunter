@@ -3,16 +3,19 @@
 Run with `uv run --locked python -m scripts.source_probe --output <new file outside checkout>`.
 One bounded GET per source, no retries, no login, no social access, no secrets. A 401/403/
 406/429 stops that source immediately (`blocked`). Keys, accounts and mailboxes that are not
-set up are recorded `needs setup` without any request. The artifact is delivered separately
-with `scripts.sheets_sync`.
+set up are recorded `needs setup` without any request. Keyed APIs (JSearch, Jooble) get exactly one
+request each and their keys are never recorded, printed or put in an error. The artifact is delivered
+separately with `scripts.sheets_sync`.
 """
 
 import argparse
 from datetime import datetime, timezone
 import json
+import logging
 import os
 from pathlib import Path
 import time
+from urllib.parse import quote
 
 import httpx
 import yaml
@@ -30,7 +33,12 @@ URLS = {"greenhouse": "https://boards-api.greenhouse.io/v1/boards/{board}/jobs?c
         "lever": "https://api.lever.co/v0/postings/{board}?mode=json",
         "ashby": "https://api.ashbyhq.com/posting-api/job-board/{board}"}
 JSON_KINDS = {"greenhouse", "lever", "ashby", "remotive", "remoteok", "himalayas", "jobicy",
-              "themuse", "hn"}
+              "themuse", "hn", "jsearch", "jooble"}
+KEYED_KINDS = {"jsearch", "jooble"}
+
+# httpx logs every request URL at INFO, and Jooble's key is in its URL path.
+for _name in ("httpx", "httpcore"):
+    logging.getLogger(_name).setLevel(logging.WARNING)
 
 
 def record(source_id, status, stamp, *, error="", http=None, listed=None, valid=None, rejected=None,
@@ -43,9 +51,12 @@ def record(source_id, status, stamp, *, error="", http=None, listed=None, valid=
 
 def fetch_once(client, url):
     """(status, text, error_code). One attempt; never follows redirects or retries."""
+    return _send(client, 'GET', url, headers={"User-Agent": USER_AGENT, "Accept": "application/json, */*"})
+
+
+def _send(client, method, url, **request):
     try:
-        with client.stream('GET', url, timeout=30, follow_redirects=False,
-                           headers={"User-Agent": USER_AGENT, "Accept": "application/json, */*"}) as response:
+        with client.stream(method, url, timeout=30, follow_redirects=False, **request) as response:
             if response.status_code != 200:
                 return response.status_code, '', ''
             data = bytearray()
@@ -61,6 +72,35 @@ def fetch_once(client, url):
     except httpx.TimeoutException:
         return None, None, "timeout"
     except httpx.HTTPError:
+        return None, None, "transport_error"
+
+
+def keyed_request(entry, environ):
+    """(missing env names, request kwargs). The kwargs hold the secret; never record or print them."""
+    values = {name: (environ.get(name) or "").strip() for name in entry["env"]}
+    missing = [name for name, value in values.items() if not value]
+    if missing:
+        return missing, None
+    base = {"User-Agent": USER_AGENT, "Accept": "application/json"}
+    if entry["kind"] == "jsearch":
+        return [], {"method": "GET", "url": entry["url"], "params": entry["params"],
+                    "headers": {**base, "X-RapidAPI-Key": values["JSEARCH_API_KEY"],
+                                "X-RapidAPI-Host": "jsearch.p.rapidapi.com"}}
+    return [], {"method": "POST", "url": entry["url"].rstrip("/") + "/" + quote(values["JOOBLE_API_KEY"], safe=""),
+                "json": entry["body"], "headers": base}
+
+
+def fetch_keyed(client, request):
+    """Same contract as fetch_once for a request carrying a secret.
+
+    Only status codes and fixed error codes leave this function: exception text and URLs can
+    contain the key, so they are never kept.
+    """
+    request = dict(request)
+    method, url = request.pop("method"), request.pop("url")
+    try:
+        return _send(client, method, url, **request)
+    except Exception:  # noqa: BLE001 - any message may embed the URL; map it to a fixed code
         return None, None, "transport_error"
 
 
@@ -90,11 +130,19 @@ def fetch_details(client, entry, stubs, stamp, *, delay, sleep):
     return postings, rejected, problem, attempts
 
 
-def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep):
+def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=None):
     """Returns (source record or None for an unresponsive candidate, postings, note)."""
     kind, source_id = entry["kind"], entry["id"]
     url = entry["url"]
-    status, body, error = fetch_once(client, url)
+    if kind in KEYED_KINDS:
+        missing, request = keyed_request(entry, os.environ if environ is None else environ)
+        if missing:
+            return (record(source_id, "needs setup", stamp, attempts=0), [],
+                    "keys_missing:" + ",".join(missing))
+        status, body, error = fetch_keyed(client, request)
+        del request  # the key never outlives the call
+    else:
+        status, body, error = fetch_once(client, url)
     if error:
         return record(source_id, "failed", stamp, error=error), [], error
     if status == 404 and entry.get("candidate"):
@@ -158,7 +206,7 @@ def entries(registry):
         for board in boards:
             yield {"id": f"{kind}:{board['board']}", "kind": kind, "url": URLS[kind].format(board=board["board"]),
                    **board}
-    for group in ("aggregators", "detail_sources", "listing_only"):
+    for group in ("aggregators", "keyed_apis", "detail_sources", "listing_only"):
         yield from registry.get(group, [])
 
 
@@ -168,7 +216,8 @@ def run(registry, client, *, delay=1.0, sleep=time.sleep, environ=None,
     stamp = now()
     sources, jobs, notes = [], [], {}
     for entry in entries(registry):
-        record_, selected, note = probe_source(client, entry, stamp, delay=delay, sleep=sleep)
+        record_, selected, note = probe_source(client, entry, stamp, delay=delay, sleep=sleep,
+                                                    environ=environ)
         notes[entry["id"]] = note
         if record_ is not None:
             sources.append(record_)

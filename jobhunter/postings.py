@@ -335,6 +335,57 @@ def parse_themuse(data, ctx):
     return (*_collect(data["results"], build), len(data["results"]))
 
 
+def _first_https(*links):
+    for link in links:
+        if https_url(link):
+            return link
+    raise ValueError("no_https_link")
+
+
+def parse_jsearch(data, ctx):
+    """JSearch (RapidAPI) results; any field may be missing or null."""
+    if (not isinstance(data, dict) or not isinstance(data.get("data"), list)
+            or data.get("status", "OK") != "OK"):
+        raise ValueError("invalid_board_response")
+
+    def build(item):
+        job_id = item.get("job_id")
+        if not isinstance(job_id, str) or not job_id.strip():
+            raise ValueError
+        remote = item.get("job_is_remote") is True
+        place = ", ".join(plain(item.get(key)) for key in ("job_city", "job_state", "job_country")
+                          if plain(item.get(key)))
+        # Keep the place beside "Remote" so a remote job tied to a non-US country is not read as US.
+        location = ", ".join(part for part in ("Remote" if remote else "", place) if part)
+        return Posting(f"jsearch:{_digest(job_id)}", ctx["source_id"], plain(item.get("employer_name")),
+                       plain(item.get("job_title")), location, clean_html(item.get("job_description")),
+                       _first_https(item.get("job_apply_link"), item.get("job_google_link")),
+                       ctx["captured_at"],
+                       salary=_salary(item.get("job_min_salary"), item.get("job_max_salary"),
+                                      item.get("job_salary_currency"), item.get("job_salary_period")),
+                       tag="other", remote=remote)
+    return (*_collect(data["data"], build), len(data["data"]))
+
+
+def parse_jooble(data, ctx):
+    """Jooble results; title and snippet carry highlight markup, and nothing marks a job remote."""
+    if not isinstance(data, dict) or not isinstance(data.get("jobs"), list):
+        raise ValueError("invalid_board_response")
+
+    def build(item):
+        link = _first_https(item.get("link"))
+        raw_id = item.get("id")
+        plain_id = (raw_id if type(raw_id) is int
+                    else raw_id.strip() if isinstance(raw_id, str) and re.fullmatch(r"\s*-?\d{1,30}\s*", raw_id)
+                    else None)
+        identity = str(plain_id) if plain_id is not None else _digest(str(raw_id) if raw_id else link)
+        return Posting(f"jooble:{identity}", ctx["source_id"], plain(item.get("company")),
+                       clean_html(item.get("title")), plain(item.get("location")),
+                       clean_html(item.get("snippet")), link, ctx["captured_at"],
+                       salary=plain(item.get("salary")), tag="other")
+    return (*_collect(data["jobs"], build), len(data["jobs"]))
+
+
 def parse_wwr_rss(text, ctx):
     feed = feedparser.parse(text)
     if feed.bozo and not feed.entries:
@@ -483,7 +534,8 @@ def count_hn(data, ctx):
 
 PARSERS = {"greenhouse": parse_greenhouse, "lever": parse_lever, "ashby": parse_ashby,
            "remotive": parse_remotive, "remoteok": parse_remoteok, "himalayas": parse_himalayas,
-           "jobicy": parse_jobicy, "themuse": parse_themuse, "wwr": parse_wwr_rss}
+           "jobicy": parse_jobicy, "themuse": parse_themuse, "wwr": parse_wwr_rss,
+           "jsearch": parse_jsearch, "jooble": parse_jooble}
 LISTING_ONLY = {"a16z": count_a16z, "hn": count_hn}
 DETAIL_SOURCES = {"yc": (stubs_yc, detail_yc), "getro": (stubs_getro, detail_getro),
                   "builtin": (stubs_builtin, detail_builtin)}
