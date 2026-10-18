@@ -290,7 +290,8 @@ def test_dedupe_merges_identical_employer_links_and_prefers_company_boards():
     board = make("greenhouse:acme:123", "greenhouse:acme", "https://job-boards.greenhouse.io/acme/jobs/123")
     aggregator = make("remotive:9", "remotive", "https://boards.greenhouse.io/acme/jobs/123?src=remotive")
     kept = p.dedupe([aggregator, board])
-    assert [(posting.job_id, note) for posting, note in kept] == [("greenhouse:acme:123", "Also listed by: remotive")]
+    assert [(posting.job_id, note) for posting, note in kept] == [("greenhouse:acme:123",
+        "Also listed by: remotive\nFirst seen by remotive: 2026-10-18T00:00:00+00:00")]
 
 
 def test_shared_custom_links_retain_distinct_requisitions_for_review():
@@ -338,3 +339,51 @@ def test_row_is_deterministic_and_excerpt_is_exact_prefix():
     assert (row["Rank (prelim)"], row["Status"], row["Notes"], row["My rating"]) == (1, "New", "", "")
     assert set(row) == set(__import__("jobhunter.sheet_records", fromlist=["JOB_HEADERS"]).JOB_HEADERS)
     json.dumps(row)
+
+
+@pytest.mark.parametrize('salary,expected', [
+    ('USD 50,000 - 60,000 per year + 401k', False),
+    ('USD 80,000 per year + 401(k) matching', True),
+    ('Annual salary: 50,000 - 60,000 USD; 100000 employees', False),
+    ('USD 50,000 - 60,000 per year + USD 100,000 bonus', False),
+    ('USD 80,000 per year + USD 100,000 bonus', True),
+    ('Annual salary: USD 50,000 - 60,000; bonus USD 100,000', False),
+    ('USD $70,000 - $90,000 per year', True),
+    ('USD 70,000 - 90,000 a year', True),
+    ('USD 80,000 (annual)', True),
+    ('USD 80,000 gross per year', True),
+    ('USD 50,000 - 60,000 per year + USD 100,000 annual bonus', False),
+    ('USD 50,000 - 60,000 per year; Annual bonus: USD 100,000', False),
+    ('USD 80,000 per year + USD 100,000 annual bonus', True),
+    ('USD 50,000 per year, bonus up to USD 100,000 per year', False),
+    ('USD 120,000 per year benefits included', True),
+    ('USD 50,000 per year + USD 100,000 annual sign-on bonus', False),
+    ('USD 50,000 per year; annual bonus (target): USD 100,000 per year', False),
+    ('USD 80,000 per year, bonus up to USD 100,000 per year', True),
+])
+def test_regional_salary_uses_currency_linked_amounts_only(salary, expected):
+    assert p.regional_salary_match(salary) is expected
+
+
+@pytest.mark.parametrize('workplace,remote', [('remote', True), ('hybrid', False), ('on-site', False), ('', False)])
+def test_lever_preserves_explicit_remote_workplace_type(workplace, remote):
+    data = [{'id': 'regional-1', 'text': 'Product Manager, AI',
+             'categories': {'location': 'Latin America'}, 'workplaceType': workplace,
+             'descriptionPlain': 'Build AI products.', 'hostedUrl': 'https://jobs.lever.co/acme/regional-1'}]
+    job = p.parse_lever(data, CTX | {'source_id': 'lever:acme'})[0][0]
+    assert job.remote is remote
+    assert p.ai_pm_match(job) is remote
+    row = p.to_row(job)
+    assert row['Location'] == 'Latin America' and row['Fit'] == ''
+    assert ('Work mode: Remote (source metadata)' in row['More details']) is remote
+
+
+def test_wwr_remote_feed_keeps_regional_location_without_salary():
+    rss = ('<rss><channel><item><title>Acme: Product Manager, AI</title>'
+           '<link>https://weworkremotely.com/jobs/regional-1</link><region>Costa Rica</region>'
+           '<description>Build AI products.</description></item></channel></rss>')
+    job = p.parse_wwr_rss(rss, CTX | {'source_id': 'weworkremotely'})[0][0]
+    assert job.remote and p.ai_pm_match(job)
+    row = p.to_row(job)
+    assert row['Location'] == 'Costa Rica' and row['Fit'] == ''
+    assert 'Work mode: Remote (source metadata)' in row['More details']
