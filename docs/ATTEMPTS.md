@@ -1,5 +1,17 @@
 # Implementation attempt log
 
+## October 18 social continuation handoff — no live social attempt
+
+- User prioritized LinkedIn profile hiring-post search alongside job listings,
+  then X, then the real cloud test; then requested handoff before implementation.
+- Actual JobHunterEnv read-only preflight at `5200ac01773ee51f7ddf18ea6b13267ac7911ac6`
+  verified nonempty credential booleans and empty Chromium launch via image's
+  Node Playwright; no cookie injection, LinkedIn/X/Gmail requests or Sheet writes.
+  Python collector packages absent; no collector selected or implemented yet.
+  See latest CLAUDE_HANDOFF.md for exact outputs and continuation sequence.
+- This is not a new failed authentication attempt or consumed live daily allowance.
+  Existing blocker/review counters, including Gmail UI3/3, remain unchanged.
+
 ## October 18 milestone closure — PR #16
 
 - Cycle 9 Claude review of `110ea30d7cc4f97ac78a76ea6a05ea405db11632`

@@ -42,6 +42,10 @@ resources already provisioned. Pending choices do not silently change current li
   questions these restrictions. Proposed direction: retain all matching jobs found,
   deliver in safe batches, and budget AI processing separately. Agree the behavior,
   then update collectors, writer/recovery and tests together; no cap change yet.
+- [ ] Current user priority: implement LinkedIn hiring-post search in addition
+  to job listings, then X hiring-post search, then the real cloud test. Both
+  social sources were already in V0; this confirms execution order. See the
+  latest CLAUDE_HANDOFF.md checkpoint. No social collector is implemented yet.
 - [ ] Explain and settle the cloud collector approach for Work at a Startup,
   LinkedIn jobs/posts and X hiring posts in plain language. Dedicated cookies are
   provisioned per the handoff; actual cloud collection/restoration remains unproved.

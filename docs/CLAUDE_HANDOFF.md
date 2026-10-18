@@ -1,5 +1,90 @@
 # Claude Code continuation handoff
 
+## Next owner — LinkedIn hiring posts, then X, then real cloud test
+
+User explicitly requested searches of LinkedIn profile posts because people
+announce jobs outside the job board, followed by X and then the real test.
+User then requested a handoff before further implementation because context
+was running short. Resume this order; do not interpret the handoff as cancellation.
+
+- Main baseline is `5200ac01773ee51f7ddf18ea6b13267ac7911ac6` (PR17 merged).
+  PR16 is merged, reviewed and tested as recorded below. No social collector
+  implementation has started; only read-only research/preflight in this segment.
+- LinkedIn jobs **and hiring posts** remain distinct collection coverage under
+  `linkedin-login`, with post permalinks retained as evidence. Broader approved
+  roles and current salary/geography rules apply to both social sources. No
+  likes, follows, replies, connections, messages, applications or account creation.
+- Dedicated `LINKEDIN_LI_AT`, `X_AUTH_TOKEN`, `X_CT0` are already provisioned
+  per prior verified setup; never request values in chat, print them, inspect
+  cookies locally or dump environment values. Recheck only nonempty booleans.
+- Implement/test LinkedIn as its own milestone PR, then X as its own PR.
+  Codex implementation needs fresh Claude review of each pushed head and CI;
+  standing authorized merges still apply. No same-agent review gate.
+- The existing plan already defines cloud-only restoration, limits and output.
+  Keep current LinkedIn <=5 searches / <=50 detail views, X <=10 queries /
+  <=200 posts, one live attempt per source per America/New_York day. Existing
+  eight-per-source / 150-total collection caps also remain pending a decision.
+  Reserve each daily allowance durably in `_State` BEFORE live collection,
+  under the structural workbook writer lock; `_State` itself is not an atomic
+  lock. Fail closed on ambiguous writes. No allowance implementation exists yet.
+- Research the cookie-compatible LinkedIn MCP route first; use the plan's small
+  read-only Playwright fallback if unsupported. Current upstream candidates are
+  not selected/pinned or installed by this work. Do not add local production
+  dependencies, a hosted scraper, paid API/proxy or interactive cloud login.
+- X uses pinned/tested twscrape with temporary private cookie account DB,
+  deleted after the run. Suppress sensitive library logs, disable telemetry,
+  bound requests/time/pagination and account waits; no password login/IMAP,
+  automatic account rotation/relogin or indefinite rate-limit waiting.
+- Claude extracts explicit facts into validated structured postings. Python
+  owns filtering, stable identity, deduplication and Sheet writes. A post without
+  a direct application URL remains a lead using its canonical post URL; preserve
+  post/source evidence and unresolved fields, never infer salary eligibility.
+- Real-test gate: after reviewed collectors and cloud-safe allowance/writer
+  coordination exist, test actual JobHunterEnv LinkedIn posts then X within
+  that day's allowance, record results/errors honestly in Sources/Run Log, and
+  verify delivery/repeat from saved normalized data without a second live fetch.
+  Gmail comparison is unavailable, not zero. Test fresh session restoration;
+  manual tests still do not prove scheduled daily execution.
+- Independent Gmail routing/live adapter and schedule remain open. Gmail UI
+  blocker stays 3/3; this new social work does not authorize another UI retry.
+
+### Read-only research and preflight
+
+Cloud validation session (same JobHunterEnv):
+https://claude.ai/code/session_01Kydab84oh1GMjzuFahVswG . Latest prompt begins
+`Social-cloud preflight only`; it asks for a clean detached checkout at the
+baseline above, pinned uv/Python/package versions, boolean cookie presence,
+empty headless-browser launch, and read-only lock/pending/allowance readiness.
+No social/Gmail requests, cookie injection or Sheet writes were authorized
+for that preflight. Inspect its expanded command output before citing results;
+no live social allowance has been consumed by the preflight itself.
+
+Expanded outputs already inspected: exact baseline HEAD, clean tracked and
+untracked tree; uv0.13.1, project Python3.12.3; all three cookie variables
+nonempty (values never read back). Python `playwright`, `twscrape` and
+`mcp-server-linkedin` are not installed in project or system Python. The image
+has Node Playwright1.56.1 under `/opt/node-tools/node_modules/playwright`, Node
+`/opt/node22/bin/node`, and Chromium141.0.7390.37 under `/opt/pw-browsers`.
+An empty headless context launched, had zero cookies, stayed on `about:blank`
+and closed cleanly, exit0. This is browser availability only, not social login.
+Workbook readiness output was still pending when preparing this checkpoint;
+inspect the final preflight receipt before reserving a social allowance.
+
+Primary upstream references checked October 18:
+- https://github.com/stickerdaniel/linkedin-mcp-server : current README lists
+  `search_posts` as well as job searches, but its setup emphasizes saved local
+  browser profiles/interactive login. Direct supplied-cookie cloud restoration
+  remains unverified; inspect exact version/source before choosing it.
+- https://github.com/bcharleson/linkedincli : supports cookie env configuration,
+  but its current README expressly requires local MCP session origination, so
+  it cannot be adopted as the production cloud route under this plan.
+- https://github.com/vladkens/twscrape : current README shows
+  `API.pool.add_account_cookies`, `API.search`, bounded pool-wait options and
+  `TWS_TELEMETRY=0`. API/source/version compatibility and internal retry behavior
+  still need inspection. `limit` is a target, not a hard fetch/response cap;
+  enforce independent bounds in our collector. No installed version is assumed.
+
+
 ## Current checkpoint — PR #16 merged and manual cloud smoke passed
 
 This checkpoint supersedes older pending-review/open-PR statements below;
