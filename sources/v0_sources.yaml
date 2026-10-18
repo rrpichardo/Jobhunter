@@ -43,19 +43,19 @@ keyed_apis:  # exactly one request per run each; keys come from environment vari
     kind: jsearch
     env: [JSEARCH_API_KEY]  # sent as the X-RapidAPI-Key header; free plan is 200 requests a month
     url: "https://jsearch.p.rapidapi.com/search-v2"  # /search was retired (HTTP 404, checked live)
-    params: {query: "AI product manager in USA", page: 1, num_pages: 1, date_posted: week}
+    params: {query: "product manager in USA", page: 1, num_pages: 1, date_posted: week}
   - id: jooble
     kind: jooble
     env: [JOOBLE_API_KEY]  # appended to the URL path at request time, so the URL is never recorded
     url: "https://jooble.org/api"
-    body: {keywords: "AI product manager", location: "United States", page: "1"}
+    body: {keywords: "product manager", location: "United States", page: "1"}
 detail_sources:  # listing page, then each shortlisted PM job's own page for its description (polite, capped)
   - {id: yc-product, kind: yc, url: "https://www.ycombinator.com/jobs/role/product-manager"}
   - {id: builtin-product, kind: builtin, url: "https://builtin.com/jobs/product-management"}
-  - {id: getro-accel, kind: getro, url: "https://jobs.accel.com/jobs?q=ai%20product%20manager"}
-  - {id: getro-primary, kind: getro, url: "https://jobs.primary.vc/jobs?q=ai%20product%20manager"}
+  - {id: getro-accel, kind: getro, url: "https://jobs.accel.com/jobs?q=product%20manager"}
+  - {id: getro-primary, kind: getro, url: "https://jobs.primary.vc/jobs?q=product%20manager"}
 listing_only:  # reachable and counted, but no description text yet, so nothing is delivered
-  - {id: a16z-ai-pm, kind: a16z, url: "https://jobs.a16z.com/jobs?q=AI%20product%20manager"}
+  - {id: a16z-ai-pm, kind: a16z, url: "https://jobs.a16z.com/jobs?q=product%20manager"}
   - {id: hn-who-is-hiring, kind: hn, url: "https://hn.algolia.com/api/v1/search_by_date?tags=story,author_whoishiring&hitsPerPage=3"}
 needs_setup:
   - {id: linkedin-logged-in, env: [], action: "Create the dedicated LinkedIn account, log in locally, and supply its cookie in environment settings; Claude does not log in."}

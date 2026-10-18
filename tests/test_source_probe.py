@@ -236,14 +236,15 @@ def test_known_low_regional_salary_does_not_consume_a_detail_slot():
     assert all(not url.endswith('/1') for url in seen)
 
 
-def test_blank_regional_stub_salary_does_not_fetch_a_text_only_detail():
+def test_blank_regional_stub_salary_fetches_detail_and_retains_unresolved_candidate():
     listing = YC_LIST.replace('San Francisco, CA', 'Colombia')
     seen = []
     with httpx.Client(transport=httpx.MockTransport(lambda request: seen.append(str(request.url)) or
-            httpx.Response(200, text=listing))) as client:
+            httpx.Response(200, text=listing if 'jobs/role' in str(request.url) else YC_PAGE))) as client:
         source, jobs, _ = probe.probe_source(client, {'id': 'yc-product', 'kind': 'yc',
             'url': 'https://www.ycombinator.com/jobs/role/product-manager'}, '2026-10-18T00:00:00+00:00')
-    assert jobs == [] and len(seen) == 1
+    assert len(jobs) == 1 and len(seen) == 2
+    assert 'Check first:' in probe.to_row(jobs[0])['More details']
 
 
 def test_recursion_failure_in_a_source_parser_does_not_abort_other_sources(monkeypatch):
@@ -401,12 +402,12 @@ def test_keyed_sources_make_one_request_each_and_deliver_through_the_shared_filt
     payload = run_keyed(keyed_serve(seen), KEYED_ENV)
     assert [(r.method, r.url.host) for r in seen] == [("GET", "jsearch.p.rapidapi.com"), ("POST", "jooble.org")]
     js, jb = seen
-    assert dict(js.url.params) == {"query": "AI product manager in USA", "page": "1", "num_pages": "1",
+    assert dict(js.url.params) == {"query": "product manager in USA", "page": "1", "num_pages": "1",
                                    "date_posted": "week"}
     assert js.url.path == "/search-v2"
     assert js.headers["X-RapidAPI-Key"] == KEY and js.headers["X-RapidAPI-Host"] == "jsearch.p.rapidapi.com"
     assert jb.url.path == f"/api/{KEY}"
-    assert json.loads(jb.content) == {"keywords": "AI product manager", "location": "United States", "page": "1"}
+    assert json.loads(jb.content) == {"keywords": "product manager", "location": "United States", "page": "1"}
     by_id = {s["source_id"]: s for s in payload["sources"]}
     assert (by_id["jsearch"]["status"], by_id["jsearch"]["jobs_fetched"], by_id["jsearch"]["valid_jobs"],
             by_id["jsearch"]["rejected_items"], by_id["jsearch"]["selected_for_m0"]) == ("OK", 3, 2, 1, 1)

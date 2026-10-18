@@ -1,5 +1,122 @@
 # Implementation attempt log
 
+## October 18 broader collection and Gmail intake milestone
+
+- Cycle 8 Claude reviewed `c4c82f952f2b1130ecc664eadc4c60763fb7f1dd`,
+  confirmed the real JSearch path fixed, and found one low-severity mode-label
+  boundary issue: `Remote, or Colombia` lost its alternative meaning. Twelve
+  failing regressions reproduced prefix/suffix conjunction and double-separator
+  cases; boundary checks now preserve ambiguity while normal prefixes still work.
+  Full local suite: 577 tests / 10 subtests, diff check clean. Fresh exact-head
+  cycle-9 Claude review and current CI remain required before merge.
+
+- Cycle 7 Claude reviewed `323eb70ce27ac5b16831995c4c8eea3f8308971e`,
+  confirmed prior repairs and found JSearch's actual `Remote, country` producer
+  format was treated as an alternative mode. Eight failing regressions include
+  a real parser-to-preference-to-row fixture path. Attached comma-prefix modes
+  now normalize; comma suffixes and `or Remote` alternatives stay unresolved.
+  Full local suite: 565 tests / 10 subtests, diff check clean. Fresh exact-head
+  cycle-8 Claude review and CI remain required before merging.
+
+- Cycle 6 Claude reviewed `e158c6beb4089f0ff4bc74effb52e3112b1d274a`,
+  confirmed earlier fixes but found comma-separated unknown alternatives could
+  satisfy70k and long-dash remote labels became unresolved. Regressions failed
+  before repair. Known regional hierarchy forms normalize before comma splitting;
+  unknown qualifiers remain unresolved and collected, not asserted eligible.
+  Long dashes, Remoto and parenthesized known-city mode qualifiers are handled.
+  Latest full local suite: 557 tests / 10 subtests, diff check clean. Fresh
+  exact pushed-head cycle-7 Claude review and CI remain required before merge.
+
+- Cycle 5 Claude reviewed `07de188e9a6fa03b168b6c4658aa4f8600031ecf`,
+  confirmed prior repairs and found country-less city/department forms (Bogotá,
+  DC; Medellín, Antioquia; etc.) were still dropped or assigned US. Regressions
+  reproduced those plus missing-comma US alternatives, unknown alternative
+  places/mode-only alternatives and unrecognized standalone locations. Repairs
+  retain ambiguous cases as unresolved, with no claim of salary eligibility.
+  Latest full local suite: 540 tests / 10 subtests, diff check clean. Fresh
+  cycle-6 pushed-head Claude review and current CI are required before merge.
+
+- Cycle 4 Claude review of `38082751bb0deeb7eb15e577e91bfe1a12b36097`
+  confirmed the earlier examples fixed but reproduced optional-department text
+  swallowing a second US locality at additional separators, and Bogotá DC/CO
+  spellings being treated as US. Thirteen failing regressions reproduced these
+  cases before repair. Replaced arbitrary department text with explicit known
+  department/capital-district forms; unknown regional forms remain unresolved.
+  Current local full suite: 518 tests / 10 subtests passed, diff check clean.
+  Fresh cycle-5 pushed-head Claude review and CI remain required before merge.
+
+- User explicitly said **"do it until is fixed"** after the PR16 cycle-cap
+  question, authorizing continued repairs and fresh Claude reviews for PR16.
+  This supersedes its stop checkpoint below; it does not reset counters or
+  extend the separate Gmail UI blocker. Cycle 4 is the next actual review.
+- Cycle-3 mixed-location findings reproduced in 11 failing regressions. Repair
+  normalizes explicit regional city/country pairs anywhere before inspecting US
+  locality codes, so CO/PA/AR codes outside those pairs remain US evidence and
+  mixed listings stay unresolved. Original source location text is preserved.
+  Full local suite: 505 tests and 10 subtests passed; diff check clean. Fresh
+  pushed-head Claude review and CI are still required before merge.
+
+- Cycle 3 Claude review of `9e1f2ff0de4b9a3163e689ce99831d9f81f46f16`
+  confirmed email links, standalone Colombian suffixes and detail priority fixed,
+  but found two mixed-region defects: US-first regional city/CO/DO combinations
+  can be dropped at the US floor, and ambiguous CO/PA/AR US city codes can falsely
+  satisfy the LATAM floor. Examples and locations are posted on PR16. Claude ran
+  486 tests / 10 subtests successfully; passing tests do not resolve findings.
+- **Three repair/review cycles exhausted; PR16 remains open and unmerged.**
+  User authorization requested for exactly one additional fix/Claude-review
+  cycle. Do not repair this blocker again until that answer arrives. PR15's
+  prior exception does not extend to PR16. Gmail UI remains independently 3/3.
+- Final code revision above also passed actual JobHunterEnv locked tests,
+  486/10, exit 0, exact SHA and clean tree confirmed in expanded tool output.
+  Linux/Windows CI passed. No new live source/Gmail/social fetch or Sheet write
+  occurred during that final check; no production Gmail or scheduling proof.
+
+- Cycle 2 Claude review of `67ca7f8fa9710fbf877a8cb28e85b1fd826dd990`
+  confirmed earlier repairs but found LinkedIn `/comm/` email URLs, mixed US
+  city/LATAM locations, Colombian department/work-mode suffixes and detail-fetch
+  shortlist ordering still needed repairs. All four reproduced in failing tests;
+  repaired suite: 486 tests and 10 subtests passed, diff check clean. Fresh
+  cycle 3/3 is required on the pushed repair; do not merge an unreviewed repair.
+
+- Cycle 1 Claude review of pushed `4d429652e72f4bc50482987222e375eed283bdf4`
+  found repeat-email identity, Colombian geography, unresolved low salary,
+  partial-error caps, cross-card evidence, capped role ordering and Next step
+  ownership issues. Posted to PR16. Regressions reproduced the issues before
+  repair. Current repair requires fresh pushed-head Claude review, cycle 2/3.
+- Repairs isolate one visible HTML job card per extraction and reject unsupported
+  layouts (including plaintext) rather than fall back to an entire message.
+  LinkedIn numeric requisition URLs discard tracking and have stable identity
+  across message/title changes. Caps/counts reconcile even after partial errors.
+  Mixed US/LATAM availability and country-less city names remain unresolved;
+  known pay below 70k is below every allowed floor. Unknown salary checks live
+  in More details, leaving Next step blank per the plan.
+
+- User authorized another agent to finish Gmail routing and broaden collection
+  beyond AI PM. Agent stopped at an account usage limit; root resumed as the sole
+  implementation owner on `codex/salary-preferences`. No counters reset.
+- Python now recognizes the approved role families and applies annual USD salary
+  floors of 140,000 US/remote-from-US and 70,000 LATAM including remote. Missing
+  salary is retained with Check first in More details rather than asserted eligible.
+  Existing source/request/batch caps remain unchanged.
+- Added a message-scoped Gmail intake boundary with injected connector/extractor
+  interfaces, verified metadata rules and exact fact evidence. It can join the
+  probe payload and existing writer in synthetic tests. Real connector payload
+  binding and a production CLI route are not implemented; no Gmail deployment.
+- Fresh `.venv/bin/python -m pytest -q`: 458 tests and 10 subtests passed.
+  The first full run failed only the keyed-source query expectation; updated
+  exact assertions to the approved broader query, retaining request-count/key
+  placement checks. `git diff --check` passed.
+- Actual cloud Gmail check used the existing connector in session
+  `session_01Kydab84oh1GMjzuFahVswG`. Expanded `mcp__Gmail__list_labels` output
+  confirms exact `JobHunter` label, zero messages and threads. No message reads
+  or inbox fallback. Local dedicated-account alert metadata search had no matches.
+- Gmail forwarding-checkbox blocker remains 3/3. Next: receive a real alert,
+  confirm precise metadata rules, user manually completes forwarding action,
+  then verify fresh label-scoped message extraction and Sheet delivery in cloud.
+- Earlier repair verification: 475 tests and 10 subtests passed; diff check passed.
+  Cycle 2 is consumed; fresh cycle 3/3 is required on the pushed repair revision.
+  Passing local tests do not establish current CI/review or cloud proof.
+
 ## October 18 PR #15 cycle 3 result — further work authorized
 
 - Claude reviewed exact `8fc2a7c12a8129b0e27f8f9472a62db0cee52ef6`, confirmed

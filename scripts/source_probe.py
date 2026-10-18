@@ -21,8 +21,9 @@ import httpx
 import yaml
 
 from jobhunter.artifacts import safe_error_code, write_artifact
-from jobhunter.postings import (AI_TERMS, DETAIL_SOURCES, LISTING_ONLY, PARSERS, Posting, ai_pm_match,
-                                collection_location_match, dedupe, is_pm_title, to_row)
+from jobhunter.postings import (AI_TERMS, DETAIL_SOURCES, LISTING_ONLY, PARSERS, Posting, collection_match,
+                                collection_stub_match, collection_priority, collection_title_priority,
+                                dedupe, role_family, to_row)
 
 USER_AGENT = "JobHunterBot/0.1 (personal job search; polite single requests)"
 MAX_BYTES = 40 * 1024 * 1024
@@ -166,9 +167,8 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
                           coverage="partial-response"), [], "listing_only"
         if kind in DETAIL_SOURCES:
             stubs, rejected = DETAIL_SOURCES[kind][0](data, {**ctx, "url": url})
-            shortlist = [s for s in stubs if is_pm_title(s["title"])
-                         and collection_location_match(s["location"], s["salary"])]
-            shortlist.sort(key=lambda stub: not bool(AI_TERMS.search(stub['title'])))
+            shortlist = [s for s in stubs if collection_stub_match(s["title"], s["location"], s["salary"])]
+            shortlist.sort(key=lambda stub: collection_title_priority(stub['title'], entry.get('tag', 'other')))
             detail_skipped = max(0, len(shortlist) - PER_SOURCE_LIMIT)
             postings, failed, problem, detail_attempts = fetch_details(
                 client, entry, shortlist[:PER_SOURCE_LIMIT], stamp, delay=delay, sleep=sleep)
@@ -180,8 +180,8 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
     except (ValueError, TypeError, KeyError, AttributeError, RecursionError) as exc:
         code = "duplicate_source_id" if str(exc) == "duplicate_source_id" else "invalid_board_response"
         return record(source_id, "failed", stamp, error=code, http=200), [], code
-    candidates = [p for p in postings if is_pm_title(p.title)]
-    selected = [p for p in postings if ai_pm_match(p)][:PER_SOURCE_LIMIT]
+    candidates = [p for p in postings if role_family(p.title)]
+    selected = sorted((p for p in postings if collection_match(p)), key=collection_priority)[:PER_SOURCE_LIMIT]
     coverage = "complete-response" if entry.get("board") else "partial-response"
     if kind in DETAIL_SOURCES:
         candidates = shortlist
@@ -228,7 +228,7 @@ def entries(registry):
         yield from registry.get(group, [])
 
 
-def run(registry, client, *, delay=1.0, sleep=time.sleep, environ=None,
+def run(registry, client, *, delay=1.0, sleep=time.sleep, environ=None, gmail_result=None,
         now=lambda: datetime.now(timezone.utc).isoformat()):
     environ = os.environ if environ is None else environ
     stamp = now()
@@ -241,7 +241,13 @@ def run(registry, client, *, delay=1.0, sleep=time.sleep, environ=None,
             sources.append(record_)
             jobs.extend(selected)
         sleep(delay)
+    if gmail_result is not None:
+        sources.append(gmail_result['source'])
+        jobs.extend(gmail_result['postings'])
+        notes['gmail-job-alerts'] = gmail_result['source']['error'] or 'bounded-message-page'
     for item in registry["needs_setup"]:
+        if item['id'] == 'gmail-job-alerts' and gmail_result is not None:
+            continue
         missing = [name for name in item["env"] if not environ.get(name)]
         sources.append(record(item["id"], "needs setup", stamp, attempts=0))
         notes[item["id"]] = ("keys_missing:" + ",".join(missing) if missing else "setup_or_collector_pending")

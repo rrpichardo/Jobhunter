@@ -1,5 +1,41 @@
 # JobHunter implementation setup
 
+## October 18 salary clarification — current user direction
+
+- US roles, including remote roles worked from the US: minimum USD 140,000
+  annually. The USD 70,000 threshold is for LATAM, not US-based remote work.
+- LATAM roles, including remote LATAM: minimum USD 70,000 annually. The user
+  explicitly confirmed this replaces the previous any-salary remote exception.
+  LATAM on-site/hybrid scope remains Colombia/Dominican Republic.
+- These are recorded preferences, not evidence that LinkedIn salary filters or
+  the cloud collector enforce them. Missing salary does not prove a match.
+
+## October 18 alert setup and cloud Gmail check
+
+- Verified the signed-in LinkedIn account uses the dedicated job-alert address.
+  The Manage job alerts view confirms 18 alerts, all daily via email and
+  notification: 12 new broader alerts plus the earlier AI PM alert and five
+  preexisting local/state PM alerts. Broader US searches cover Product Manager,
+  Senior Product Manager, Product Lead, Chief of Staff, Strategy Manager, MBA
+  Leadership Development Program, Entrepreneur in Residence and Project Manager.
+  Separate PM searches cover remote US, remote Latin America, Colombia and the
+  Dominican Republic. Source alerts are broad; Python must enforce preferences.
+- Actual Claude cloud Gmail connector can list labels. Expanded tool output
+  confirms exact `JobHunter` label with zero messages and zero threads. No
+  message bodies, message searches or unrelated inbox content were read in
+  this cloud check; message fetching/extraction/delivery remains unproved.
+- A bounded setup-only search for LinkedIn job-alert subject patterns in the
+  dedicated local Gmail returned no matches. Wait for a genuine daily alert
+  before verifying exact sender/subject rules. No filters were installed and
+  the three-attempt forwarding-checkbox blocker remains paused.
+- Next manual setup: from a genuine alert, use Filter messages like these;
+  constrain the exact sender and positive job-alert subject pattern, excluding
+  security/login/verification/password/reset/code subjects. Forward to the
+  already-verified Claude-connected destination; leave global forwarding off
+  and do not apply to old messages. Destination rule must also require the
+  original dedicated recipient and apply only `JobHunter`. Verify a fresh alert
+  at both ends before claiming the route works. Never route security mail.
+
 ## October 18 forwarding verified; dedicated alerts still pending
 
 - Forwarding destination verification is now complete in the Gmail settings UI.
@@ -36,7 +72,8 @@
 
 ## October 18 collection preference update
 
-The user permits remote South/Latin America roles regardless of salary. For
+Superseded salary exception: remote South/Latin America roles previously had no
+salary floor; the latest user clarification above sets USD 70,000 annually. For
 on-site/hybrid roles in that region, only Colombia and the Dominican Republic
 qualify, with an annual USD salary range reaching at least 70,000. The numeric
 answer is interpreted as annual USD, following the question presented to the user.

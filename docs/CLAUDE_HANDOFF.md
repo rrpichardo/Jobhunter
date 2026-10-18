@@ -1,5 +1,77 @@
 # Claude Code continuation handoff
 
+## Latest continuation — broader alerts and salary preferences
+
+Latest cycle-8 repair preserves mode alternatives at conjunction/double-separator
+boundaries while keeping the verified JSearch Remote, country path. Local577/10
+passes; fresh exact-head cycle-9 Claude review and CI remain required. Continued
+PR16 repair authorization remains in force; no Gmail deployment is claimed.
+
+Latest cycle-7 repair supports JSearch's `Remote, city/state/country` format,
+with a parser-to-salary-to-row regression. Local565/10 passes; fresh exact-head
+cycle-8 Claude review and CI remain required. Prior ambiguous mode alternatives
+stay unresolved. Continued PR16 repair authorization remains in force.
+
+Latest cycle-6 repair handles comma-separated unknown alternatives and attached
+long-dash/Remoto labels. Explicit known regional hierarchy forms normalize before
+splitting; unfamiliar qualifiers remain unresolved and retained. Local557/10
+passes; exact pushed-head cycle-7 Claude review and CI remain required. User's
+continued PR16 repair authorization is still in force; Gmail UI remains separate.
+
+Latest cycle-5 repair keeps country-less city/department and unclassified places
+unresolved; alternative locations cannot use the lower floor when another place
+or mode-only option is unknown, including missing-comma US formats. Local suite
+passes 540/10. Fresh exact-head cycle-6 Claude review and CI are required before
+merge. User's continued PR16 repair authorization remains in force.
+
+Latest repair after cycle 4 restricts department normalization so it cannot
+consume a second locality and handles Bogotá DC/CO spellings. Unknown forms stay
+unresolved. Local suite passes 518/10; fresh exact-head cycle-5 Claude review and
+CI are required. Continued PR16 repair authorization remains in force.
+
+**User resumed PR16:** "do it until is fixed" explicitly authorizes continued
+PR16 repair/review cycles, superseding the cap stop below. Gmail UI stays at
+3/3 independently. Root repaired the remaining mixed-location cases with
+regressions; 505 tests / 10 subtests pass locally. Fresh pushed-head Claude
+cycle-4 review and CI are required before merge; do not infer approval.
+
+**Stop checkpoint:** PR16 cycle 3 reviewed code SHA
+`9e1f2ff0de4b9a3163e689ce99831d9f81f46f16` and still found two mixed-location
+defects: US-first regional city/CO/DO order can drop valid leads; ambiguous
+CO/PA/AR US city codes can falsely satisfy LATAM pay. PR16 is open, unmerged,
+three cycles exhausted. User was asked for one additional cycle; do not infer
+approval from silence. See ATTEMPTS.md and PR16 cycle-3 comment for reproductions.
+Current code passed 486/10 locally, in actual JobHunterEnv and required CI, but
+that does not resolve the review findings. Gmail UI blocker remains separately
+3/3, awaiting manual action or a relevant capability change.
+
+PR #16 is the implementation milestone. Cycle-1 and cycle-2 Claude findings
+were reproduced and repaired; latest local suite is 486 tests / 10 subtests.
+Fresh pushed-head cycle 3/3 review and CI remain required. Actual JobHunterEnv
+locked tests passed 475/10 on earlier repair `67ca7f8`; current-revision cloud
+test confirmation is still needed. PR comments retain exact-SHA cloud evidence.
+
+PR #15 was merged at `974ec2c`; its pending-review entries below are historical.
+LinkedIn dedicated-account UI now confirms 18 daily email/notification alerts,
+including broader non-AI roles and remote US/LATAM PM searches (SETUP.md).
+User confirmed annual USD floors: US including remote-from-US 140,000; LATAM
+including remote 70,000. This replaces the old any-salary remote LATAM exception.
+LATAM on-site/hybrid scope remains Colombia/Dominican Republic.
+
+Codex is continuing broader Python collection filtering and a message-scoped
+Gmail intake boundary on `codex/salary-preferences`. Another Codex agent stopped
+at a usage limit; root took implementation ownership. Tests/review/deployment
+must be checked on the final pushed revision. Gmail intake currently accepts an
+injected connector adapter; the real cloud adapter payload binding and CLI path
+are not implemented or verified. Do not claim production Gmail collection.
+
+Actual Claude cloud label listing verified `JobHunter` exists with zero messages
+and threads; no message fetching occurred. Local dedicated-account job-alert
+metadata search also returned no matches. Wait for a genuine alert to verify
+precise forwarding/labeling rules. The forwarding-checkbox blocker remains at
+three attempts, with manual completion or relevant UI change required. Do not
+reset counters or replace cloud execution with local Gmail collection.
+
 ## Latest continuation — PR review and operator checklist
 
 - Cycle-3 Claude review of `8fc2a7c` confirmed the code findings fixed but found

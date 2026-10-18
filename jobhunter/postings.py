@@ -1,4 +1,4 @@
-"""Multi-source postings: one parser per source, the AI-PM filter, deterministic rows.
+"""Multi-source postings: one parser per source, collection preferences, deterministic rows.
 
 Parsers take already-fetched data and never touch the network. Source text is
 untrusted: it is cleaned, never executed, and only an exact leading excerpt of it
@@ -43,12 +43,15 @@ NON_US = re.compile(r"\b(south america|latin america|dominican republic|rep[uú]
 COUNTRY_CODE = re.compile(r",\s*[A-Z]{2},\s*([A-Z]{2})\b")
 LOCATION_US_CODE = re.compile(r",\s*(?:A[LKZR]|C[AOT]|DE|FL|GA|HI|I[ADLN]|K[SY]|LA|M[ADEINOST]|"
                               r"N[CDEHJMVY]|O[HKR]|PA|RI|S[CD]|T[NX]|UT|V[AT]|W[AIVY]|DC)\b")
+# Same state vocabulary without a comma requirement; case-sensitive so words
+# such as "or" and "in" are not mistaken for Oregon and Indiana.
+US_STATE_CODE_TOKEN = re.compile(r'\b' + LOCATION_US_CODE.pattern.removeprefix(r',\s*'))
 # Recheck state/ISO-code collisions in AMBIGUOUS_REGIONAL_CODES if this list changes.
 LATIN_AMERICA = re.compile(r'\b(south america|latin america|latam|colombia|dominican republic|rep[uú]blica dominicana|'
                            r'brazil|brasil|argentina|chile|peru|perú|ecuador|bolivia|uruguay|paraguay|venezuela|'
                            r'(?<!new )mexico|méxico|costa rica|panama|panamá|guatemala|honduras|el salvador|nicaragua|belize)\b', re.I)
 ONSITE_COUNTRIES = re.compile(r'\b(colombia|dominican republic|rep[uú]blica dominicana)\b', re.I)
-REMOTE_TERMS = re.compile(r'\b(remote|anywhere|worldwide|global)\b', re.I)
+REMOTE_TERMS = re.compile(r'\b(remote|remoto|anywhere|worldwide|global)\b', re.I)
 EXPLICIT_US = re.compile(r'(?i:\b(?:united states|usa)\b|\bu\.s\.(?:a\.)?)|\bUS\b')
 MIN_REGIONAL_ANNUAL_USD = 70_000
 # Short country/state collisions are not US evidence on the regional path.
@@ -126,15 +129,15 @@ def us_or_unknown(location: str) -> bool:
     return bool(LOCATION_US_CODE.search(location) or ANYWHERE.search(location))
 
 
-def regional_salary_match(salary: str) -> bool:
-    """Annual USD salary range overlaps the user's floor; unknown units stay unknown."""
+def annual_usd_salary_ceiling(salary: str) -> float | None:
+    """Explicit annual USD base-pay ceiling; unsupported compensation is unresolved."""
     usd = re.compile(r'\bUSD\b|US\$', re.I)
     salary = salary.replace('_', ' ')
     if (not usd.search(salary)
             or not re.search(r'\b(year|yearly|annual|annually|annum|yr)\b', salary, re.I)
             or re.search(r'\b(COP|DOP|CAD|AUD|MXN|EUR|GBP|hour|hourly|month|monthly|week|weekly|day|daily|'
                          r'OTE|total compensation|equity)\b|RD\$|R\$', salary, re.I)):
-        return False
+        return None
     # Only amounts attached to currency are pay; benefits such as 401k are not.
     amount = r'\$?\s*(?<![\w.])\d[\d,]*(?:\.\d+)?\s*[kK]?(?!\w|\.\d)'
     pay_range = rf'{amount}(?:\s*[-–—]\s*{amount})?'
@@ -165,7 +168,13 @@ def regional_salary_match(salary: str) -> bool:
             value = float(number.replace(',', '')) * (1000 if scale else 1)
             if math.isfinite(value):
                 amounts.append(value)
-    return bool(amounts and max(amounts) >= MIN_REGIONAL_ANNUAL_USD)
+    return max(amounts) if amounts else None
+
+def regional_salary_match(salary: str) -> bool:
+    """Historical regional probe helper; production uses collection_match."""
+    amount = annual_usd_salary_ceiling(salary)
+    return amount is not None and amount >= MIN_REGIONAL_ANNUAL_USD
+
 
 
 def collection_location_match(location: str, salary: str = '', *, remote: bool = False) -> bool:
@@ -189,6 +198,129 @@ def ai_pm_match(posting: Posting) -> bool:
             and collection_location_match(posting.location, posting.salary, remote=posting.remote)
             and (posting.tag == "ai" or bool(AI_TERMS.search(posting.title))
                  or bool(AI_TERMS.search(posting.text))))
+
+
+# The AI-only helpers above remain for replaying the historical M0 probe. All
+# current source collection uses these broader user-approved role preferences.
+ROLE_EXCLUSIONS = re.compile(r"\b(intern|internship|summer associate|product marketing|"
+                             r"product design(?:er)?|product communications)\b", re.I)
+ROLE_FAMILIES = (
+    ('Product management', PM_TITLE),
+    ('Chief of Staff', re.compile(r'\bchief of staff\b', re.I)),
+    ('Leadership program', re.compile(r'\b(?:leadership (?:development )?program|'
+                                     r'(?:MBA|management) (?:development|rotation(?:al)?) program)\b', re.I)),
+    ('Strategy', re.compile(r'\b(?:strategy (?:manager|lead|director)|'
+                           r'(?:manager|director|head|vp) (?:of )?(?:corporate |business )?strategy)\b', re.I)),
+    ('Entrepreneurship', re.compile(r'\b(?:entrepreneur|founder) in residence\b', re.I)),
+    ('Project management', re.compile(r'\bproject (?:manager|management lead|director)\b', re.I)),
+)
+
+
+def role_family(title: str) -> str | None:
+    if ROLE_EXCLUSIONS.search(title):
+        return None
+    return next((family for family, pattern in ROLE_FAMILIES if pattern.search(title)), None)
+
+
+def collection_region(location: str, *, remote: bool = False) -> str | None:
+    """US / LATAM / unresolved; None means explicitly outside collection scope."""
+    # Normalize only explicit regional city/country pairs before inspecting US
+    # state codes. This works anywhere in a multi-location listing and leaves
+    # other CO/PA/AR locality pairs as potentially US evidence. Original source
+    # location text remains on the Posting and Sheet row.
+    city = r'(?:bogot[aá](?:\s+D\.?\s*C\.?)?|medell[ií]n)'
+    # Only known department/capital-district spellings may be consumed. An
+    # arbitrary phrase here could swallow a second city and its US state code.
+    department = r'(?:Antioquia|Cundinamarca|D\.?\s*C\.?|Distrito Capital|Capital District|Colombia)'
+    location = re.sub(rf'\b{city}(?:,\s*{department})?,\s*(?:CO|Colombia)\b', 'Colombia', location, flags=re.I)
+    location = re.sub(r'\bsanto domingo,\s*DO\b', 'Dominican Republic', location, flags=re.I)
+    for country, code in (('Colombia', 'CO'), ('Panama', 'PA'), ('Argentina', 'AR'),
+                          ('Dominican Republic', 'DO')):
+        location = re.sub(rf'\b{country},\s*{code}\b', country, location, flags=re.I)
+    us_evidence = bool(EXPLICIT_US.search(location) or US_TERMS.search(location)
+                       or US_STATE_NAME.search(location) or US_STATE_CODE_TOKEN.search(location))
+    if re.fullmatch(rf'\s*(?:{city}|santo domingo)\s*', location, re.I):
+        return 'unresolved'  # city names alone do not establish the country
+    if (re.search(r'\b(?:bogot[aá]|medell[ií]n)\b', location, re.I)
+            and re.search(r',\s*CO\b', location, re.I)):
+        return 'unresolved'  # unsupported regional locality syntax is not Colorado evidence
+    if LATIN_AMERICA.search(location):
+        if us_evidence:
+            return 'unresolved'  # mixed US/LATAM availability does not choose a work location
+        # A second place without a reliable country/state cannot establish the
+        # lower floor either. Strip only attached prefix/suffix work-mode labels:
+        # "Remote - Colombia" is one place; "Colombia or Remote" is ambiguous.
+        mode = r'(?:remote|remoto|hybrid|on[- ]?site|in[- ]?office)'
+        operator = r'(?:[-–—/:,&|;·]|\b(?:or|and|y|o)\b)'
+        places = location
+        prefix = re.match(rf'^\s*{mode}\s*[-–—/:,]\s*', places, re.I)
+        if prefix and not re.match(operator, places[prefix.end():].lstrip(), re.I):
+            places = places[prefix.end():]
+        suffix = re.search(rf'\s*[-–—/:]\s*{mode}\s*$', places, re.I)
+        if suffix and not re.search(rf'{operator}\s*$', places[:suffix.start()], re.I):
+            places = places[:suffix.start()]
+        places = [part.strip(' -:.,') for part in re.split(
+            r'[,|;/&·\n]+|\s+[-–—]\s+|\b(?:or|and|y|o)\b', places, flags=re.I)]
+        places = [part for part in places if part]
+        qualifier = rf'(?:{city}|santo domingo|{department})(?:\s*\(\s*{mode}\s*\))?'
+        if len(places) > 1 and any(not LATIN_AMERICA.search(part)
+                and not re.fullmatch(qualifier, part, re.I) for part in places):
+            return 'unresolved'
+        if remote or REMOTE_TERMS.search(location) or ONSITE_COUNTRIES.search(location):
+            return 'LATAM'
+        return None
+    if (re.search(r'\b(?:bogot[aá]|medell[ií]n|santo domingo)\b', location, re.I)
+            and not EXPLICIT_US.search(location)):
+        return 'unresolved'  # a city/department without a country is not a US location
+    if not us_or_unknown(location):
+        if NON_US.search(location) or any(code != 'US' for code in COUNTRY_CODE.findall(location)):
+            return None
+        return 'unresolved'  # unrecognized text is not proof of a foreign location
+    if US_TERMS.search(location) or LOCATION_US_CODE.search(location):
+        return 'US'
+    return 'unresolved'
+
+
+def salary_preference(posting: Posting) -> tuple[str, int]:
+    region = collection_region(posting.location, remote=posting.remote)
+    floor = 70_000 if region == 'LATAM' else 140_000
+    amount = annual_usd_salary_ceiling(posting.salary)
+    if amount is not None and amount < 70_000:
+        return 'below floor', floor
+    if region in (None, 'unresolved') or amount is None:
+        return 'unresolved', floor
+    return ('satisfied' if amount >= floor else 'below floor'), floor
+
+
+def collection_stub_match(title: str, location: str, salary: str) -> bool:
+    """Apply known preference evidence before spending a capped detail request."""
+    region = collection_region(location)
+    amount = annual_usd_salary_ceiling(salary)
+    floor = 70_000 if region == 'LATAM' else 140_000
+    return bool(role_family(title) and region is not None
+                and (amount is None or amount >= (70_000 if region == 'unresolved' else floor)))
+
+
+def collection_match(posting: Posting) -> bool:
+    """Collect approved roles; retain unresolved requirements without asserting eligibility."""
+    return bool(role_family(posting.title)
+                and collection_region(posting.location, remote=posting.remote) is not None
+                and salary_preference(posting)[0] != 'below floor')
+
+
+def collection_title_priority(title: str, tag: str = 'other', text: str = '') -> int:
+    """Available listing evidence orders roles before spending detail-fetch slots."""
+    family = role_family(title)
+    if family == 'Product management':
+        ai_role = bool(AI_TERMS.search(title + ' ' + text))
+        return (0 if ai_role else 3) + {'ai': 0, 'bigtech': 1, 'other': 2}[tag]
+    return next((6 + index for index, (name, _) in enumerate(ROLE_FAMILIES[1:]) if name == family), 99)
+
+
+def collection_priority(posting: Posting) -> int:
+    """Apply the same role ordering to fully fetched posting candidates."""
+    return collection_title_priority(posting.title, posting.tag, posting.text)
+
 
 
 def _digest(value: str) -> str:
@@ -621,6 +753,15 @@ def to_row(posting: Posting, note: str = "") -> dict:
                f"\nFirst seen by {posting.source_id}: {posting.captured_at}" + (f"\n{note}" if note else ""))
     if posting.remote:
         details += '\nWork mode: Remote (source metadata)'
+    preference, floor = salary_preference(posting)
+    details += f'\nRole family: {role_family(posting.title) or "Unclassified"}'
+    details += f'\nSalary preference: {preference} (annual USD floor {floor})'
+    if preference == 'unresolved':
+        details += f'\nCheck first: verify annual USD base salary reaches {floor:,}'
+        if collection_region(posting.location, remote=posting.remote) == 'unresolved':
+            details += '; verify permitted work location and applicable floor (US 140,000 / LATAM 70,000)'
+    elif preference == 'below floor':
+        details += '\nBelow salary preference floor'
     return {"Job ID": posting.job_id, "Date found": posting.captured_at[:10],
             "Job title": posting.title, "Company": posting.company, "Salary": posting.salary,
             "Location": posting.location, "Brief description": quote, "Apply link": posting.apply_url,

@@ -2,19 +2,24 @@
 
 ## Current operator follow-ups — October 18, 2026
 
+Latest salary clarification: US roles, including remote work from the US, have
+a USD 140,000 annual minimum. LATAM roles, including remote LATAM, have a
+USD 70,000 annual minimum; LATAM on-site/hybrid scope remains Colombia and the
+Dominican Republic. This supersedes the earlier any-salary remote LATAM exception.
+Missing salary is unresolved, never evidence of meeting a minimum.
+
 This checklist records the user's pending decisions and setup assistance from the
 continuation conversation. Older setup tables below are historical; do not recreate
 resources already provisioned. Pending choices do not silently change current limits.
 
-- [ ] Finish PR #15: fix actionable Claude findings, obtain fresh opposite-agent
-  review of the latest pushed revision, and pass applicable CI before merging.
+- [x] Finish PR #15: merged at `974ec2c` after current Claude review and CI.
 - [x] Confirm the intended existing Claude Gmail destination, create its exact
   `JobHunter` label, and verify the dedicated alert account's forwarding destination.
   Global forwarding stays disabled; only approved alert filters may forward mail.
-- [ ] Help the user enable job-search email alerts in the dedicated job-alert
-  account. They are not enabled yet. Start with LinkedIn saved-search alerts, then
-  configure the other approved providers as available; user completes private input
-  and account verification. Do not assume old main-account subscriptions cover this.
+- [ ] Finish provider alert setup. LinkedIn now has 18 daily email/notification
+  alerts in the dedicated account: broad US role families, remote US/LATAM PM,
+  Colombia and Dominican Republic PM, plus existing state/local PM searches.
+  Other approved providers and fresh email delivery remain unverified.
 - [ ] Configure precise source forwarding and destination `JobHunter` labeling
   filters using verified alert sender/subject examples. Exclude security, login,
   verification and password/reset messages. Historical main-account alert metadata
@@ -289,12 +294,16 @@ WebSearch scouts for public LinkedIn/X posts; code for all APIs and the `twscrap
    status (OK / OK-zero-jobs / failed / blocked / needs setup + error), jobs fetched, AI-PM matches. Subagent outputs
    saved as JSON and merged. LinkedIn and X run as cloud collector steps within this same V0 workflow,
    following their limits. Persist non-secret retry data in Sheet `_State`.
-3. **AI PM filter (code):** title is a PM role (product manager / PM / product lead / group PM …) AND (AI/ML/LLM/GenAI/
-   agent/model keyword in title or description, OR company tagged AI company in registry); exclude intern/Summer
+3. **Collection filter (code):** include general product management roles as well
+   as AI PM, Chief of Staff, leadership programs, strategy management,
+   entrepreneur/founder in residence, and project management. AI is a ranking
+   preference, not a required collection keyword. Exclude intern/Summer
    Associate; keep US / remote-US / unknown location. User update (October 18): also
-   keep remote South/Latin America roles regardless of salary; on-site or hybrid
-   regional roles qualify only in Colombia or the Dominican Republic when an
-   explicitly annual USD salary range overlaps USD 70,000 or higher. Preserve the
+   keep remote South/Latin America roles with an explicitly annual USD salary
+   range reaching USD 70,000; on-site or hybrid regional roles qualify only in
+   Colombia or the Dominican Republic at that same threshold. US roles, including
+   remote work from the US, require an annual USD range reaching USD 140,000.
+   Missing salary remains unresolved rather than proving a match. Preserve the
    source location and work-mode evidence; this collection exception does not
    assert US-based work permission or complete eligibility. Ambiguous currency,
    pay period or total-compensation figures do not establish the salary exception.

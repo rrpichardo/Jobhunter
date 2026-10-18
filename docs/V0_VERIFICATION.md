@@ -1,5 +1,32 @@
 # V0 verification evidence
 
+## October 18 Gmail connector readiness and broader collection candidate
+
+Latest local review repairs pass 486 tests and 10 subtests, with a clean diff
+check. Actual JobHunterEnv locked tests passed 475/10 on `67ca7f8`, with exit 0,
+full SHA confirmed and clean tree; this predates the latest cycle-2 repairs.
+Exact-SHA evidence is in PR16 comments. Fresh current-head Claude review and CI
+remain required; no production Gmail adapter or scheduled delivery is verified.
+
+Actual Claude cloud session:
+https://claude.ai/code/session_01Kydab84oh1GMjzuFahVswG . A bounded read-only
+check used the existing Gmail connector. Codex expanded the actual
+`mcp__Gmail__list_labels` result and confirmed `JobHunter` exists, type USER,
+with messagesTotal=0 and threadsTotal=0. No message-content tools or inbox
+fallback were used. This establishes label access only; it does not prove
+forwarding, individual-message fetching, extraction or Sheet delivery.
+
+Local verification of the broader-collection/Gmail-boundary candidate:
+`.venv/bin/python -m pytest -q` passed 458 tests and 10 subtests;
+`git diff --check` passed. These are offline tests. Synthetic Gmail integration
+includes probe-to-writer delivery, repeated reconciliation and preservation of
+Status, Notes and My rating. The real cloud connector adapter/CLI path is still
+missing. Gmail routing remains uninstalled; a dedicated-account LinkedIn alert
+metadata search returned no matches after alert setup. No full deployment claim.
+
+LinkedIn Manage job alerts UI confirmed 18 daily email/notification alerts in
+the dedicated account. This proves alert configuration, not delivered messages.
+
 ## Post-merge Codex review scope
 
 The original automated writer cycle-3 request failed due a usage limit. A manual
