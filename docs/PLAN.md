@@ -13,6 +13,11 @@ continuation conversation. Older setup tables below are historical; do not recre
 resources already provisioned. Pending choices do not silently change current limits.
 
 - [x] Finish PR #15: merged at `974ec2c` after current Claude review and CI.
+- [x] Finish PR #16: merged at `1df1e7c` after clean exact-head Claude review
+  and required CI; broader role collection and US/LATAM salary preferences are
+  implemented. Manual JobHunterEnv smoke delivered one real non-AI PM role,
+  repeated without duplication and preserved existing user fields. See
+  V0_VERIFICATION.md. Gmail boundary is a component; its live adapter is still open.
 - [x] Confirm the intended existing Claude Gmail destination, create its exact
   `JobHunter` label, and verify the dedicated alert account's forwarding destination.
   Global forwarding stays disabled; only approved alert filters may forward mail.
@@ -48,7 +53,7 @@ resources already provisioned. Pending choices do not silently change current li
   and separate day-7/day-14 reviews. Source setup and deployment remain incomplete.
 
 ## ▶ V0 — Daily cloud collection across all planned sources
-Goal: pull **AI PM jobs** from as many sources as possible, **prove each source works**, and deliver them in a
+Goal: pull **AI PM, general Product management and the approved adjacent role families** from as many sources as possible, prioritize AI PM within current caps, **prove each source works**, and deliver them in a
 **Google Sheet** with our columns. Include **LinkedIn jobs/posts and X hiring posts** in the V0 test scope.
 **Execution requirement:** all collectors, browser sessions, MCP servers, extraction, deduplication, Sheet writes,
 and scheduling run in the cloud environment from V0. Daily operation must not depend on your computer being on.

@@ -1,5 +1,39 @@
 # Claude Code continuation handoff
 
+## Current checkpoint — PR #16 merged and manual cloud smoke passed
+
+This checkpoint supersedes older pending-review/open-PR statements below;
+those entries preserve chronology, not current status.
+
+- PR #16 merged at `1df1e7ccbc7579b149085993ded07ca8f9829df7` on October 18.
+  Claude cycle 9 found no actionable findings on reviewed head
+  `110ea30d7cc4f97ac78a76ea6a05ea405db11632`. Required Linux/Windows checks and
+  Claude action passed; the actual reviewer report, not the badge, satisfied
+  reciprocal review. Evidence: PR16 comment `issuecomment-6255774750`.
+- Offline post-merge suite: 577 tests / 10 subtests passed. Actual JobHunterEnv
+  locked tests also passed 577/10 on the reviewed head before merge.
+- Manual cloud run `pr16-broad-001` on the exact merge SHA fetched Stripe once,
+  selected one real Product management role excluded by historical `ai_pm_match`,
+  and delivered it through Python. Salary stayed unresolved. Identical repeat
+  exited 0; readback confirmed 168 jobs, zero duplicate IDs, all 167 previous
+  IDs present once, and unchanged Status/Notes/My rating. One complete Run Log
+  row, accurate partial-response source counts and released lock were verified.
+  See V0_VERIFICATION.md for digest and scope limits.
+- This is not deployed daily collection. Gmail routing remains uninstalled;
+  its UI blocker stays 3/3. The live Claude connector adapter/CLI binding, a
+  genuine forwarded alert test, social cloud restoration/collectors and actual
+  scheduled delivery remain open. Existing credentials/cookies are provisioned;
+  do not recreate accounts or expose their values.
+- Next independent code milestone: implement the actual cloud Gmail message
+  adapter and extractor binding against verified connector payloads, retaining
+  exact-label scope and security exclusions. End-to-end Gmail testing depends
+  on a genuine alert plus precise forwarding/label filters. Do not retry the
+  exhausted filter UI blocker without manual completion or a relevant change.
+- User input still needed: correct Cosign and desired school/MBA URLs; settle
+  the saved-cookie collector approach and proposed collection-cap change.
+  Current caps remain eight per source / 150 per batch. Do not ask for account
+  credentials in chat. PR16's extra repair authorization did not lift Gmail's cap.
+
 ## Latest continuation — broader alerts and salary preferences
 
 Latest cycle-8 repair preserves mode alternatives at conjunction/double-separator

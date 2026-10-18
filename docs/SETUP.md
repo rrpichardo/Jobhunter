@@ -7,8 +7,10 @@
 - LATAM roles, including remote LATAM: minimum USD 70,000 annually. The user
   explicitly confirmed this replaces the previous any-salary remote exception.
   LATAM on-site/hybrid scope remains Colombia/Dominican Republic.
-- These are recorded preferences, not evidence that LinkedIn salary filters or
-  the cloud collector enforce them. Missing salary does not prove a match.
+- PR16 implements these Python preferences and broader role families; the merged
+  code passed a manual cloud public-source-to-Sheet smoke (V0_VERIFICATION.md).
+  LinkedIn alerts remain broad. Missing salary stays unresolved, not a match.
+  Gmail message ingestion, social collectors and scheduled delivery remain open.
 
 ## October 18 alert setup and cloud Gmail check
 
