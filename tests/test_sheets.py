@@ -266,6 +266,22 @@ def test_quarantine_refuses_a_completed_run_and_keeps_it_idempotent():
     assert sync(backend, [job()], 'first')['run_id'] == 'first'
 
 
+def test_quarantine_without_a_manifest_still_permanently_retires_the_run_id():
+    from jobhunter.sheet_journal import SheetJournal
+    from jobhunter.sheets import prepare_payload, quarantine_run
+    backend = MemoryStore()
+    backend.ensure_tab('_State', ['Key', 'Value'])
+    SheetJournal(backend).prepare('broken', prepare_payload([job()], sources()), STAMP)
+    backend.tables['_State'] = [row for row in backend.tables['_State']
+                                if row[0] != 'm0/run/broken/manifest']
+    original_chunks = [row[1] for row in backend.tables['_State'][1:]]
+    quarantine_run(backend, 'broken', now=lambda: STAMP)
+    assert [row[1] for row in backend.tables['_State'][1:]] == original_chunks
+    with pytest.raises(ValueError, match='run_id_quarantined'):
+        sync(backend, [job()], 'broken')
+    assert len(backend.tables['Jobs']) == 1
+
+
 def test_quarantine_of_unknown_run_on_a_workbook_without_state_creates_nothing():
     from jobhunter.sheets import quarantine_run
     backend = MemoryStore()
