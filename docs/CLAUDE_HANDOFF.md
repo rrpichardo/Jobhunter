@@ -11,7 +11,10 @@ Claude reviews. The independent Codex report is explicitly post-merge.
 Codex is fixing the findings on codex/fix-postmerge-review. Remote evidence from
 Lever/WWR, durable discovery attribution/times and locally bound annual USD salary
 amounts have regressions; 325 tests and 10 subtests pass offline. Fresh pushed-head
-reviews by Codex and Claude plus CI are required before the follow-up is merged.
+Claude review plus CI are required before the follow-up is merged. The user
+explicitly requires opposite-agent review only: Codex reviews Claude's changes,
+and Claude reviews Codex's changes. PR11 is Codex-authored; no Codex self-review
+is pending or required.
 The user's commit/merge/push authorization and unlimited repair-cycle direction
 remain in force. Runtime/source-history/setup and deployment gates remain open.
 

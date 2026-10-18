@@ -1,5 +1,15 @@
 # Implementation attempt log
 
+## October 18 review ownership clarified by the user
+
+- The user explicitly requires Codex to review Claude's changes and Claude to
+  review Codex's changes only. PR11 fixes are Codex-authored, so Claude is the only
+  reviewer required for this follow-up. No further Codex self-review is requested.
+- The earlier independent reports remain historical evidence. The planned
+  additional Codex review after 609a137 was not issued and does not consume a
+  delivered review cycle. Source cycle12 now tracks the latest Claude re-review;
+  no cycle13 Codex request is pending. CI and implementation tests remain required.
+
 ## October 18 pre-merge salary re-review
 
 - Claude reviewed exact PR11 head19e9e77 and confirmed the original fixes, with
@@ -12,10 +22,11 @@
   gross pay, while locally labelled bonuses/commissions/benefits cannot establish
   the salary exception. A genuinely qualifying base salary still qualifies when
   a separate bonus follows it. Preserved attribution/remote code is unchanged.
-- Full locked suite: 325 tests and 10 subtests passed. Source cycle12 = requested
-  Claude re-review; cycle13 = requested independent Codex re-review of the new
-  exact head. Historical counts and the user's unlimited local-cycle direction
-  remain intact. These requests are not approvals; CI/review precede merge.
+- Full locked suite: 325 tests and 10 subtests passed. Source cycle12 tracks the
+  Claude re-review of the new exact head. An additional Codex review was planned,
+  then cancelled by the user's opposite-agent-only direction before it was issued.
+  Historical counts and the user's unlimited repair-cycle direction remain intact.
+  A pending request is not approval; CI and Claude review precede this merge.
 
 ## October 18 independent Codex review after integration
 
@@ -39,7 +50,8 @@
   precise discovery timestamps. Legacy dates remain dates; unknown historical
   source times are not invented. Source times compare actual instants.
 - Full locked follow-up suite: 318 tests and 10 subtests passed. All three fixes
-  still require exact-head Codex/Claude review and CI before a follow-up merge.
+  were initially assigned both reviews; the user's later clarification requires
+  Claude review only for these Codex-authored fixes, together with CI.
   No live source calls, Google writes or deployment were performed.
 
 ## October 18 integration authorized
