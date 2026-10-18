@@ -167,6 +167,16 @@ titles per source get one polite GET of their own job page for the description, 
 place, and a refusal (401/403/406/429) stops that source at once. a16z and Hacker News are
 still count-only. The fetched pages were checked against each site's robots.txt.
 
+Two keyed job-search APIs sit in the registry's `keyed_apis` group. JSearch (RapidAPI, GET) reads
+`JSEARCH_API_KEY` and Jooble (POST) reads `JOOBLE_API_KEY`. Each makes exactly one request per
+run (JSearch's free plan allows 200 a month), with no retry, and its results go through the same
+AI-PM filter, 8-per-source cap and dedupe as the aggregators. If a key is missing or blank the
+source is recorded `needs setup` (note `keys_missing:<NAME>`) and no request is made. A 401/403/
+406/429 marks it `blocked`; other failures are recorded by status or error code only. Keys are
+never written to the artifact, notes, summary, Sheet or console, and request URLs and exception
+text are never kept (Jooble carries its key in the URL path), which tests enforce. Adzuna was
+skipped on purpose because it is paid-only; it is not a source row.
+
 Cross-source duplicates are merged only when two different sources link the same employer
 posting (the same Greenhouse/Lever/Ashby requisition, or the same URL once tracking parameters
 are dropped; job-identifying parameters such as `gh_jid` are kept). The company-board row wins

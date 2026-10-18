@@ -1,7 +1,8 @@
 # V0 source registry. `candidate: true` boards are auto-probed guesses: a 404 drops them
 # silently (kept as responders only). Tags are reviewed registry facts: ai | bigtech | other.
-# Entries needing keys, accounts or a labeled mailbox are never fetched here: they are
-# recorded `needs setup` with the exact next action.
+# Entries needing accounts or a labeled mailbox are never fetched here: they are recorded
+# `needs setup` with the exact next action. `keyed_apis` are fetched once per run, only when
+# their environment keys are set (otherwise `needs setup`). Adzuna is skipped (paid-only).
 boards:
   greenhouse:
     - {board: anthropic, company: Anthropic, tag: ai}
@@ -37,6 +38,17 @@ aggregators:
   - {id: jobicy, kind: jobicy, url: "https://jobicy.com/api/v2/remote-jobs?count=50&tag=product"}
   - {id: themuse, kind: themuse, url: "https://www.themuse.com/api/public/jobs?category=Product%20Management&page=1"}
   - {id: weworkremotely, kind: wwr, url: "https://weworkremotely.com/categories/remote-product-jobs.rss"}
+keyed_apis:  # exactly one request per run each; keys come from environment variables and are never logged
+  - id: jsearch
+    kind: jsearch
+    env: [JSEARCH_API_KEY]  # sent as the X-RapidAPI-Key header; free plan is 200 requests a month
+    url: "https://jsearch.p.rapidapi.com/search-v2"  # /search was retired (HTTP 404, checked live)
+    params: {query: "AI product manager in USA", page: 1, num_pages: 1, date_posted: week}
+  - id: jooble
+    kind: jooble
+    env: [JOOBLE_API_KEY]  # appended to the URL path at request time, so the URL is never recorded
+    url: "https://jooble.org/api"
+    body: {keywords: "AI product manager", location: "United States", page: "1"}
 detail_sources:  # listing page, then each shortlisted PM job's own page for its description (polite, capped)
   - {id: yc-product, kind: yc, url: "https://www.ycombinator.com/jobs/role/product-manager"}
   - {id: builtin-product, kind: builtin, url: "https://builtin.com/jobs/product-management"}
@@ -46,9 +58,6 @@ listing_only:  # reachable and counted, but no description text yet, so nothing 
   - {id: a16z-ai-pm, kind: a16z, url: "https://jobs.a16z.com/jobs?q=AI%20product%20manager"}
   - {id: hn-who-is-hiring, kind: hn, url: "https://hn.algolia.com/api/v1/search_by_date?tags=story,author_whoishiring&hitsPerPage=3"}
 needs_setup:
-  - {id: jsearch, env: [JSEARCH_API_KEY], action: "Create a free JSearch key and add JSEARCH_API_KEY to JobHunterEnv."}
-  - {id: adzuna, env: [ADZUNA_APP_ID, ADZUNA_APP_KEY], action: "Create free Adzuna keys and add ADZUNA_APP_ID and ADZUNA_APP_KEY to JobHunterEnv."}
-  - {id: jooble, env: [JOOBLE_API_KEY], action: "Create a free Jooble key and add JOOBLE_API_KEY to JobHunterEnv."}
   - {id: linkedin-logged-in, env: [], action: "Create the dedicated LinkedIn account, log in locally, and supply its cookie in environment settings; Claude does not log in."}
   - {id: x-hiring-posts, env: [], action: "Create the dedicated X account and supply auth_token/ct0 cookies in environment settings."}
   - {id: gmail-job-alerts, env: [], action: "Forward alerts to the connected Gmail and add the JobHunter label filter; then verify the label."}

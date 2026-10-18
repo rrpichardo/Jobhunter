@@ -318,3 +318,16 @@ Two whitespace cleanups wrongly emptied `docs/ATTEMPTS.md` and `docs/V0_VERIFICA
 all code were unaffected. Both files were restored from `6a61f35` with the later evidence re-added in
 new commits (no history rewrite). Check with `git diff --stat` that docs changes have no unexpected
 deletions before committing.
+
+## JSearch and Jooble keyed sources in JobHunterEnv — October 18, 2026
+
+Branch `claude/m2-jsearch-jooble` (PR #13) at `166304c`, fresh cloud session, uv 0.13.1 from a scratch
+virtualenv, clean tree: **379 tests passed**. The first live probe showed JSearch answering HTTP 404 on
+its retired `/search` path; `/search-v2` (jobs under `data.jobs`) fixed it. A second probe showed the
+writer's 150-job ceiling filled by earlier registry sources, so the cap is now shared round-robin.
+Final probe exit 0 with JSearch delivering 6 and Jooble 4 jobs; neither key value appeared in the
+output, artifact or logs. `sheets_sync --run-id m4-sources-004` and its identical repeat exited 0.
+Read-only readback: 167 Jobs rows, no duplicate Job IDs, earlier rows present once, the jsearch and
+jooble Sources rows OK, one Run Log row for the run, lock released. Noted, not failures: one jsearch
+row with a blank location and an odd company string; 47 Sources rows for 46 registry sources (likely
+the old adzuna row); a transient Sheets read-quota 429 during readback.

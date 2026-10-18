@@ -387,3 +387,112 @@ def test_wwr_remote_feed_keeps_regional_location_without_salary():
     row = p.to_row(job)
     assert row['Location'] == 'Costa Rica' and row['Fit'] == ''
     assert 'Work mode: Remote (source metadata)' in row['More details']
+
+
+JS_ITEM = {"job_id": "abc123==", "employer_name": "Acme", "job_title": "AI Product Manager",
+           "job_description": "<p>Build <b>agents</b>.</p>", "job_apply_link": "https://acme.test/apply/1",
+           "job_google_link": "https://www.google.com/search?q=1", "job_city": "Austin", "job_state": "TX",
+           "job_country": "US", "job_is_remote": False, "job_min_salary": 150000.0, "job_max_salary": 190000,
+           "job_salary_currency": "USD", "job_salary_period": "YEAR",
+           "job_posted_at_datetime_utc": "2026-10-15T00:00:00.000Z"}
+JS_CTX = {**CTX, "source_id": "jsearch"}
+
+
+def test_parse_jsearch_maps_fields():
+    postings, rejected, total = p.parse_jsearch({"status": "OK", "data": [JS_ITEM]}, JS_CTX)
+    assert (rejected, total) == (0, 1)
+    job = postings[0]
+    assert job.job_id == f"jsearch:{p._digest('abc123==')}" and job.source_id == "jsearch"
+    assert (job.company, job.title, job.location) == ("Acme", "AI Product Manager", "Austin, TX, US")
+    assert job.text == "Build agents ."
+    assert job.apply_url == "https://acme.test/apply/1" and job.salary == "150,000 - 190,000 USD YEAR"
+    assert job.tag == "other" and job.remote is False
+    assert p.ai_pm_match(job)
+
+
+def test_parse_jsearch_remote_keeps_place_and_falls_back_to_google_link():
+    item = {**JS_ITEM, "job_is_remote": True, "job_apply_link": "http://insecure.test/1",
+            "job_city": None, "job_state": None, "job_min_salary": None, "job_max_salary": None}
+    job = p.parse_jsearch({"data": [item]}, JS_CTX)[0][0]
+    assert job.apply_url == "https://www.google.com/search?q=1"
+    assert job.location == "Remote, US" and job.remote is True and job.salary == ""
+    assert p.ai_pm_match(job)
+    bare = p.parse_jsearch({"data": [{**item, "job_country": None}]}, JS_CTX)[0][0]
+    assert bare.location == "Remote" and p.ai_pm_match(bare)
+    # A remote flag must not turn a non-US job into a US-eligible one: the structured country decides.
+    for country, city in (("DE", "Berlin"), ("EE", "Tallinn"), ("IN", "Pune")):
+        for remote in (True, False):
+            foreign = {**item, "job_is_remote": remote, "job_city": city, "job_state": None, "job_country": country}
+            postings, rejected, total = p.parse_jsearch({"data": [foreign, JS_ITEM]}, JS_CTX)
+            assert [job.job_id for job in postings] == [p.parse_jsearch({"data": [JS_ITEM]}, JS_CTX)[0][0].job_id]
+            assert (rejected, total) == (0, 2)  # skipped, not counted as a broken item
+    # Latin American countries keep their regional rule, using the country name.
+    latam = p.parse_jsearch({"data": [{**item, "job_city": "Bogota", "job_country": "co"}]}, JS_CTX)[0][0]
+    assert latam.location == "Remote, Bogota, Colombia" and p.ai_pm_match(latam)
+
+
+@pytest.mark.parametrize("change", [
+    {"job_apply_link": "http://insecure.test/1", "job_google_link": None},
+    {"job_apply_link": None, "job_google_link": "ftp://x.test/1"},
+    {"job_apply_link": "javascript:alert(1)", "job_google_link": ""},
+    {"job_id": None}, {"job_id": ""}, {"job_title": None}, {"employer_name": None}, {"job_description": None},
+])
+def test_parse_jsearch_rejects_unusable_items_without_dropping_the_rest(change):
+    good = {**JS_ITEM, "job_id": "good"}
+    postings, rejected, total = p.parse_jsearch({"data": [{**JS_ITEM, **change}, good]}, JS_CTX)
+    assert (len(postings), rejected, total) == (1, 1, 2)
+
+
+def test_parse_jsearch_tolerates_a_sparse_item_and_rejects_bad_envelopes():
+    sparse = {"job_id": "x", "employer_name": "Acme", "job_title": "Product Manager",
+              "job_description": "AI work", "job_google_link": "https://www.google.com/x"}
+    job = p.parse_jsearch({"data": [sparse]}, JS_CTX)[0][0]
+    assert job.location == "" and job.salary == ""
+    for bad in ({"status": "ERROR", "data": []}, {"data": None}, [], {}):
+        with pytest.raises(ValueError, match="invalid_board_response"):
+            p.parse_jsearch(bad, JS_CTX)
+
+
+JB_ITEM = {"id": 8374920193, "title": "Senior <b>Product</b> <b>Manager</b>, AI", "location": "New York, NY",
+           "snippet": "&nbsp;...build <b>LLM</b> features...", "salary": "$160k - $200k", "source": "acme.test",
+           "type": "Full-time", "link": "https://jooble.org/desc/8374920193", "company": "Acme",
+           "updated": "2026-10-16T00:00:00.0000000"}
+JB_CTX = {**CTX, "source_id": "jooble"}
+
+
+def test_parse_jooble_maps_fields_and_strips_highlight_markup():
+    postings, rejected, total = p.parse_jooble({"totalCount": 1, "jobs": [JB_ITEM]}, JB_CTX)
+    assert (rejected, total) == (0, 1)
+    job = postings[0]
+    assert job.job_id == "jooble:8374920193" and job.source_id == "jooble"
+    assert job.title == "Senior Product Manager , AI"
+    assert "<" not in job.text and "LLM" in job.text
+    assert (job.company, job.location, job.salary) == ("Acme", "New York, NY", "$160k - $200k")
+    assert job.remote is False and job.tag == "other" and p.ai_pm_match(job)
+
+
+def test_parse_jooble_ids_and_rejections():
+    items = [{**JB_ITEM, "id": -42}, {**JB_ITEM, "id": "not/a plain id"},
+             {**JB_ITEM, "id": None, "link": "https://jooble.org/desc/x"},
+             {**JB_ITEM, "id": 3, "link": "http://insecure.test/3"}, {**JB_ITEM, "id": 4, "link": None},
+             {**JB_ITEM, "id": 5, "company": None}, {**JB_ITEM, "id": 6, "snippet": None}]
+    postings, rejected, total = p.parse_jooble({"jobs": items}, JB_CTX)
+    assert (total, rejected) == (7, 4)
+    ids = [job.job_id for job in postings]
+    assert ids[0] == "jooble:-42"
+    assert ids[1] == f"jooble:{p._digest('not/a plain id')}" and ids[2] == f"jooble:{p._digest('https://jooble.org/desc/x')}"
+    for bad in ({"jobs": None}, [], {}):
+        with pytest.raises(ValueError, match="invalid_board_response"):
+            p.parse_jooble(bad, JB_CTX)
+
+
+def test_jsearch_v2_nested_response_with_null_salary_fields():
+    # Shape seen live from /search-v2: jobs under data.jobs, salary fields null, no currency key.
+    v2_item = {**JS_ITEM, "job_min_salary": None, "job_max_salary": None, "job_salary_period": None}
+    v2_item.pop("job_salary_currency", None)
+    postings, rejected, total = p.parse_jsearch(
+        {"status": "OK", "request_id": "r", "parameters": {}, "data": {"cursor": "c", "jobs": [v2_item]}}, JS_CTX)
+    assert (total, rejected, len(postings)) == (1, 0, 1)
+    assert postings[0].salary == ""
+    with pytest.raises(ValueError):
+        p.parse_jsearch({"status": "OK", "data": {"cursor": "c"}}, JS_CTX)

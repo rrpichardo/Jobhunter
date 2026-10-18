@@ -1,5 +1,72 @@
 # Claude Code continuation handoff
 
+## Handover from Claude (Opus) — October 18, 2026, evening
+
+Start here in a new conversation or in Codex. Read AGENTS.md (opposite-agent review only:
+Codex reviews Claude PRs, Claude reviews Codex PRs) and the sections below for history.
+
+**State of GitHub.** `main` = `cf1424f` (PRs #4-#11 merged, CI green, 330 tests). Open: **PR #13**
+`claude/m2-jsearch-jooble` (JSearch + Jooble keyed sources, JSearch moved to `/search-v2`, the
+150-job writer cap now shared round-robin across sources). Needs Codex review; nothing merged.
+PR #12 was closed unmerged (its 36539f4 cloud evidence was superseded by PR #11).
+
+**Cloud evidence for PR #13** (JobHunterEnv session, see V0_VERIFICATION once recorded): at
+`166304c` 379 tests passed, the probe exited 0 with JSearch delivering 6 and Jooble 4 jobs, and no
+key value appeared in output, artifact or logs. `sheets_sync --run-id m4-sources-004` and its
+identical repeat both exited 0; readback: 167 Jobs rows, no duplicate Job IDs, all earlier rows
+present once, 6 jsearch + 4 jooble rows, their Sources rows OK, one Run Log row for the run, lock
+released. Follow-ups: one jsearch row has a blank location and an odd company string (source
+data, check the parser); Sources has 47 rows for 46 registry sources (likely the old adzuna row,
+since the writer never deletes rows); a Sheets read quota (429) hit during readback cleared after
+a minute; the Run Log status still reads `complete-with-source-failure` because `needs setup`
+counts as non-OK.
+
+**JobHunterEnv environment variables (names only, all verified set in a fresh session):**
+`JOBHUNTER_SPREADSHEET_ID`, `JOBHUNTER_GOOGLE_AUTH_MODE`, `JSEARCH_API_KEY`, `JOOBLE_API_KEY`,
+`LINKEDIN_LI_AT`, `X_AUTH_TOKEN`, `X_CT0`, `WAAS_SESSION_COOKIE` (Work at a Startup
+`_bf_session_key`), `WAAS_SSO_KEY`, `YC_SSO_KEY`. Never print values. The env box warns values
+are visible to environment users; settings reach only sessions started after saving. The cloud
+image ships uv 0.11.32; install the pin with `python3 -m venv ~/uvvenv && ~/uvvenv/bin/pip install
+uv==0.13.1`.
+
+**User decisions recorded this session.** Adzuna skipped (paid-only, £8/month); removed from the
+registry. Gmail uses the original plan: the dedicated job-alert account forwards job-alert senders to
+the Gmail account connected to Claude, where a filter applies label `JobHunter`;
+the user is doing the forwarding/filter setup (not yet verified). Real-sheet delivery is approved
+for sources that pass their cloud test. PR grouping: low-risk sources bundled; LinkedIn and X each
+get their own PR. The user asked to drop the fixed LinkedIn/X volume limits and wants a decision
+after the research below.
+
+**Open work, in order.**
+1. Codex review of PR #13; record its sync evidence.
+2. Work at a Startup (logged in): the site has far more jobs than the public YC page (157 startups
+   with product roles vs 35 postings). Its list comes from an Algolia search keyed per session plus
+   `POST /companies/fetch`. Inspecting those private requests from the user's logged-in tab was
+   blocked by the host safety classifier ("exfiltration scouting"); do not retry that. The proposed
+   route, pending the user's go-ahead, is a cloud headless browser that loads the page with the saved
+   cookies and reads visible job cards only.
+3. LinkedIn and X: same pending decision (headless browser with `li_at`; twscrape with
+   `auth_token`/`ct0`). Research notes: there are no official LinkedIn limits; vendor guides suggest
+   roughly 30-50 searches and about 100 profile views per day, spread out, with new accounts ramped
+   slowly, and LinkedIn may invalidate `li_at` when requests come from a different country/IP than
+   where it was issued (the cloud VM is not the user's home IP). X documents 429 on rate limits;
+   no reliable public numbers for logged-in web search.
+4. The user asked to remove the "stop at the first warning" rule from PLAN.md. A Claude edit of that
+   instruction file was blocked by the host classifier ("instruction poisoning"); the user may edit
+   PLAN.md themselves. Independently, collectors must still stop on CAPTCHAs, login challenges and
+   429s and never bypass them; that is agent behavior, not a plan setting.
+5. Gmail: verify the `JobHunter` label (read label names only), then build the alert parser.
+6. Cosign: the correct URL is unknown (cosign.com is parked). School/MBA sites: the user must name
+   them (mbaexchange.com is an admissions consultancy, not a job board).
+7. Gmail connector settings: Delete label / Mark spam / Trash / Remove labels are "Always allow";
+   recommend the user switch them to "Needs approval" before any unattended routine.
+8. Daily routine (06:07 America/New_York) and its ROUTINE_PROMPT/CLOUD_RUNBOOK docs only after the
+   sources are finished (user instruction: no guides for unfinished content).
+
+**Lessons.** Never write a file with `open(p,'w')` before reading it (it truncated two docs once);
+check `git diff --stat` before docs commits. When driving the user's Chrome, confirm the tab is
+still the expected page before typing (a user tab once replaced the session tab).
+
 ## Post-merge review follow-up — October 18, 2026
 
 An independent Codex review of merged main 36539f4 found three P2 source defects;
