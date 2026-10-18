@@ -30,28 +30,42 @@ Read the full PLAN.md and registry, not only this shortened inventory:
   sources still need correct URLs/setup. Missing sources remain visible with an
   honest status. Historical public-source success does not prove current readiness.
 
-**Unanswered choices — no approval inferred:** user said they were considering
-keeping every matching job found, batch delivery and saved AI backlog, but were
-not sure and explicitly requested a simple explanation followed by another ask.
-The explanation covered all sources after the user corrected the narrow scope.
-No answer selecting either option arrived before this handoff request.
-
-Ask again in simple language when resuming dependent changes:
+**Collection choices — ANSWERED October 18 (Claude session, after the plain-language
+ask above was repeated):**
 1. Keep every matching job found across all planned sources, send ready jobs to
    the Sheet in batches, and save unfinished AI processing for later, without
-   buying anything? This means retaining discoveries within bounded searches,
-   not unlimited searching or asserting unknown eligibility.
-2. LinkedIn: keep the current five-search daily start, or choose a 50-search
-   daily ceiling? Searches and opening individual result details are different.
+   buying anything. User chose YES. This means retaining discoveries within
+   bounded searches, not unlimited searching or asserting unknown eligibility.
+2. LinkedIn: user declined the 50-search ceiling for now and chose 5 JOB
+   searches plus 5 separate HIRING-POST searches (10 total) per daily run. Searches and opening individual
+   result details are different limits; detail views stay at <=50 per run.
 
-Until answered, preserve eight-per-source / 150-total collection and 150-per-input
-writer caps, and the current LinkedIn <=5 searches / <=50 details per daily run.
+The answers are recorded in PLAN.md but are NOT implemented. The code still
+enforces these caps until the implementing PR lands, so do not describe them as
+lifted. Locations to change together, with tests:
+- `scripts/source_probe.py:30-31` `PER_SOURCE_LIMIT = 8`, `TOTAL_LIMIT = 150`
+  (used at lines 172-184 and 256-259, plus `fair_order`).
+- `jobhunter/sheet_records.py:24` `normalize_jobs` rejects more than 150 records.
+- `jobhunter/sheets.py:61` pending payload `input_count` must be <= 150.
+- `jobhunter/gmail_alerts.py:138,143` 150 is an AI-extraction budget, not a job
+  cap. Per PLAN.md decision 2 the goal is to AI-process every new job in the
+  daily run; replace 150 with a generous safety stop that queues leftovers
+  visibly in the Run Log. Real limits come after measuring the first big run.
+Larger runs must split into recoverable batches, never drop jobs silently.
+First run is a 4-week backfill (PLAN.md decision 3); sources with no date filter
+are recorded as honest gaps.
+
 The existing plan includes randomized pauses between actions. The historical
 30-50 searches/day discussion appears farther below as vendor research, not an
 approved change, official LinkedIn limit, or guarantee against restriction.
 Do not silently turn 50 detail views into 50 searches or invent delay timings.
-Existing cloud saved-cookie authorization and no-new-spending rule remain; any
-broader limits/backlog behavior still require the user's pending decision.
+Existing cloud saved-cookie authorization and no-new-spending rule remain.
+
+**PR #18 review status (checked October 18):** the only Claude comment ("No issues
+found", 22:25:31Z) predates head `abefbc3` (committed 22:25:47Z) and belongs to the
+run on `cb24054`. The `claude-review` and CI jobs on `abefbc3` are green but posted
+no report. Per REVIEW_WORKFLOW.md a green job is not a review, so the latest head
+still needs an actual Claude review. Pushing this note creates a newer head.
 
 No new production code, source fetch, account action or Sheet write occurred
 while preparing this clarification. Prior cloud preflight and test evidence below
@@ -79,9 +93,10 @@ was running short. Resume this order; do not interpret the handoff as cancellati
   Codex implementation needs fresh Claude review of each pushed head and CI;
   standing authorized merges still apply. No same-agent review gate.
 - The existing plan already defines cloud-only restoration, limits and output.
-  Keep current LinkedIn <=5 searches / <=50 detail views, X <=10 queries /
+  Use LinkedIn <=5 job + <=5 post searches / <=50 detail views, X <=10 queries /
   <=200 posts, one live attempt per source per America/New_York day. Existing
-  eight-per-source / 150-total collection caps also remain pending a decision.
+  eight-per-source / 150-total caps are still in the code; the decision to keep
+  every match is made (see top of this file) but not yet implemented.
   Reserve each daily allowance durably in `_State` BEFORE live collection,
   under the structural workbook writer lock; `_State` itself is not an atomic
   lock. Fail closed on ambiguous writes. No allowance implementation exists yet.
