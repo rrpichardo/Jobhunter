@@ -221,13 +221,19 @@ def role_family(title: str) -> str | None:
 
 def collection_region(location: str, *, remote: bool = False) -> str | None:
     """US / LATAM / unresolved; None means explicitly outside collection scope."""
+    if re.fullmatch(r'\s*(?:(?:bogot[aá]|medell[ií]n),\s*CO|santo domingo,\s*DO)\s*', location, re.I):
+        return 'LATAM'
+    if re.fullmatch(r'\s*(?:bogot[aá]|medell[ií]n|santo domingo)\s*', location, re.I):
+        return 'unresolved'  # city names alone do not establish the country
     if LATIN_AMERICA.search(location):
         us_state = any(US_LOCATION_SUFFIX.fullmatch(location[match.end():])
                        and match.group().lstrip(', ').strip() not in AMBIGUOUS_REGIONAL_CODES
                        for match in LOCATION_US_CODE.finditer(location))
         us_state = us_state or any(US_LOCATION_SUFFIX.fullmatch(location[match.end():])
                                   for match in US_STATE_NAME.finditer(location))
-        if EXPLICIT_US.search(location) or us_state:
+        if EXPLICIT_US.search(location):
+            return 'unresolved'  # mixed US/LATAM availability does not choose a work location
+        if us_state:
             return 'US'
         if remote or REMOTE_TERMS.search(location) or ONSITE_COUNTRIES.search(location):
             return 'LATAM'
@@ -243,6 +249,8 @@ def salary_preference(posting: Posting) -> tuple[str, int]:
     region = collection_region(posting.location, remote=posting.remote)
     floor = 70_000 if region == 'LATAM' else 140_000
     amount = annual_usd_salary_ceiling(posting.salary)
+    if amount is not None and amount < 70_000:
+        return 'below floor', floor
     if region in (None, 'unresolved') or amount is None:
         return 'unresolved', floor
     return ('satisfied' if amount >= floor else 'below floor'), floor
@@ -254,7 +262,7 @@ def collection_stub_match(title: str, location: str, salary: str) -> bool:
     amount = annual_usd_salary_ceiling(salary)
     floor = 70_000 if region == 'LATAM' else 140_000
     return bool(role_family(title) and region is not None
-                and (region == 'unresolved' or amount is None or amount >= floor))
+                and (amount is None or amount >= (70_000 if region == 'unresolved' else floor)))
 
 
 def collection_match(posting: Posting) -> bool:
@@ -262,6 +270,15 @@ def collection_match(posting: Posting) -> bool:
     return bool(role_family(posting.title)
                 and collection_region(posting.location, remote=posting.remote) is not None
                 and salary_preference(posting)[0] != 'below floor')
+
+
+def collection_priority(posting: Posting) -> int:
+    """Apply the plan's role ordering before a capped source selects candidates."""
+    family = role_family(posting.title)
+    if family == 'Product management':
+        ai_role = bool(AI_TERMS.search(posting.title + ' ' + posting.text))
+        return (0 if ai_role else 3) + {'ai': 0, 'bigtech': 1, 'other': 2}[posting.tag]
+    return next((6 + index for index, (name, _) in enumerate(ROLE_FAMILIES[1:]) if name == family), 99)
 
 
 
@@ -698,17 +715,16 @@ def to_row(posting: Posting, note: str = "") -> dict:
     preference, floor = salary_preference(posting)
     details += f'\nRole family: {role_family(posting.title) or "Unclassified"}'
     details += f'\nSalary preference: {preference} (annual USD floor {floor})'
-    next_step = ''
     if preference == 'unresolved':
-        next_step = f'Check first: verify annual USD base salary reaches {floor:,}'
+        details += f'\nCheck first: verify annual USD base salary reaches {floor:,}'
         if collection_region(posting.location, remote=posting.remote) == 'unresolved':
-            next_step += '; verify permitted work location'
+            details += '; verify permitted work location and applicable floor (US 140,000 / LATAM 70,000)'
     elif preference == 'below floor':
-        next_step = 'Below salary preference floor'
+        details += '\nBelow salary preference floor'
     return {"Job ID": posting.job_id, "Date found": posting.captured_at[:10],
             "Job title": posting.title, "Company": posting.company, "Salary": posting.salary,
             "Location": posting.location, "Brief description": quote, "Apply link": posting.apply_url,
-            "Source": posting.source_id, "Rank (prelim)": rank, "Fit": "", "Next step": next_step,
+            "Source": posting.source_id, "Rank (prelim)": rank, "Fit": "", "Next step": "",
             "Status": "New", "Notes": "", "My rating": "", "More details": details}
 
 

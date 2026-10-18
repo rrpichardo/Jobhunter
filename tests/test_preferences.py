@@ -39,7 +39,7 @@ def test_unapproved_or_intern_titles_are_not_candidates(title):
     ('Dominican Republic (Hybrid)', False, 'USD 70,000 annually', True),
     ('Brazil (Hybrid)', False, 'USD 170,000 annually', False),
     ('Canada (Remote)', True, 'USD 170,000 annually', False),
-    ('United States or LATAM', True, 'USD 70,000 annually', False),
+    ('United States or LATAM', True, 'USD 70,000 annually', True),
 ])
 def test_region_and_salary_floors(location, remote, salary, expected):
     assert p.collection_match(job(location=location, remote=remote, salary=salary)) is expected
@@ -53,13 +53,13 @@ def test_unknown_salary_is_retained_but_flagged_for_checking(location, salary):
     assert p.collection_match(candidate)
     row = p.to_row(candidate)
     assert row['Fit'] == '' and row['Status'] == 'New'
-    assert row['Next step'].startswith('Check first:') and 'annual USD base salary' in row['Next step']
+    assert row['Next step'] == '' and 'annual USD base salary' in row['More details']
     assert 'Salary preference: unresolved' in row['More details']
 
 
 def test_unknown_location_does_not_get_confirmed_salary_preference():
     row = p.to_row(job(location=''))
-    assert 'location' in row['Next step']
+    assert 'location' in row['More details']
     assert 'Salary preference: satisfied' not in row['More details']
 
 
@@ -79,3 +79,49 @@ def test_broader_roles_flow_through_probe_without_ai_signal():
     record, jobs, _ = source_probe.probe_source(client, entry, '2026-10-18T00:00:00+00:00')
     assert [item.title for item in jobs] == ['Product Manager', 'Chief of Staff', 'Project Manager']
     assert record['pm_candidates'] == 3 and record['selected_for_m0'] == 3
+
+
+@pytest.mark.parametrize('location', ['Bogotá, CO', 'Medellín, CO', 'Santo Domingo, DO'])
+def test_approved_regional_cities_use_latam_floor(location):
+    candidate = job(location=location, salary='USD 80,000 annually')
+    assert p.collection_region(location) == 'LATAM'
+    assert p.collection_match(candidate)
+    assert p.salary_preference(candidate) == ('satisfied', 70_000)
+
+
+@pytest.mark.parametrize('location', ['Bogotá', 'Medellín', 'Santo Domingo'])
+def test_city_without_country_is_retained_as_unresolved_not_assumed_eligible(location):
+    candidate = job(location=location, salary='USD 80,000 annually')
+    assert p.collection_match(candidate)
+    assert p.salary_preference(candidate)[0] == 'unresolved'
+
+
+@pytest.mark.parametrize('location', ['', 'Remote', 'Worldwide'])
+def test_unknown_location_still_excludes_salary_below_every_floor(location):
+    candidate = job(location=location, salary='USD 50,000 annually')
+    assert not p.collection_match(candidate)
+    assert not p.collection_stub_match(candidate.title, location, candidate.salary)
+
+
+def test_mixed_us_latam_location_retained_without_assuming_which_floor_applies():
+    candidate = job(location='Remote (US or Colombia)', salary='USD 90,000 annually')
+    assert p.collection_match(candidate)
+    assert p.salary_preference(candidate)[0] == 'unresolved'
+
+
+def test_unresolved_salary_check_is_in_details_not_next_step():
+    row = p.to_row(job(salary=''))
+    assert row['Next step'] == ''
+    assert 'Check first:' in row['More details']
+
+
+def test_board_caps_prioritize_product_roles_over_adjacent_roles():
+    titles = ['Project Manager'] * 8 + ['Chief of Staff', 'Product Manager, AI']
+    data = [{'id': str(i), 'text': title, 'categories': {'location': 'United States'},
+             'descriptionPlain': 'Build products.', 'hostedUrl': f'https://jobs.lever.co/acme/{i}'}
+            for i, title in enumerate(titles)]
+    with httpx.Client(transport=httpx.MockTransport(lambda req: httpx.Response(200, json=data))) as client:
+        _, jobs, _ = source_probe.probe_source(client, {'id':'lever:acme', 'kind':'lever',
+            'board':'acme', 'company':'Acme', 'url':'https://test.example/jobs'}, '2026-10-18T00:00:00+00:00')
+    assert jobs[0].title == 'Product Manager, AI'
+    assert len(jobs) == 8

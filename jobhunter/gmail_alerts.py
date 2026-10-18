@@ -10,7 +10,10 @@ from email.utils import getaddresses, parseaddr
 import hashlib
 import re
 
-from jobhunter.postings import Posting, clean_html, collection_match
+from bs4 import BeautifulSoup
+
+from jobhunter.postings import Posting, clean_html, collection_match, collection_priority
+from jobhunter.job_identity import canonical_key, verified_requisition
 from jobhunter.records import https_url
 
 SECURITY_SUBJECT = re.compile(r'\b(?:security|verification|verify|password|reset|login|log[- ]?in|'
@@ -18,6 +21,32 @@ SECURITY_SUBJECT = re.compile(r'\b(?:security|verification|verify|password|reset
 SECURITY_BODY = re.compile(r'\b(?:verification code|reset (?:your )?password|password reset|'
                            r'one[- ]time (?:code|password)|security (?:alert|notice)|confirm your (?:account|identity))\b', re.I)
 FACT_FIELDS = frozenset({'title', 'company', 'location', 'salary', 'description_quote', 'apply_url'})
+
+
+def _job_blocks(body):
+    """Only isolated visible job cards with one application link are supported.
+
+    Unknown email layouts stay unsupported until a real adapter's layout is
+    verified. A whole-message fallback would allow cross-job fact mixing.
+    """
+    soup = BeautifulSoup(body, 'html.parser')
+    for node in list(soup.find_all()):
+        if node.attrs is None:
+            continue
+        style = re.sub(r'\s+', '', str(node.get('style', ''))).lower()
+        if (node.name in {'script', 'style', 'template', 'noscript', 'footer'}
+                or node.has_attr('hidden') or node.get('aria-hidden') == 'true'
+                or 'display:none' in style or 'visibility:hidden' in style):
+            node.decompose()
+    blocks = []
+    for node in soup.find_all(['article', 'li', 'tr']):
+        if node.find(['article', 'li', 'tr']):
+            continue
+        links = {anchor.get('href') for anchor in node.find_all('a', href=True)
+                 if https_url(anchor.get('href'))}
+        if len(links) == 1:
+            blocks.append((str(node), links))
+    return blocks
 
 
 def _eligible_metadata(message, label_id, recipient, rules):
@@ -33,21 +62,28 @@ def _eligible_metadata(message, label_id, recipient, rules):
                         and re.fullmatch(rule['subject_pattern'], subject) for rule in rules))
 
 
-def _posting(fact, body, message_id, captured_at):
+def _posting(fact, body, links, captured_at):
     if not isinstance(fact, dict) or set(fact) != FACT_FIELDS:
         raise ValueError('invalid_gmail_facts')
     text = clean_html(body)
     for field, value in fact.items():
         if (not isinstance(value, str) or len(value) > (300 if field == 'description_quote' else 1000)
                 or (not value.strip() and field not in {'location', 'salary'})
-                or (value and value not in text and not (field == 'apply_url' and value in body))):
+                or (value and value not in text and not (field == 'apply_url' and value in links))):
             raise ValueError('unsupported_gmail_fact')
-    if not https_url(fact['apply_url']):
+    if not https_url(fact['apply_url']) or fact['apply_url'] not in links:
         raise ValueError('invalid_gmail_link')
     # IDs and source attribution come from code; Claude cannot select Sheet rows.
-    identity = hashlib.sha256((message_id + '\0' + fact['apply_url']).encode()).hexdigest()[:32]
+    key = canonical_key(fact['apply_url'])
+    # Stable across daily alerts. Generic URLs retain company/title context;
+    # known canonical links preserve the requisition embedded in the path/query.
+    known_requisition = verified_requisition(key) or bool(
+        re.fullmatch(r'https://www\.linkedin\.com/jobs/view/[0-9]+', key))
+    identity_key = key if known_requisition else key + '\0' + fact['company'].casefold() + '\0' + fact['title'].casefold()
+    identity = hashlib.sha256(identity_key.encode()).hexdigest()[:32]
+    apply_url = key if key.startswith('https://www.linkedin.com/jobs/view/') else fact['apply_url']
     return Posting('gmail:' + identity, 'gmail-job-alerts', fact['company'], fact['title'],
-                   fact['location'], fact['description_quote'], fact['apply_url'], captured_at,
+                   fact['location'], fact['description_quote'], apply_url, captured_at,
                    salary=fact['salary'])
 
 
@@ -80,7 +116,7 @@ def collect_alerts(connector, extractor, *, dedicated_recipient, rules, captured
         source['attempts'] = 1
         messages = connector.list_message_metadata(label_id=label_id, limit=50)
         source['status'] = 'OK-zero-jobs'
-        seen, posting_ids = set(), set()
+        seen, posting_ids, extractions = set(), set(), 0
         for message in messages[:50]:
             if not _eligible_metadata(message, label_id, dedicated_recipient, rules):
                 source['rejected_items'] += 1
@@ -94,31 +130,42 @@ def collect_alerts(connector, extractor, *, dedicated_recipient, rules, captured
             if SECURITY_BODY.search(clean_html(body)):
                 source['rejected_items'] += 1
                 continue
-            try:
-                facts = extractor(body)
-                if not isinstance(facts, list) or len(facts) > 150:
-                    raise ValueError('invalid_gmail_facts')
-            except Exception:
-                source['status'], source['error'] = 'failed', 'gmail_extraction_failed'
+            blocks = _job_blocks(body)
+            if not blocks:
+                source['status'], source['error'] = 'failed', 'gmail_layout_unverified'
                 continue
-            for fact in facts:
+            for block, links in blocks:
+                if extractions >= 150:
+                    break  # bounded partial coverage, never a complete-mailbox claim
+                extractions += 1
                 try:
-                    posting = _posting(fact, body, message_id, captured_at)
-                except (ValueError, TypeError, AttributeError):
-                    source['rejected_items'] += 1
+                    facts = extractor(block)
+                    if (not isinstance(facts, list) or len(facts) > 150
+                            or any(fact != facts[0] for fact in facts[1:])):
+                        raise ValueError('invalid_gmail_facts')
+                    facts = facts[:1]
+                except Exception:
+                    source['status'], source['error'] = 'failed', 'gmail_extraction_failed'
                     continue
-                if posting.job_id in posting_ids:
-                    continue
-                posting_ids.add(posting.job_id)
-                source['valid_jobs'] += 1
-                if collection_match(posting):
-                    source['pm_candidates'] += 1
-                    output['postings'].append(posting)
-        # Current source cap is unchanged. Never silently claim complete coverage.
-        output['postings'] = output['postings'][:8]
-        source['selected_for_m0'] = len(output['postings'])
+                for fact in facts:
+                    try:
+                        posting = _posting(fact, block, links, captured_at)
+                    except (ValueError, TypeError, AttributeError):
+                        source['rejected_items'] += 1
+                        continue
+                    if posting.job_id in posting_ids:
+                        continue
+                    posting_ids.add(posting.job_id)
+                    source['valid_jobs'] += 1
+                    if collection_match(posting):
+                        source['pm_candidates'] += 1
+                        output['postings'].append(posting)
         if source['status'] != 'failed':
             source['status'] = 'OK' if output['postings'] else 'OK-zero-jobs'
     except Exception:
         source['status'], source['error'] = 'failed', 'gmail_connector_failed'
+    finally:
+        # Also reconcile successful earlier messages after a later connector error.
+        output['postings'] = sorted(output['postings'], key=collection_priority)[:8]
+        source['selected_for_m0'] = len(output['postings'])
     return output

@@ -244,7 +244,7 @@ def test_blank_regional_stub_salary_fetches_detail_and_retains_unresolved_candid
         source, jobs, _ = probe.probe_source(client, {'id': 'yc-product', 'kind': 'yc',
             'url': 'https://www.ycombinator.com/jobs/role/product-manager'}, '2026-10-18T00:00:00+00:00')
     assert len(jobs) == 1 and len(seen) == 2
-    assert 'Check first:' in probe.to_row(jobs[0])['Next step']
+    assert 'Check first:' in probe.to_row(jobs[0])['More details']
 
 
 def test_recursion_failure_in_a_source_parser_does_not_abort_other_sources(monkeypatch):

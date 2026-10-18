@@ -2,12 +2,25 @@
 
 ## October 18 broader collection and Gmail intake milestone
 
+- Cycle 1 Claude review of pushed `4d429652e72f4bc50482987222e375eed283bdf4`
+  found repeat-email identity, Colombian geography, unresolved low salary,
+  partial-error caps, cross-card evidence, capped role ordering and Next step
+  ownership issues. Posted to PR16. Regressions reproduced the issues before
+  repair. Current repair requires fresh pushed-head Claude review, cycle 2/3.
+- Repairs isolate one visible HTML job card per extraction and reject unsupported
+  layouts (including plaintext) rather than fall back to an entire message.
+  LinkedIn numeric requisition URLs discard tracking and have stable identity
+  across message/title changes. Caps/counts reconcile even after partial errors.
+  Mixed US/LATAM availability and country-less city names remain unresolved;
+  known pay below 70k is below every allowed floor. Unknown salary checks live
+  in More details, leaving Next step blank per the plan.
+
 - User authorized another agent to finish Gmail routing and broaden collection
   beyond AI PM. Agent stopped at an account usage limit; root resumed as the sole
   implementation owner on `codex/salary-preferences`. No counters reset.
 - Python now recognizes the approved role families and applies annual USD salary
   floors of 140,000 US/remote-from-US and 70,000 LATAM including remote. Missing
-  salary is retained with a Check first next action rather than asserted eligible.
+  salary is retained with Check first in More details rather than asserted eligible.
   Existing source/request/batch caps remain unchanged.
 - Added a message-scoped Gmail intake boundary with injected connector/extractor
   interfaces, verified metadata rules and exact fact evidence. It can join the
@@ -24,8 +37,9 @@
 - Gmail forwarding-checkbox blocker remains 3/3. Next: receive a real alert,
   confirm precise metadata rules, user manually completes forwarding action,
   then verify fresh label-scoped message extraction and Sheet delivery in cloud.
-- Milestone opposite-agent review cycle 1/3 is pending request on the pushed
-  revision. Passing local tests do not establish current CI/review or cloud proof.
+- Fresh repair verification: 475 tests and 10 subtests passed; diff check passed.
+  Cycle 1 is consumed; fresh cycle 2/3 is required on the pushed repair revision.
+  Passing local tests do not establish current CI/review or cloud proof.
 
 ## October 18 PR #15 cycle 3 result — further work authorized
 

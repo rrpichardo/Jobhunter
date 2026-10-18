@@ -6,7 +6,9 @@ import pytest
 from jobhunter import gmail_alerts as g
 
 
-BODY = 'Acme\nProduct Manager\nRemote - Colombia\nUSD 80,000 annually\nBuild billing products.\nhttps://jobs.lever.co/acme/1'
+BODY = ('<article><p>Acme</p><p>Product Manager</p><p>Remote - Colombia</p>'
+        '<p>USD 80,000 annually</p><p>Build billing products.</p>'
+        '<a href="https://jobs.lever.co/acme/1">Apply</a></article>')
 FACTS = [{'title': 'Product Manager', 'company': 'Acme', 'location': 'Remote - Colombia',
           'salary': 'USD 80,000 annually', 'description_quote': 'Build billing products.',
           'apply_url': 'https://jobs.lever.co/acme/1'}]
@@ -152,3 +154,55 @@ def test_security_body_is_not_extracted_even_with_job_like_subject():
     result = collect(Mailbox(body='Use this verification code to sign in.'),
                      lambda body: called.append(True) or FACTS)
     assert not called and not result['postings']
+
+
+def test_repeated_daily_alerts_have_stable_identity_despite_linkedin_tracking():
+    urls = ['https://www.linkedin.com/jobs/view/12345/?refId=day1&midToken=secret1',
+            'https://www.linkedin.com/jobs/view/12345/?refId=day2&midToken=secret2']
+    postings = []
+    for index, url in enumerate(urls):
+        body = BODY.replace(FACTS[0]['apply_url'], url)
+        mailbox = Mailbox(messages=[META | {'message_id':f'daily{index}'}], body=body)
+        result = collect(mailbox, lambda text: [FACTS[0] | {'apply_url':url}])
+        postings.append(result['postings'][0])
+    assert postings[0].job_id == postings[1].job_id
+    assert postings[0].apply_url == 'https://www.linkedin.com/jobs/view/12345'
+
+
+def test_verified_linkedin_requisition_identity_survives_title_update():
+    url = 'https://www.linkedin.com/jobs/view/12345'
+    ids = []
+    for title in ['Product Manager', 'Senior Product Manager']:
+        body = BODY.replace(FACTS[0]['apply_url'], url).replace('Product Manager', title)
+        result = collect(Mailbox(body=body), lambda block: [FACTS[0] | {'title': title, 'apply_url': url}])
+        ids.append(result['postings'][0].job_id)
+    assert ids[0] == ids[1]
+
+
+def test_partial_connector_failure_still_caps_postings_and_reports_selected_count():
+    class PartialMailbox(Mailbox):
+        def read_message(self, message_id):
+            if message_id == 'later':
+                raise RuntimeError('do not expose mailbox error')
+            return '\n\n'.join(BODY.replace('/acme/1',f'/acme/{i}') for i in range(12))
+    mailbox = PartialMailbox(messages=[META, META | {'message_id':'later'}])
+    def extract(block):
+        import re
+        url = re.search(r'https://[^"<\s]+', block).group()
+        return [FACTS[0] | {'apply_url': url}]
+    result = collect(mailbox, extract)
+    assert result['source']['status'] == 'failed'
+    assert len(result['postings']) == result['source']['selected_for_m0'] == 8
+
+
+def test_facts_cannot_mix_between_separate_job_cards_or_footer():
+    first = '<article><p>Acme Product Manager Remote - Colombia Build billing products.</p><a href="https://jobs.lever.co/acme/1">Apply</a></article>'
+    second = '<article><p>Beta Director USD 150,000 annually</p><a href="https://jobs.lever.co/beta/2">Apply</a></article>'
+    body = first + second + '<footer>United States</footer>'
+    result = collect(Mailbox(body=body), lambda block: [FACTS[0] | {'salary':'USD 150,000 annually'}])
+    assert not result['postings']
+
+
+def test_hidden_apply_link_is_not_valid_evidence():
+    body = BODY.replace(FACTS[0]['apply_url'], '') + '<div hidden><a href="https://jobs.lever.co/acme/1">Apply</a></div>'
+    assert not collect(Mailbox(body=body))['postings']

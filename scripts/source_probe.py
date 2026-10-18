@@ -22,7 +22,7 @@ import yaml
 
 from jobhunter.artifacts import safe_error_code, write_artifact
 from jobhunter.postings import (AI_TERMS, DETAIL_SOURCES, LISTING_ONLY, PARSERS, Posting, collection_match,
-                                collection_stub_match, dedupe, role_family, to_row)
+                                collection_stub_match, collection_priority, dedupe, role_family, to_row)
 
 USER_AGENT = "JobHunterBot/0.1 (personal job search; polite single requests)"
 MAX_BYTES = 40 * 1024 * 1024
@@ -180,7 +180,7 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
         code = "duplicate_source_id" if str(exc) == "duplicate_source_id" else "invalid_board_response"
         return record(source_id, "failed", stamp, error=code, http=200), [], code
     candidates = [p for p in postings if role_family(p.title)]
-    selected = [p for p in postings if collection_match(p)][:PER_SOURCE_LIMIT]
+    selected = sorted((p for p in postings if collection_match(p)), key=collection_priority)[:PER_SOURCE_LIMIT]
     coverage = "complete-response" if entry.get("board") else "partial-response"
     if kind in DETAIL_SOURCES:
         candidates = shortlist
