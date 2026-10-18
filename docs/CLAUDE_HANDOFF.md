@@ -52,7 +52,8 @@ branched from PR #18's head; needs Codex review because Claude wrote it):
 - `scripts/sheets_sync.py`: runs of more than 150 jobs are split into `<run>-b001`,
   `-b002`, ... each a journaled, recoverable run; one batch keeps the plain run id.
 - `jobhunter/gmail_alerts.py`: `EXTRACTION_SAFETY_STOP = 1000` replaces the 150
-  extraction budget. `len(facts) > 150` is a separate reply-size sanity bound.
+  extraction budget, and the hidden `[:8]` cap on returned postings is gone.
+  One metadata page of 50 messages is still read; pagination arrives with the live adapter. `len(facts) > 150` is a separate reply-size sanity bound.
 - `jobhunter/postings.py`: `Posting.posted_at`, `parse_posted`, `within_lookback`.
 Not built: the saved AI backlog in `_State`, pagination for Himalayas/The Muse/
 Jooble/JSearch and skipping Job IDs already in the Sheet (all in

@@ -169,6 +169,6 @@ def collect_alerts(connector, extractor, *, dedicated_recipient, rules, captured
         source['status'], source['error'] = 'failed', 'gmail_connector_failed'
     finally:
         # Also reconcile successful earlier messages after a later connector error.
-        output['postings'] = sorted(output['postings'], key=collection_priority)[:8]
+        output['postings'] = sorted(output['postings'], key=collection_priority)
         source['selected_for_m0'] = len(output['postings'])
     return output

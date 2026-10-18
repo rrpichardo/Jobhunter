@@ -179,7 +179,7 @@ def test_verified_linkedin_requisition_identity_survives_title_update():
     assert ids[0] == ids[1]
 
 
-def test_partial_connector_failure_still_caps_postings_and_reports_selected_count():
+def test_partial_connector_failure_keeps_every_match_and_reports_selected_count():
     class PartialMailbox(Mailbox):
         def read_message(self, message_id):
             if message_id == 'later':
@@ -192,7 +192,7 @@ def test_partial_connector_failure_still_caps_postings_and_reports_selected_coun
         return [FACTS[0] | {'apply_url': url}]
     result = collect(mailbox, extract)
     assert result['source']['status'] == 'failed'
-    assert len(result['postings']) == result['source']['selected_for_m0'] == 8
+    assert len(result['postings']) == result['source']['selected_for_m0'] == 12  # no cap of eight: every match is kept
 
 
 def test_facts_cannot_mix_between_separate_job_cards_or_footer():
