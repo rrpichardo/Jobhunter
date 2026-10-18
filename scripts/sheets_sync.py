@@ -22,7 +22,7 @@ sheet_mutation_unconfirmed writer_lock_required writes_verified_lock_release_unc
 sheet_request_failed sheet_tls_error sheet_transport_error invalid_sheet_response unapproved_tab
 invalid_google_configuration google_workbook_unavailable google_proxy_auth_missing google_workbook_not_found
 google_workbook_forbidden google_tls_error google_timeout google_transport_error invalid_json
-artifact_too_large invalid_extraction_delivery run_id_quarantined run_not_pending'''.split())
+artifact_too_large artifact_must_be_outside_checkout invalid_extraction_delivery run_id_quarantined run_not_pending'''.split())
 
 
 def _deliver_many(args, payload, store):
@@ -73,7 +73,10 @@ def main(argv=None, *, store=None):
             print(f"quarantined: run_id={result['run_id']} cells_moved={result['cells_moved']}; "
                   'data kept under m0/quarantined/ in _State')
             return 0
-        payload = read_artifact(args.input)
+        try:
+            payload = read_artifact(args.input)
+        except OSError:
+            raise ValueError('invalid_sync_input') from None
         if isinstance(payload, dict) and payload.get('schema_version') == 2:
             return _deliver_many(args, payload, store)
         if (not isinstance(payload, dict) or type(payload.get('schema_version')) is not int

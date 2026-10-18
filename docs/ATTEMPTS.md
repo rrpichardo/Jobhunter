@@ -48,6 +48,16 @@
   Locked full candidate suite: 283 tests and 10 subtests passed; no live calls,
   pushes, merges to main or deployments. Further Claude review is outstanding.
 
+## October 18 input diagnostic follow-up — writer cycle 7
+
+- Claude confirmed the unexpected writer failure fix, then reproduced that missing
+  input files inherited the new unexpected-error label. A failing regression
+  confirms this happens before Google access. File-read OS errors now map to
+  `invalid_sync_input` at the read boundary; the existing artifact checkout-path
+  error has an explicit safe label. Later unexpected writer errors remain distinct.
+- Locked suite: 158 tests and 10 subtests passed. No remote or live writes. User's
+  unlimited local repair-cycle direction applies; fresh static review requested.
+
 ## October 18 retrospective diagnostic follow-up — writer cycle 6
 
 - Claude's context-complete retrospective review of superseded #7 found a CLI
