@@ -10,13 +10,23 @@ import re
 
 from google.auth.credentials import AnonymousCredentials
 from google.auth.exceptions import InvalidOperation
+from google.auth.transport.requests import AuthorizedSession
 import gspread
 from gspread.exceptions import APIError, SpreadsheetNotFound
 from requests.exceptions import SSLError, Timeout, ConnectionError
+from requests.adapters import HTTPAdapter
 
 
 class GoogleSetupError(ValueError):
     """Operator-safe setup failure; never include provider response bodies."""
+
+
+class SingleAttemptSession(AuthorizedSession):
+    """Do not resubmit a mutation through refresh, transport retry or redirect."""
+
+    def request(self, *args, **kwargs):
+        kwargs['allow_redirects'] = False
+        return super().request(*args, **kwargs)
 
 
 def open_workbook(environ=None):
@@ -28,7 +38,10 @@ def open_workbook(environ=None):
             or re.fullmatch(r'[A-Za-z0-9_-]{20,200}', workbook_id) is None):
         raise GoogleSetupError('invalid_google_configuration')
     try:
-        client = gspread.Client(auth=AnonymousCredentials())
+        credentials = AnonymousCredentials()
+        session = SingleAttemptSession(credentials, max_refresh_attempts=0)
+        session.mount('https://', HTTPAdapter(max_retries=0))
+        client = gspread.Client(auth=credentials, session=session)
         client.set_timeout(20)
         return client.open_by_key(workbook_id)
     except Exception as exc:

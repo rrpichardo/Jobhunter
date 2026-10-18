@@ -1,5 +1,73 @@
 # Implementation attempt log
 
+## October 18 path diagnostic follow-up — writer cycle 8
+
+- Claude confirmed missing-file classification and noted Path.expanduser/resolve
+  can raise ValueError/RuntimeError. Both boundary regressions failed first.
+  Input-read failures of those classes now become invalid_sync_input while known
+  safe ValueError codes (including invalid_json and artifact_too_large) re-raise.
+  Later writer errors retain unexpected_sync_error. No lock or retry logic changed.
+- Locked writer suite: 160 tests and 10 subtests passed. Fresh local static review
+  requested under the user's unlimited repair-cycle instruction; no push/live run.
+
+## October 18 input diagnostic follow-up — writer cycle 7
+
+- Claude confirmed the unexpected writer failure fix, then reproduced that missing
+  input files inherited the new unexpected-error label. A failing regression
+  confirms this happens before Google access. File-read OS errors now map to
+  `invalid_sync_input` at the read boundary; the existing artifact checkout-path
+  error has an explicit safe label. Later unexpected writer errors remain distinct.
+- Locked suite: 158 tests and 10 subtests passed. No remote or live writes. User's
+  unlimited local repair-cycle direction applies; fresh static review requested.
+
+## October 18 retrospective diagnostic follow-up — writer cycle 6
+
+- Claude's context-complete retrospective review of superseded #7 found a CLI
+  diagnostic that still applied to current #8: an unexpected writer failure was
+  mislabeled invalid input. A regression failed after an injected post-mutation
+  exception; the CLI now emits fixed `unexpected_sync_error`, retaining recovery
+  guidance and suppressing raw exception details. No retry policy changed.
+- The retrospective adapter/engine coverage concern is already addressed by the
+  current fake-workbook live-harness tests, including applied/unapplied timeout
+  cases. Pending replay follows recorded journal order; operators must not edit
+  hidden recovery state. The one-megabyte journal bound remains intentional.
+- Locked writer suite: 157 tests and 10 subtests passed. Local review cycle 6 is
+  covered by the user's "do as many as needed" direction; no pushes or live calls.
+
+## October 18 user continuation instruction — review limits superseded
+
+- After the source milestone reached its original three-review cap, the user
+  explicitly directed "do as many as needed" for local fix/review cycles.
+  Continue the necessary cycles while retaining the historical counters. This
+  removes the prior numeric pause for this repair task; it does not authorize
+  further pushes, merges, new services or deployment. Keep source stop rules.
+- Whole-PR Claude reviews were requested for #7, #8, #9 and #10, including already
+  pushed heads. #7 is superseded; its retrospective findings are not instructions
+  to revive it. #8 review at `e3536e4` found the missing `run_not_pending` CLI label.
+  A failing CLI regression reproduced it, then the error was allowlisted.
+- The reported sticky-lock-on-429 issue was not reproduced: 429 is already a
+  rejected 4xx, and the existing fresh-receipt retry regression passed. Never
+  treat a stale receipt as rejection proof for genuinely uncertain writes.
+- This is writer repair/review cycle 5, authorized by the user's updated direction.
+  No live calls ran; fresh Claude review of the local diagnostic fix is required.
+
+## October 18 Codex review repairs — user-authorized extension
+
+- Codex reviewed exact writer head `6a61f356d1e472f34ea6242a3c0b76bb02a88f6b`
+  (the previously undelivered cycle 3). It reproduced reuse of a quarantined run ID
+  when the damaged journal has no manifest. The #7 completed-Run-Log recovery issue
+  is already fixed in #8 and is not a new outstanding repair.
+- The user then instructed "Implement the changes", authorizing one additional
+  writer fix/review cycle (4). Prior counters remain intact; this does not authorize
+  an unlimited extension. Codex is the sole active implementation owner.
+- Added an end-to-end regression: remove a pending run's manifest, quarantine its
+  remaining chunks without changing their values, and refuse that ID before Jobs
+  mutation. It failed on the reviewed code. Preparation now checks any quarantined
+  key for the identity, including orphan chunks. Locked full suite: 155 tests and
+  10 subtests passed; `git diff --check` passed. Fresh Claude review is required.
+- This repair does not repeat live collection or Google writes, change deployment
+  status, or satisfy the outstanding cloud/schedule acceptance gates.
+
 This is the durable log for implementation blockers and milestone repair cycles.
 Read it before retrying work. Maximum: three distinct attempts per blocker and
 three repair/review cycles per milestone. Counters survive handoffs and restarts.
@@ -295,3 +363,112 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
   connectivity, not write endpoints, recovery or serialization. No Google writes.
 - Cycle 2 / 3 is the fresh review of the safe-discriminator and handoff fixes.
   Local locked suite: 71 tests/10 subtests passed. No secret value in tracked files.
+
+## M0 writer/recovery implementation — continuation
+
+- PR #6 merged at `fa899c32de3267507c51658274d5bc2509ef7193` after exact-head
+  Claude cycle-2 review, 71 tests/10 subtests locally and in JobHunterEnv, plus
+  Linux/Windows CI. Main rerun passed 71 tests/10 subtests. Code is a connection
+  foundation only. User then directed Codex to continue rather than hand off now.
+- New owner branch: `codex/m0-sheet-sync`; Codex remains sole implementer.
+- Write-endpoint proof attempt 1 / 3 succeeded in actual JobHunterEnv at229a97b:
+  one atomic addSheet/updateCells structural call created hidden `_M0AuthProbe`
+  (sheet ID 2026101801), and one RAW values batch wrote a harmless literal.
+  FORMULA readback exactly matched `=jobhunter_probe_literal`; it was not executed
+  as a formula. All reported booleans true, exit 0, clean tree. Tool output
+  expanded/verified. No retry, user cells unchanged, probe tab retained.
+  This proves endpoint compatibility, not application writer/recovery/concurrency.
+- Wrote failing planner, lock and adapter tests, then implementations. Planner
+  tests preserve user fields/first seen, reordered headers, sorted rows, duplicate
+  identities, ambiguous headers and RAW-ready literal values. Lock tests cover
+  overlap and uncertain acquisition/deletion. Adapter tests prove atomic owner
+  creation, RAW range writes, append-only grid growth and sanitized HTTP evidence.
+
+- Journal, engine and CLI now pass test-first behavior checks, including bounded
+  retries, exact long-delay stop, explicit pending Run Log before job mutation,
+  same-ID repeat verification, multi-chunk replay and corruption rejection.
+- `uv run --locked python -m pytest -q`: 107 tests/10 subtests passed locally;
+  diff whitespace check passed. Application writer live proof and fresh Claude
+  review remain outstanding; no milestone completion or deployment claim.
+
+### M0 writer review/repair cycle 1 / 3
+
+- First whole-change Claude Code review is being requested for the writer branch.
+  It must cover the current committed head, not just the connection checkpoint.
+  No existing review covers the new journal/lock/writer. Record findings and
+  preserve this counter across handoffs; no review success is assumed in advance.
+
+
+### User-requested Claude Code handoff — writer cycle 1 remains open
+
+- Review of 4c9800c completed; actual findings posted on PR #7 at
+  https://github.com/rrpichardo/Jobhunter/pull/7#issuecomment-6243645600 .
+  Current fixes address control/line-ending validation, scoped journal checks,
+  delayed-write safety with atomic unique receipts, hidden HTTP resubmissions,
+  original-error preservation and release-outcome diagnostics. Read-only Astra
+  analysis supported the receipt design; no second implementation owner edited.
+- Internal test namespace added after its regression test failed as expected.
+  Global lock remains shared. Full local suite:125 passed,10 subtests passed.
+  Fresh current-head review is still outstanding; cycle2 has NOT been started.
+- Remaining cycle-1 work: manual poisoned-journal quarantine/recovery, preventing
+  completed Run Log downgrade on replay, additional uncertainty tests. Per-run
+  source history and all application live checks remain outstanding.
+- User now requests stopping for a committed/pushed handoff and PR. Preserve
+  draft #7; no merge or deployment claim. CLAUDE_HANDOFF.md has exact next actions.
+- Billing: user chose to leave existing free-trial link unchanged; dialog canceled,
+  project linkage rechecked. No billing setting changed. Do not repeat this ask.
+
+- Final handoff verification: `uv run --locked python -m pytest -q` passed
+  125 tests/10 subtests; `git diff --check` passed. No new live API collection,
+  writer mutation, or scheduled proof was attempted during handoff preparation.
+- Reciprocal review: AGENTS.md/CLAUDE.md require Codex review for Claude work.
+  User signed into ChatGPT in Richard. Official review settings load but show no
+  repositories, including Jobhunter search; no saved Codex Cloud environments.
+  Automatic review remains blocked on repository connection, not user sign-in.
+  No permission, credits, billing or automatic-review setting changed. Local
+  installed `codex review --help` verified; manual review route documented.
+
+### Claude Code takeover of writer milestone — review cycle 2 / 3 requested
+
+- Claude Code is now sole implementation owner. Branch `claude/m0-sheet-sync` starts
+  at checkpoint `9f4fd58` (PR #7 head); replacement PR supersedes draft #7. Counters
+  are carried over, not reset: writer review cycle 1 / 3 was consumed by the review
+  of `4c9800c`; this push is the fix set for it and requests **cycle 2 / 3**
+  from Codex (reciprocal review; no self-review).
+- Finished the remaining cycle-1 fixes, tests first (3 failed before the code):
+  a recovered run whose final Run Log row already landed is no longer rewritten to
+  `pending`; manual `--quarantine-run` renames a poisoned run's `_State` keys without
+  discarding values and refuses reuse of that run ID. Added receipt tests: failed
+  receipt read, definitive 429 followed by a fresh-receipt retry, 408/500/503 treated
+  as unknown, and an interrupt through the engine retaining the lock.
+- `.venv/bin/python -m pytest -q`: 136 passed, 10 subtests. Still open: per-run
+  source history, the paced live harness, actual JobHunterEnv proof, scheduled M0.
+
+- Codex GitHub review of `d76caef` was started but not delivered (user reports its
+  usage limit was reached). A same-model Claude `/engineering:code-review` was run on
+  the user's instruction; it is **not** the required Codex review and does not count
+  as approval. It produced minor findings, fixed in the next commit (completed runs
+  cannot be quarantined, original Completed time kept on recovery, quarantine no
+  longer creates `_State`, cell-count cap). Suite: 139 passed, 10 subtests.
+  The new head still needs Codex review; no merge until it is obtained. The review
+  counter stays at cycle 2 / 3 because these are self-review fixes, not a Codex cycle.
+
+- Codex completed its review of `d76caef` (cycle 2 / 3): one P2 finding, refuse to
+  quarantine completed runs; already fixed in `99b1154`. Cycle 3 / 3 (final) was then
+  requested from Codex for `99b1154`. No further cycle remains for this milestone
+  without a user decision. The earlier "never returned" note above is superseded.
+
+### Writer live harness result (JobHunterEnv, October 18, 2026)
+
+- Codex cycle 3 / 3 for `99b1154`: the GitHub reviewer answered only that its usage
+  limit was reached (resets Oct 18, 12:12 AM per the local CLI). A local
+  `codex review` fallback hit the same limit. **No cycle-3 review was delivered; no
+  fourth cycle was started.** Request the same review again after the reset; do not
+  buy credits or change plan.
+- Built `scripts/live_harness.py` (commit `c5e2398`); the actual cloud run passed all
+  eight clean scenarios, exit 0. Details: V0_VERIFICATION.md. Counters unchanged:
+  this is a test of the existing writer, not a new blocker attempt.
+- The saved real-posting data from the earlier cloud session no longer exists (the
+  container was reclaimed, as the handoff warned). The user then approved one fresh
+  bounded public harvest with an independently retained hash; see the next section
+  once recorded.

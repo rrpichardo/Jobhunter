@@ -119,3 +119,45 @@ This is initial cloud read-access proof, not successful write authorization,
 write-path proxy compatibility, locking, recovery, a scheduled run, or deployment.
 Writer tests and harmless write/readback/structural-endpoint checks remain required.
 The user accepted continued use of the disclosed dedicated key; see SETUP.md.
+
+## M0 writer live harness in JobHunterEnv — October 18, 2026
+
+Scope: failure-injection and concurrency checks of the Sheet writer against Google,
+using only fresh hidden `_M0Test_` fixture tabs and the shared lock tab. This is
+**not** the real-posting write, not a scheduled run and not V0 deployment.
+
+Actual Claude cloud session
+https://claude.ai/code/session_01DsCkZnt2X9EtuQRVq6Gq5u (JobHunterEnv, branch
+`claude/m0-sheet-sync`, HEAD `c5e2398`, clean tree). The container's uv was 0.11.32 and
+the repo pins 0.13.1; with the user's approval uv 0.13.1 was installed with pip into a
+scratch virtualenv outside the checkout. No tracked file or setting changed.
+
+- `uv sync --locked` and `uv run --locked python -m pytest -q`: **154 passed,
+  10 subtests passed** in the cloud.
+- `uv run --locked python -m scripts.live_harness` (paced 1.5 s, eight clean scenarios,
+  run in the background and read from the output file after it finished):
+  **`summary: scenarios=8 failures=0`**, exit code 0, process not running afterwards.
+  The expanded command output had 54 PASS lines and no FAIL line. Namespaces:
+  `_M0Test_ea1312753eb7` (chunks), `d51081372f06` (repeat), `4bf8cc375569` (preserve),
+  `d850038cd74a` (sorted), `dffa80a01b24` (timeout after apply), `7eb8b875924b`
+  (timeout after structural apply), `48489e778b42` (interrupt after apply),
+  `aa48b655cc1d` (overlap).
+- Checked live: 40 jobs in 9 write requests with no duplicates and a complete Run Log
+  row; same run ID rewrote nothing; a new run ID with unchanged data added no Jobs
+  rows; changed data under an old run ID was refused (`run_id_payload_conflict`);
+  user-edited Status/Notes/My rating/Date found survived a second sync and
+  formula-looking text stayed literal; after rows were sorted by a user, a rerun
+  updated each job by ID and notes stayed with their job; a timeout after Google had
+  applied a cell write and after a structural change were both confirmed by the lock
+  receipt and the sync completed; an interrupt after an applied write released the
+  lock, kept the pending journal, and the rerun recovered it (`recovered=1`); two
+  independent processes raced and exactly one won while the other reported
+  `writer_locked`, with one Run Log row and no duplicate jobs. Every scenario ended
+  with `no_writes_outside_namespace` and `lock_released` passing.
+- **Not run on purpose:** `timeout_before_apply` and `interrupt_before_apply`, which
+  deliberately leave the global lock in place. The harness never unlocks. Those cases
+  remain covered only by unit tests. The eight fixture tabs were retained, hidden.
+- **Not proven yet:** the real posting write and repeated-run readback in the real
+  Jobs/Run Log, scheduled M0, per-run source history, and Codex review of the writer
+  (cycle 3 / 3 requested for `99b1154`; Codex reported its usage limit, so no review
+  of that revision has been delivered).

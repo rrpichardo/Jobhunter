@@ -1,177 +1,168 @@
 # Claude Code continuation handoff
 
-Updated October 17, 2026. Read this first, then AGENTS.md, docs/PLAN.md,
-docs/SETUP.md and docs/ATTEMPTS.md. This is an implementation handoff, not the
-daily routine prompt. V0 is **not deployed**. Do not restart completed milestones.
+Handoff requested October 17, 2026. Codex is stopping implementation after this
+checkpoint; Claude Code becomes the implementation owner when the user resumes
+there. **V0 is not deployed; writer PR #7 is draft and must not be merged yet.**
+Read AGENTS.md, PLAN.md, SETUP.md, ATTEMPTS.md and REVIEW_WORKFLOW.md first.
 
-## Resume instruction
+## Paste this into Claude Code
 
-> Continue JobHunter V0 from this handoff and the current Git state. Keep one
-> implementation owner, preserve all existing changes, and check open PRs before
-> coding. Production must run in Claude Code cloud JobHunterEnv. Use the existing
-> subscription; no paid model API, new hosting service/account, or billing
-> activation. Explain progress in plain English and announce parallel agents.
-> Finish the earliest incomplete acceptance gate. Record bounded attempts and
-> obtain current opposite-agent review before merging implementation. Never
-> request secrets in chat. Do not call the application deployed until the actual
-> cloud schedule, Sheet delivery and recovery gates pass.
+> Continue JobHunter from docs/CLAUDE_HANDOFF.md and current GitHub state. Take over
+> as the sole implementation owner; do not restart completed work. Finish the
+> outstanding PR #7 review repairs, obtain Codex review of the latest pushed SHA,
+> and prove the writer in actual JobHunterEnv before requesting integration.
+> Preserve the existing attempt/review counters. Keep all V0 sources, including
+> logged-in LinkedIn and X, in scope. No local production dependency, new service,
+> account, paid model API or billing upgrade. Explain progress in plain English.
+> Never request or print secrets. Tests alone do not prove cloud deployment.
 
-## Repository and integration state
+## Git and ownership
 
-- Repository: `rrpichardo/Jobhunter` (private). Main includes PR #4 (`7f77cb5`)
-  and PR #5 (`d77842dc91ebb236f959a3dc1702cbff561856d4`).
-- Current work started on `codex/m0-sheet-writer`. Its initial commit is
-  `4ebb680`; later handoff/review commits may follow. Inspect `git status`,
-  `git log`, remote main and open PRs; do not assume this file is the latest SHA.
-- PR #5 is merged: https://github.com/rrpichardo/Jobhunter/pull/5 . It implements
-  one-board Greenhouse sampling and validated Claude excerpts only, with no
-  writer, full eligibility, social integration, recovery or scheduling.
-- The current change adds `jobhunter/google_auth.py` and tests: explicit
-  `network-secret` mode, AnonymousCredentials for gspread, workbook-by-ID access,
-  20-second timeout, sanitized failure. It is a connection foundation, **not a
-  Sheet writer**. Initial cloud read access is proven; write paths remain unproved.
-- User specifically requests all work committed/pushed, reviewed merges, and
-  this ready-to-use handoff so Claude Code can continue when Codex runs out.
-  Verify the current PR's status/review rather than treating this text as approval.
-- When ownership transfers, stop the previous implementation owner. A Claude
-  implementation branch uses `claude/`; do not have Codex and Claude edit together.
+- Private repo: `rrpichardo/Jobhunter`. Main includes PR #4 bootstrap (7f77cb5),
+  PR #5 harvest/extraction (`d77842dc91ebb236f959a3dc1702cbff561856d4`) and
+  PR #6 proxy authentication (`fa899c32de3267507c51658274d5bc2509ef7193`).
+- Current branch `codex/m0-sheet-sync`, draft PR
+  https://github.com/rrpichardo/Jobhunter/pull/7 . Read its latest commits and
+  `git status`; this handoff is committed with the checkpoint, so inspect HEAD
+  rather than relying on a self-referential SHA in this file.
+- For new Claude edits, create `claude/m0-sheet-sync` from this checkpoint and a
+  replacement milestone PR against main, explicitly superseding #7. Carry its
+  findings/counters forward, link both PRs, and close #7 only when the replacement
+  preserves all work. Do not accidentally branch from older main and lose repairs.
+- Opposite-agent review now works in both directions by repository instruction:
+  Claude-authored work needs Codex review; see REVIEW_WORKFLOW.md. No self-review.
+  Standing merge authorization expressly covers Codex-built milestones after
+  current Claude review/tests/CI; other merges follow user direction.
 
-## Verified evidence and how it was launched
+## Current writer implementation and verification
 
-Production proof came from **Claude Code cloud**, not Codex cloud. Codex operated
-Chrome's Richard profile, selected the repository and JobHunterEnv at
-claude.ai/code, then submitted a bounded test prompt. Session:
-https://claude.ai/code/session_015wZ8bZKVEjazvzsqciHokQ . It is a manual cloud
-session, **not a scheduled routine**. Local Claude CLI was separately used for
-read-only code review; local review is not cloud-execution evidence.
+Existing modules: sheet_records, sheet_io, sheet_lock, sheet_journal, sheets,
+plus scripts/sheets_sync. Do not rebuild these from scratch. They provide keyed
+Jobs upserts, preservation of Status/Notes/My rating/Date found, RAW writes,
+bounded chunks, Sources/Run Log, hidden `_State` journal and structural global lock.
 
-- Locked uv 0.13.1 / Python 3.12; Linux and Windows CI available. Local commands:
-  `uv sync --locked` and `uv run --locked python -m pytest -q`.
-- PR #5 final reviewed head `0f7b43659a496c80a25079dd9107ccda1439e154`:
-  fresh Claude Code Sonnet review found no actionable issues; Linux/Windows CI
-  passed. Actual JobHunterEnv locked install passed; 65 tests/10 subtests passed.
-  Saved-data validation accepted the original trusted SHA and produced 1 record.
-  Cloud command outputs were expanded and inspected in the UI; tree clean.
-- Live Greenhouse request at earlier `aaed72b`: HTTP 200, 655 valid jobs,
-  0 rejected, 15 PM candidates, 1 selected. Claude supplied an exact excerpt;
-  Python validated it. Later replay used saved data, not another live request.
-- The connection foundation's local locked suite passes 71 tests/10 subtests.
-  These use mocks; see the separate live read-access evidence below.
-- Saved cloud artifacts may disappear; don't rely on their persistence. The
-  session scratchpad contains `m0dir2.txt` pointing at the saved harvest and
-  extraction directory. Its original trusted harvest SHA-256 is
+Latest local checkpoint: `.venv/bin/python -m pytest -q` → **125 passed,
+10 subtests passed**. Locked rerun is recorded in ATTEMPTS.md. The previous
+107-test head `4c9800ccd6882c3eb3573d35be62919d4de4fe07` passed Linux/Windows CI.
+Current checkpoint requires fresh CI and reviewer coverage; an old green review
+is not approval. No application writer has run in the cloud yet.
+
+Claude Sonnet cycle-1 review of 4c9800c:
+https://github.com/rrpichardo/Jobhunter/pull/7#issuecomment-6243645600 .
+**Cycle 1 / 3 has been consumed; cycle 2 has not been requested.** Completing the
+remaining first-cycle fixes before review does not reset the counter. PR #5's
+one-off fourth-cycle authorization does not extend this milestone.
+
+Repairs included in this checkpoint, still needing fresh independent review:
+
+- Reject unsupported control characters/unpaired surrogates, canonicalize CRLF/CR
+  to LF before journaling; reject whitespace in Job IDs.
+- Journal validates only its own `m0/run/` values; unrelated numeric social counters
+  no longer poison recovery.
+- Every non-lock mutation atomically adds a fresh UUID receipt to global lock C1.
+  After a transport/5xx/interrupt uncertainty, only matching owner + exact receipt
+  confirms that request applied. Stale/missing/unreadable receipt retains lock
+  and blocks all subsequent mutations, retries and deletion. HTTP 4xx except 408
+  is treated as rejected; scrutinize this classification in review.
+- Disable hidden transport retries, redirects and auth-refresh resubmissions.
+  Preserve original exceptions/interrupts if release also fails; distinguish
+  verified writes with unconfirmed lock release.
+- Internal test namespace `_M0Test_[a-z0-9]{8,32}` maps the four data tabs to hidden
+  prefixed tabs while keeping the global lock. Unit test only; no live harness yet.
+
+## Next work, in order
+
+1. Read the actual cycle-1 report and current diff. Complete the remaining fixes:
+   manual-only poisoned-journal quarantine/recovery procedure (never silently
+   discard work); avoid downgrading an already completed Run Log row to pending
+   after a crash before journal.finish; add regression tests. The completed-run
+   replay limitation is now documented. Per-run source evidence/history remains
+   absent (Sources overwrites current rows); implement before full V0 acceptance.
+2. Extend receipt tests for failed receipt read, definitive 429 rejection,
+   interrupt through the engine, and delayed-before-apply outcomes. Current
+   tests cover all three mutation stages, stale receipts and timeout-after-apply.
+   Invariant: no later mutation/unlock when prior outcome is unknown. An old
+   value already present does not prove a new request finished.
+3. Run locked tests, push, request **Codex review** of the exact head (cycle 2/3)
+   using REVIEW_WORKFLOW.md. Resolve issues and get current review/CI. Missing
+   Codex access stays outstanding; a Claude Action reviewing Claude is insufficient.
+4. **Done (c5e2398, cloud run exit 0; see V0_VERIFICATION.md): lock-retaining cases
+   `timeout_before_apply`/`interrupt_before_apply` remain opt-in and un-run.**
+   Original text: build a paced live test harness using a fresh hidden test namespace; reject
+   any preexisting namespace initially, keep the global lock. No destructive
+   fixture testing in real Jobs. Disable live social fetches. Test chunks,
+   preservation of user fields, sorting between runs, timeout-after-apply,
+   interrupt before/after Jobs, recovery and independent-process overlap. Retain
+   hidden fixture tabs if cleanup cannot be proved safe. Pace requests to avoid
+   Sheets per-user quotas; fail closed on unknown mutations. Do not auto-unlock.
+5. In actual JobHunterEnv, write the already validated real posting, repeat its
+   unchanged run ID, and inspect Jobs/Run Log evidence. Expand actual command
+   output; an agent summary alone is insufficient. Then prove scheduled M0.
+6. Continue full source groups, Gmail, LinkedIn/X, exact daily routine/runbook,
+   06:07 America/New_York schedule and separate day-7/day-14 follow-ups. No routine,
+   verified scheduled run or trial start dates exist yet.
+
+## Actual Claude cloud evidence, not Codex cloud
+
+Codex controlled Chrome Richard to select the repo and **JobHunterEnv** at
+https://claude.ai/code/session_015wZ8bZKVEjazvzsqciHokQ . That is a manual Claude
+cloud session, not a scheduled routine. Ubuntu24.04, Python3.12.3, uv0.13.1.
+Local authenticated Claude Sonnet CLI reviews were separate development checks.
+
+- Fresh Greenhouse probe at historical aaed72b: HTTP200, 655 valid, zero rejected,
+  15 PM candidates, one selected; actual Claude excerpt validated by Python.
+  Later checks replayed saved data, not new collection.
+- PR #5 actual cloud: 65 tests/10 subtests; PR #6 actual cloud:71/10, clean tree.
+  Cloud currently last tested at 229a97b, not the writer checkpoint.
+- Scratchpad `/tmp/claude-0/-home-user-Jobhunter/bd94b49d-acc0-5310-ad78-3b3f143cc8cd/scratchpad`:
+  `uvbin`, `venv`, `uvcache`; `m0dir2.txt` points to saved harvest/extraction,
+  and normalized `records_0f7b436.json` has one posting. May disappear.
+  Trusted original harvest SHA256:
   `84423ba33cc8923e9cdfa6548da0da08f35b4e56bebce92def20f6be0ff49a8e`.
-  Never recompute a trusted reference from an edited artifact. If gone, report
-  that and run a new bounded public harvest with a new independently retained hash.
+  Never regenerate the trust reference from a modified artifact. If missing,
+  report loss and make a new bounded public harvest with independently retained hash.
 
-## Immediate Google setup — saved secret and successful read access
+## Google setup: already completed; do not repeat
 
-- Correct local Chrome profile: **Richard**. The user selected the existing
-  dedicated jobs Google account. Its Cloud console works; an earlier account was
-  closed to Cloud access. Do not switch back or inspect unrelated mail/accounts.
-- Dedicated project and writer service account created. No project IAM roles
-  were selected. Sheets API enabled. No billing account was selected during
-  project creation; actual billing status has not been independently verified.
-  Do not activate/upgrade billing. The account already displayed a free trial.
-- Workbook: `1kG1QeLhYmiImPW4pMtEDIHI6I-dK1Ztig_77B8mGrPw`.
+- Chrome profile Richard; dedicated jobs account selected and verified.
+- Project `jobhunter-511923`; service account
+  `jobhunter-sheets-writer@jobhunter-511923.iam.gserviceaccount.com`, no project
+  IAM roles selected; Sheets API enabled. Workbook Restricted, owner plus writer
+  Editor only; notification off.
+- Workbook ID `1kG1QeLhYmiImPW4pMtEDIHI6I-dK1Ztig_77B8mGrPw`:
   https://docs.google.com/spreadsheets/d/1kG1QeLhYmiImPW4pMtEDIHI6I-dK1Ztig_77B8mGrPw/edit
-- Dedicated identity:
-  `jobhunter-sheets-writer@jobhunter-511923.iam.gserviceaccount.com`.
-  User confirmed Editor access only to this workbook, notifications off. UI
-  confirmed sharing. No application data/tabs/writes have been made.
-- User explicitly approved downloading its JSON key and later directed the agent
-  to use it. Agent privately opened only that approved file for direct copy/paste
-  into the protected secret field; no contents were printed or put in Git. Do not
-  inspect unrelated Downloads files, clipboard contents or environment dumps.
-- **User-approved key exception:** the key was disclosed in chat. User explicitly
-  accepted this and directed using it for this setup. Replacement was recommended
-  but is not a mandatory gate under that direction. Do not repeat key contents
-  in Git, logs, PRs or this handoff. The agent transferred the complete JSON
-  directly through native copy/paste without printing it, saved the GCP network
-  secret, and closed the editor. Never read the clipboard or local key for logs.
-- The preferred GCP secret type **exists**. Earlier disabled Add secret evidence
-  is superseded. Actual menu: Add secret → GCP access token (with Service Account
-  Key) → GCP service account key JSON. The key belongs in that field, **not**
-  Setup script. The approved secret is now saved; UI showed its restricted
-  host/workbook path with Replace/Delete controls, with no secret value shown.
-- The saved secret uses these non-secret restrictions: host `sheets.googleapis.com`; path prefix
-  `/v4/spreadsheets/1kG1QeLhYmiImPW4pMtEDIHI6I-dK1Ztig_77B8mGrPw`;
-  scope `https://www.googleapis.com/auth/spreadsheets`; Subject empty. Verify
-  non-secret saved status only while the secret field is closed.
-- Avoid printing/screenshotting secret contents. User expressly authorized the
-  agent to use this existing key for setup; direct private transfer is permitted.
-  Do not treat that as general authorization to publish or commit credentials.
-- Claude docs say the network proxy mints/injects tokens after requests leave
-  the VM; the key stays outside the VM. The current Python candidate uses
-  `gspread.Client(auth=AnonymousCredentials())`; read access succeeded. Write-path
-  compatibility must still be proven.
-- Non-secret config has been saved: `JOBHUNTER_GOOGLE_AUTH_MODE=network-secret` and
-  `JOBHUNTER_SPREADSHEET_ID` set to the ID above. Existing sessions may need a
-  fresh session for changed environment variables. Don't dump environment values.
-- Initial live test completed in actual JobHunterEnv at `0260388`: the helper
-  opened only this workbook and worksheets() returned `tab_count=1`, exit 0,
-  clean tree. Command output was expanded and inspected. No key/token or raw
-  response was printed. This proves read access only, not writer readiness.
-- If the preferred secret type proves incompatible, the user already approved
-  an in-memory credential-variable fallback, narrowly scoped to this workbook.
-  It is a fallback, not a reason to skip testing the preferred supported secret.
+- Saved JobHunterEnv GCP network secret, type “GCP access token (with Service
+  Account Key)”. Host sheets.googleapis.com; path prefix `/v4/spreadsheets/`
+  plus workbook ID; Sheets scope; Subject blank. Proxy injects token outside VM.
+  No key/token file/env value is needed in Python. Non-secret environment:
+  `JOBHUNTER_GOOGLE_AUTH_MODE=network-secret`, `JOBHUNTER_SPREADSHEET_ID=<ID above>`.
+- Initial actual cloud read succeeded at0260388. At229a97b isolated hidden
+  `_M0AuthProbe` (ID2026101801) atomic addSheet/updateCells and RAW literal
+  `=jobhunter_probe_literal` readback all passed. Tab retained. This is endpoint
+  compatibility only, not application recovery/locking proof. No real Jobs yet.
+- Key was disclosed in chat. User explicitly authorized continued use of this
+  specific dedicated key; rotation recommended, not a mandatory gate. Never copy
+  its value into Git/logs/PRs/handoff. Do not inspect the local key or clipboard.
+- Billing readback found JobHunter auto-linked to the existing free trial.
+  **User explicitly chose “Leave the existing trial link unchanged.”** The
+  disable-billing dialog was canceled and linkage rechecked. No billing setting
+  was changed or upgrade made. Do not unlink, upgrade or ask again.
 
-## Next implementation gates
+## Scope and attempt counters
 
-Follow `docs/superpowers/plans/2026-10-17-m0-sheet-writer.md` and the binding plan:
-
-1. Read access is proven; verify harmless RAW write/readback and the lock batch
-   endpoint before calling writer authentication ready. Implement safe Jobs upserts keyed by
-   Job ID, RAW writes, chunking, header/duplicate checks and readback. Preserve
-   Status, Notes, My rating and original Date found on existing rows. Sampling
-   records are not eligibility decisions.
-2. Journal normalized pending work in Sheet `_State` before mutation. Reconcile
-   ambiguous append outcomes by rereading IDs, never blind append retry. Add
-   Sources and Run Log evidence; no raw email/cookies in state.
-3. Enforce/prove one writer. Candidate: atomic Sheets batch adds hidden
-   `_JobHunterLock` with fixed unique sheet ID/title plus unique owner token cells
-   in the same batch. Owner-confirming read after ambiguous acquire; no stealing
-   or automatic expiration. Release once; don't retry ambiguous delete. Google
-   documents atomic batches and uniqueness failures, but contention safety is
-   an inference needing live overlap proof. It only serializes compliant clients;
-   manual deletion/tampering requires stopping all owners before recovery.
-4. Test stop-after-extraction, stop-after-write, write-success-but-timeout,
-   overlap, sorting between runs, multiple chunks, repeat sync/no duplicates,
-   user-column preservation and source failure. Use sanitized saved data for
-   repeated tests, not repeated live social collection.
-5. Complete real M0 source→Claude extraction→Python→Sheet→Run Log, restart/recovery
-   and a scheduled routine. Then integrate the remaining source groups, including
-   LinkedIn and X; don't quietly reduce V0 scope to Greenhouse/email.
-6. Deliver exact `docs/ROUTINE_PROMPT.md`, `docs/CLOUD_RUNBOOK.md`, source inventory,
-   verified 06:07 America/New_York schedule and separate day-7/day-14 follow-ups.
-   No routine or trial dates exist yet.
-
-## Scope, permission and counter reminders
-
-- No Cloudflare/new hosting work: user rejected that direction as outside scope.
-  No paid services, paid model API usage or billing activation.
-- LinkedIn and X remain V0. Dedicated accounts not verified as created. User logs
-  in locally and completes challenges; cookies go directly into JobHunterEnv.
-  Restore temporary cloud sessions; non-secret allowances/state in `_State`.
-  LI cookie-compatible MCP first if supported/pinned/configured, then read-only
-  Playwright. No `.mcp.json` server is configured. X twscrape needs stop-rule fixes.
-- Stop immediately on social challenge/429; no bypass or same-day retry. At most
-  one social attempt/day in America/New_York; LI <=5 searches/50 details, X <=10
-  queries/200 posts. Missing setup remains outstanding, never successful zero.
-- Preserve existing Claude Gmail connector. Only forwarded JobHunter-labeled job
-  alerts; no unrelated thread messages, security mail or broadened empty search.
-  Forwarding/label/connected identity remain unverified. One-time setup allowed;
-  operational Gmail writes are forbidden.
-- Read the full ATTEMPTS.md. Credential delivery/read access succeeded on attempt
-  **3/3** after GCP secrets became available. Persistent-state/concurrency and
-  social-auth remain at **2/3**; don't reset counters. GCP access attempt 1 is
-  resolved by the selected account. PR #6 is at review cycle 2/3 for the current
-  fixes; check its latest head/review/merge state before continuing.
-  PR #5 exhausted 3 cycles, then user authorized exactly one fourth cycle, now
-  completed/merged. That extension does not apply to new milestones.
-- New milestones have the normal three-cycle cap. Obtain a current opposite-agent
-  review; a green GitHub Claude review job may have skipped because of old
-  comments/draft state. Post actual review text and exact revision evidence.
-- Standing merge authorization exists after applicable tests/CI and latest Claude
-  review pass with actionable issues resolved. Never bypass branch protections or
-  merge unreviewed code. For Claude-authored changes obtain Codex review.
+- No new Cloudflare/hosting/account; user rejected that detour. No paid model API.
+- Credential delivery/read access succeeded at attempt3/3. Write-endpoint proof
+  succeeded at1/3. Persistent-state/concurrency and social-auth historical blockers
+  remain2/3; read ATTEMPTS.md before counting a new distinct attempt. Do not reset.
+- LinkedIn and X remain V0. Dedicated account/session setup is unverified. User
+  completes local challenges and supplies dedicated cookies directly in settings.
+  Cookie-compatible cloud MCP first if supported, then Playwright; no .mcp.json
+  server exists yet. X twscrape still needs stop-rule fixes. On challenge/429 stop
+  immediately, never bypass or retry that day. Daily source allowances in `_State`.
+- Preserve existing Claude Gmail connector, read only forwarded JobHunter-labeled
+  job alerts, never expand empty label to inbox/unrelated thread/security mail.
+  Forwarding/label/connected identity remain unverified. Routine makes no Gmail writes.
+- Unknown mutation recovery needs evidence that the server request has finished,
+  plus reconciliation and stopped writers. A timer or stopped client is insufficient.
+- Use cheaper models for bounded tasks; Astra helped the receipt-safety design.
+  Announce parallel agents and keep them read-only while one agent implements.
