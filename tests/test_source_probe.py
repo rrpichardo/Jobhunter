@@ -570,3 +570,15 @@ def test_keyed_sources_round_trip_through_sheets_sync(tmp_path, capsys, monkeypa
     assert len(backend.tables["Jobs"]) == 2  # header plus the one AI PM job
     assert sync(["--input", str(out), "--run-id", "keyed1"], store=backend) == 0
     assert len(backend.tables["Jobs"]) == 2 and len(backend.tables["Run Log"]) == 2
+
+
+def test_total_cap_is_shared_round_robin_across_sources():
+    from jobhunter.postings import Posting
+
+    def job(source, n):
+        return (Posting(f"{source}:{n}", source, "Co", "Product Manager, AI", "Remote", "Build AI.",
+                        f"https://example.com/{source}/{n}", "2026-10-18T00:00:00+00:00"), "")
+    items = [job("early", n) for n in range(3)] + [job("late", n) for n in range(2)]
+    order = [posting.job_id for posting, _ in probe.fair_order(items)]
+    assert order == ["early:0", "late:0", "early:1", "late:1", "early:2"]
+    assert probe.fair_order([]) == []

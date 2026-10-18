@@ -201,6 +201,24 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
                   candidates=len(candidates), selected=len(selected), coverage=coverage, attempts=attempts), selected, "ok" + skipped_note
 
 
+def fair_order(items):
+    """Round-robin (posting, note) pairs by source, keeping each source's own order.
+
+    The Sheet writer takes at most TOTAL_LIMIT jobs per run. Without this, sources early in the
+    registry fill the cap and later ones (for example the keyed APIs) never deliver anything.
+    """
+    queues = {}
+    for item in items:
+        queues.setdefault(item[0].source_id, []).append(item)
+    ordered, depth = [], 0
+    while len(ordered) < len(items):
+        for queue in queues.values():
+            if depth < len(queue):
+                ordered.append(queue[depth])
+        depth += 1
+    return ordered
+
+
 def entries(registry):
     for kind, boards in registry["boards"].items():
         for board in boards:
@@ -229,6 +247,7 @@ def run(registry, client, *, delay=1.0, sleep=time.sleep, environ=None,
         notes[item["id"]] = ("keys_missing:" + ",".join(missing) if missing else "setup_or_collector_pending")
     unique = dedupe(jobs)
     duplicates = len(jobs) - len(unique)
+    unique = fair_order(unique)  # the writer accepts at most TOTAL_LIMIT jobs; share them across sources
     rows, kept = [], {}
     for posting, note in unique:
         if len(rows) >= TOTAL_LIMIT:
