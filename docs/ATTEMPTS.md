@@ -384,3 +384,8 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
   longer creates `_State`, cell-count cap). Suite: 139 passed, 10 subtests.
   The new head still needs Codex review; no merge until it is obtained. The review
   counter stays at cycle 2 / 3 because these are self-review fixes, not a Codex cycle.
+
+- Codex completed its review of `d76caef` (cycle 2 / 3): one P2 finding, refuse to
+  quarantine completed runs; already fixed in `99b1154`. Cycle 3 / 3 (final) was then
+  requested from Codex for `99b1154`. No further cycle remains for this milestone
+  without a user decision. The earlier "never returned" note above is superseded.
