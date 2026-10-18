@@ -2,6 +2,15 @@
 
 ## October 18 broader collection and Gmail intake milestone
 
+- Cycle 5 Claude reviewed `07de188e9a6fa03b168b6c4658aa4f8600031ecf`,
+  confirmed prior repairs and found country-less city/department forms (Bogotá,
+  DC; Medellín, Antioquia; etc.) were still dropped or assigned US. Regressions
+  reproduced those plus missing-comma US alternatives, unknown alternative
+  places/mode-only alternatives and unrecognized standalone locations. Repairs
+  retain ambiguous cases as unresolved, with no claim of salary eligibility.
+  Latest full local suite: 540 tests / 10 subtests, diff check clean. Fresh
+  cycle-6 pushed-head Claude review and current CI are required before merge.
+
 - Cycle 4 Claude review of `38082751bb0deeb7eb15e577e91bfe1a12b36097`
   confirmed the earlier examples fixed but reproduced optional-department text
   swallowing a second US locality at additional separators, and Bogotá DC/CO

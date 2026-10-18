@@ -43,6 +43,9 @@ NON_US = re.compile(r"\b(south america|latin america|dominican republic|rep[uú]
 COUNTRY_CODE = re.compile(r",\s*[A-Z]{2},\s*([A-Z]{2})\b")
 LOCATION_US_CODE = re.compile(r",\s*(?:A[LKZR]|C[AOT]|DE|FL|GA|HI|I[ADLN]|K[SY]|LA|M[ADEINOST]|"
                               r"N[CDEHJMVY]|O[HKR]|PA|RI|S[CD]|T[NX]|UT|V[AT]|W[AIVY]|DC)\b")
+# Same state vocabulary without a comma requirement; case-sensitive so words
+# such as "or" and "in" are not mistaken for Oregon and Indiana.
+US_STATE_CODE_TOKEN = re.compile(r'\b' + LOCATION_US_CODE.pattern.removeprefix(r',\s*'))
 # Recheck state/ISO-code collisions in AMBIGUOUS_REGIONAL_CODES if this list changes.
 LATIN_AMERICA = re.compile(r'\b(south america|latin america|latam|colombia|dominican republic|rep[uú]blica dominicana|'
                            r'brazil|brasil|argentina|chile|peru|perú|ecuador|bolivia|uruguay|paraguay|venezuela|'
@@ -235,7 +238,7 @@ def collection_region(location: str, *, remote: bool = False) -> str | None:
                           ('Dominican Republic', 'DO')):
         location = re.sub(rf'\b{country},\s*{code}\b', country, location, flags=re.I)
     us_evidence = bool(EXPLICIT_US.search(location) or US_TERMS.search(location)
-                       or US_STATE_NAME.search(location) or LOCATION_US_CODE.search(location))
+                       or US_STATE_NAME.search(location) or US_STATE_CODE_TOKEN.search(location))
     if re.fullmatch(rf'\s*(?:{city}|santo domingo)\s*', location, re.I):
         return 'unresolved'  # city names alone do not establish the country
     if (re.search(r'\b(?:bogot[aá]|medell[ií]n)\b', location, re.I)
@@ -244,11 +247,26 @@ def collection_region(location: str, *, remote: bool = False) -> str | None:
     if LATIN_AMERICA.search(location):
         if us_evidence:
             return 'unresolved'  # mixed US/LATAM availability does not choose a work location
+        # A second place without a reliable country/state cannot establish the
+        # lower floor either. Strip only attached prefix/suffix work-mode labels:
+        # "Remote - Colombia" is one place; "Colombia or Remote" is ambiguous.
+        mode = r'(?:remote|hybrid|on[- ]?site|in[- ]?office)'
+        places = re.sub(rf'^\s*{mode}\s*[-/:]\s*|\s*[-/:]\s*{mode}\s*$', '', location, flags=re.I)
+        places = [part.strip(' ()-:.,') for part in re.split(
+            r'[|;/&·\n]+|\s+[-–—]\s+|\b(?:or|and|y|o)\b', places, flags=re.I)]
+        places = [part for part in places if part]
+        if len(places) > 1 and any(not LATIN_AMERICA.search(part) for part in places):
+            return 'unresolved'
         if remote or REMOTE_TERMS.search(location) or ONSITE_COUNTRIES.search(location):
             return 'LATAM'
         return None
+    if (re.search(r'\b(?:bogot[aá]|medell[ií]n|santo domingo)\b', location, re.I)
+            and not EXPLICIT_US.search(location)):
+        return 'unresolved'  # a city/department without a country is not a US location
     if not us_or_unknown(location):
-        return None
+        if NON_US.search(location) or any(code != 'US' for code in COUNTRY_CODE.findall(location)):
+            return None
+        return 'unresolved'  # unrecognized text is not proof of a foreign location
     if US_TERMS.search(location) or LOCATION_US_CODE.search(location):
         return 'US'
     return 'unresolved'

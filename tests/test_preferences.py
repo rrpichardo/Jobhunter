@@ -141,9 +141,29 @@ def test_locality_normalization_cannot_swallow_another_location(separator):
             assert p.collection_match(candidate), location
 
 
-@pytest.mark.parametrize('location', ['Medellín, Unknown Department, CO', 'Bogotá DC', 'Bogotá D.C.'])
+@pytest.mark.parametrize('location', ['Medellín, Unknown Department, CO', 'Bogotá DC', 'Bogotá D.C.',
+    'Bogotá, DC', 'Bogotá DC (Remote)', 'Bogotá, DC (Hybrid)',
+    'Bogotá, D.C. | Washington, DC', 'Bogotá, D.C.', 'Bogotá, D.C. (On-site)',
+    'Bogotá, Distrito Capital', 'Bogotá, Cundinamarca', 'Medellín, Antioquia'])
 def test_unverified_city_or_department_form_stays_unresolved(location):
     candidate = job(location=location, salary='USD 90,000 annually')
+    assert p.collection_match(candidate)
+    assert p.salary_preference(candidate)[0] == 'unresolved'
+
+
+@pytest.mark.parametrize('location', ['Colombia or Boulder CO', 'Colombia or Pittsburgh PA',
+    'Bogotá, Colombia - Boulder CO', 'LATAM/Houston TX', 'Colombia or boulder co',
+    'Boulder CO or Colombia', 'Colombia or Unclassified place', 'Remote - LATAM / Unclassified place',
+    'Colombia or Remote', 'Remote or Colombia', 'Colombia or (Remote)'])
+def test_alternative_places_need_resolution_even_without_us_city_comma(location):
+    candidate = job(location=location, salary='USD 90,000 annually')
+    assert p.collection_match(candidate)
+    assert p.salary_preference(candidate)[0] == 'unresolved'
+
+
+@pytest.mark.parametrize('location', ['Boulder CO', 'Unclassified place'])
+def test_unrecognized_location_is_unknown_not_confirmed_outside_scope(location):
+    candidate = job(location=location, salary='USD 150,000 annually')
     assert p.collection_match(candidate)
     assert p.salary_preference(candidate)[0] == 'unresolved'
 

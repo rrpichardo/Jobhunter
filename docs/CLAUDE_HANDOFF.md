@@ -2,6 +2,12 @@
 
 ## Latest continuation — broader alerts and salary preferences
 
+Latest cycle-5 repair keeps country-less city/department and unclassified places
+unresolved; alternative locations cannot use the lower floor when another place
+or mode-only option is unknown, including missing-comma US formats. Local suite
+passes 540/10. Fresh exact-head cycle-6 Claude review and CI are required before
+merge. User's continued PR16 repair authorization remains in force.
+
 Latest repair after cycle 4 restricts department normalization so it cannot
 consume a second locality and handles Bogotá DC/CO spellings. Unknown forms stay
 unresolved. Local suite passes 518/10; fresh exact-head cycle-5 Claude review and
