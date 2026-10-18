@@ -95,7 +95,9 @@ Repairs included in this checkpoint, still needing fresh independent review:
    interrupt before/after Jobs, recovery and independent-process overlap. Retain
    hidden fixture tabs if cleanup cannot be proved safe. Pace requests to avoid
    Sheets per-user quotas; fail closed on unknown mutations. Do not auto-unlock.
-5. In actual JobHunterEnv, write the already validated real posting, repeat its
+5. **Done October 18, 2026 with a fresh harvest (old data was lost): run `m0-real-001` and
+   its repeat passed; see V0_VERIFICATION.md. Scheduled M0 is still open.**
+   Original text: in actual JobHunterEnv, write the already validated real posting, repeat its
    unchanged run ID, and inspect Jobs/Run Log evidence. Expand actual command
    output; an agent summary alone is insufficient. Then prove scheduled M0.
 6. Continue full source groups, Gmail, LinkedIn/X, exact daily routine/runbook,
