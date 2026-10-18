@@ -1,5 +1,23 @@
 # Claude Code continuation handoff
 
+## Post-merge review follow-up — October 18, 2026
+
+An independent Codex review of merged main 36539f4 found three P2 source defects;
+see reviews/2026-10-18-codex-postmerge-review.md. The original automated writer
+cycle-3 review was usage-limited, and the later manual Codex report was not an
+approval of the final revision. The final pre-merge confirmations below are
+Claude reviews. The independent Codex report is explicitly post-merge.
+
+Codex is fixing the findings on codex/fix-postmerge-review. Remote evidence from
+Lever/WWR, durable discovery attribution/times and locally bound annual USD salary
+amounts have regressions; 330 tests and 10 subtests pass offline. Fresh pushed-head
+Claude review plus CI are required before the follow-up is merged. The user
+explicitly requires opposite-agent review only: Codex reviews Claude's changes,
+and Claude reviews Codex's changes. PR11 is Codex-authored; no Codex self-review
+is pending or required.
+The user's commit/merge/push authorization and unlimited repair-cycle direction
+remain in force. Runtime/source-history/setup and deployment gates remain open.
+
 ## Current integration checkpoint — October 18, 2026
 
 The user now explicitly directs "commit merge and push", superseding the earlier

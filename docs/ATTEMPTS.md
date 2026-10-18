@@ -1,5 +1,71 @@
 # Implementation attempt log
 
+## October 18 source cycle13 — Claude salary-modifier follow-up
+
+- Claude's exact5710dd3 review found no blocking issue but noted the concrete
+  "bonus up to" salary bypass and a benefits-included false exclusion. Four
+  regressions failed for capped bonus, sign-on bonus, target-bonus labels and a
+  qualifying salary with benefits included. Current-clause compensation labels
+  now distinguish those amounts without requiring the label to touch the figure.
+- Remote/provenance implementation is unchanged. Full locked suite: 330 tests
+  and 10 subtests passed; diff whitespace check passed. Only Claude is requested
+  to review these Codex-authored changes, per the user's exclusive review rule.
+  No same-agent approval gate is requested. CI/Claude review still precede merge.
+
+## October 18 review ownership clarified by the user
+
+- The user explicitly requires Codex to review Claude's changes and Claude to
+  review Codex's changes only. PR11 fixes are Codex-authored, so Claude is the only
+  reviewer required for this follow-up. No further Codex self-review is requested.
+- The earlier independent reports remain historical evidence. The planned
+  additional Codex review after 609a137 was not issued and does not consume a
+  delivered review cycle. Source cycle12 now tracks the latest Claude re-review;
+  no cycle13 Codex request is pending. CI and implementation tests remain required.
+
+## October 18 pre-merge salary re-review
+
+- Claude reviewed exact PR11 head19e9e77 and confirmed the original fixes, with
+  salary-format caveats. Independent Codex source cycle11 found two P2 salary
+  issues before merge: explicit dollar/a-year/parenthesized annual forms regressed,
+  and an explicitly annual-labelled bonus still qualified below-floor salary.
+  Full report: reviews/2026-10-18-codex-followup-review.md. No PR11 merge occurred.
+- Five additional regression cases failed before repair. Qualifying monetary
+  ranges now retain explicit dollar signs and annual-period notation, including
+  gross pay, while locally labelled bonuses/commissions/benefits cannot establish
+  the salary exception. A genuinely qualifying base salary still qualifies when
+  a separate bonus follows it. Preserved attribution/remote code is unchanged.
+- Full locked suite: 325 tests and 10 subtests passed. Source cycle12 tracks the
+  Claude re-review of the new exact head. An additional Codex review was planned,
+  then cancelled by the user's opposite-agent-only direction before it was issued.
+  Historical counts and the user's unlimited repair-cycle direction remain intact.
+  A pending request is not approval; CI and Claude review precede this merge.
+
+## October 18 independent Codex review after integration
+
+- The automated cycle-3 request for 99b1154 failed on a usage limit. A later
+  manual Codex review at 6a61f35 found bugs, but was not final-head approval and
+  its full report was retained outside the PR. Final pre-merge reports for #8–#10
+  were Claude reports. Do not describe the failed bot request as successful or a
+  post-merge review as satisfying a gate before merge.
+- An independent Codex reviewer in the app reviewed merged main
+  36539f47ee6c550c9cf5e2f521831a17ad13f16c and reproduced three P2 defects. Full
+  scope and evidence: reviews/2026-10-18-codex-postmerge-review.md. The old main
+  suite passed 304 tests/10 subtests; passing tests did not cover the defects.
+- The source counter previously recorded cycle 7. Additional events, retained
+  rather than reset: 8 = pushed-head Claude integration acknowledgement at
+  3f237dd; 9 = this independent post-merge Codex review; 10 = requested follow-up
+  Claude review; 11 = requested independent Codex follow-up review. The user had
+  explicitly authorized "do as many as needed". Pending requests are not approvals.
+- Codex is the implementation owner on codex/fix-postmerge-review. Failing-first
+  regressions reproduce dropped Lever/WWR remote evidence, erased same-harvest
+  attribution, benefits/bonus values qualifying below-floor annual pay and missing
+  precise discovery timestamps. Legacy dates remain dates; unknown historical
+  source times are not invented. Source times compare actual instants.
+- Full locked follow-up suite: 318 tests and 10 subtests passed. All three fixes
+  were initially assigned both reviews; the user's later clarification requires
+  Claude review only for these Codex-authored fixes, together with CI.
+  No live source calls, Google writes or deployment were performed.
+
 ## October 18 integration authorized
 
 - The user now directs "commit merge and push", superseding the earlier no-push

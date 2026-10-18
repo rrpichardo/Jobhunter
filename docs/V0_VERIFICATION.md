@@ -1,12 +1,21 @@
 # V0 verification evidence
 
+## Post-merge Codex review scope
+
+The original automated writer cycle-3 request failed due a usage limit. A manual
+Codex review later found defects at 6a61f35; it was not approval of the final head.
+An independent app-based Codex review after the merges found three P2 defects at
+36539f4. Its report is in reviews/2026-10-18-codex-postmerge-review.md. The follow-up
+fixes have new regressions and need fresh exact-head review/CI. This chronology
+must not be represented as a completed pre-merge Codex bot review.
+
 ## Current local repair scope — not new cloud evidence
 
 The historical cloud runs below prove only the revisions they name. Review repairs
 were developed under a local-only restriction. The user has now authorized their
 push and integration; they have not been exercised against live sources/Google
 Sheets. Integration does not extend the historical cloud evidence.
-The current local full suite passes 304 tests and 10 subtests; this is offline
+The current local full suite passes 330 tests and 10 subtests; this is offline
 evidence, not a Claude reviewer test run or deployment proof.
 
 Identity policy after review: merge verified ATS requisitions and matching explicit

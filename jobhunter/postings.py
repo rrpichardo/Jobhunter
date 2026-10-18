@@ -135,11 +135,36 @@ def regional_salary_match(salary: str) -> bool:
             or re.search(r'\b(COP|DOP|CAD|AUD|MXN|EUR|GBP|hour|hourly|month|monthly|week|weekly|day|daily|'
                          r'OTE|total compensation|equity)\b|RD\$|R\$', salary, re.I)):
         return False
+    # Only amounts attached to currency are pay; benefits such as 401k are not.
+    amount = r'\$?\s*(?<![\w.])\d[\d,]*(?:\.\d+)?\s*[kK]?(?!\w|\.\d)'
+    pay_range = rf'{amount}(?:\s*[-–—]\s*{amount})?'
     amounts = []
-    for number, scale in re.findall(r'(?<![\w.])(\d[\d,]*(?:\.\d+)?)\s*([kK]?)(?!\w|\.\d)', usd.sub(' ', salary)):
-        value = float(number.replace(',', '')) * (1000 if scale else 1)
-        if math.isfinite(value):
-            amounts.append(value)
+    for match in re.finditer(rf'(?:\bUSD\b|US\$)\s*({pay_range})|({pay_range})\s*(?:\bUSD\b|US\$)',
+                             salary, re.I):
+        before, after = salary[:match.start()], salary[match.end():]
+        period = r'(?:year|yearly|annual|annually|annum|yr)\b'
+        annual_after = re.match(rf'\s*(?:(?:gross|base)\s+)?(?:(?:per|a)\s+|/\s*)?'
+                                rf'(?:{period}|\(\s*{period}\s*\))', after, re.I)
+        annual_before = re.search(r'\b(?:annual|annually|yearly)(?:\s+(?:base|salary|pay|range))*\s*:?\s*$',
+                                  before, re.I)
+        if not (annual_after or annual_before):
+            continue  # another currency figure elsewhere is not evidence of annual pay
+        non_salary = r'(?:bonus|commission|benefits?|allowance|reimbursement)'
+        # Use the current compensation clause, keeping decimal/thousands separators intact.
+        context = re.split(r'[;+\n]|(?<!\d)[,.]|[,.](?!\d)', before)[-1]
+        labels = re.findall(rf'\b(?:{non_salary}|salary|base)\b', context, re.I)
+        labelled_before = labels and labels[-1].casefold() not in {'salary', 'base'}
+        non_salary_after = r'(?:bonus|commission|allowance|reimbursement|benefits?\b(?!\s+(?:included|available|offered)\b))'
+        labelled_after = annual_after and re.match(
+            rf'\s*(?:(?:performance|cash|target|guaranteed|retention|sign(?:ing|[- ]on)|discretionary|in)\s+)*'
+            rf'{non_salary_after}\b', after[annual_after.end():], re.I)
+        if labelled_before or labelled_after:
+            continue
+        pay = match.group(1) or match.group(2)
+        for number, scale in re.findall(r'(\d[\d,]*(?:\.\d+)?)\s*([kK]?)', pay):
+            value = float(number.replace(',', '')) * (1000 if scale else 1)
+            if math.isfinite(value):
+                amounts.append(value)
     return bool(amounts and max(amounts) >= MIN_REGIONAL_ANNUAL_USD)
 
 
@@ -220,7 +245,8 @@ def parse_lever(data, ctx):
         text = " ".join(section for section in sections if section)
         return Posting(f"lever:{ctx['board']}:{item['id']}", ctx["source_id"], ctx["company"],
                        plain(item.get("text")), plain(categories.get("location") or ""),
-                       text, item.get("hostedUrl"), ctx["captured_at"], tag=ctx["tag"])
+                       text, item.get("hostedUrl"), ctx["captured_at"], tag=ctx["tag"],
+                       remote=plain(item.get('workplaceType')).casefold() == 'remote')
     return (*_collect(data, build), len(data))
 
 
@@ -319,7 +345,8 @@ def parse_wwr_rss(text, ctx):
         company, _, role = title.partition(": ")
         return Posting(f"wwr:{_digest(entry['link'])}", ctx["source_id"], company if role else "Unknown",
                        role or title, plain(entry.get("region")) or "Remote",
-                       clean_html(entry.get("summary")), entry.get("link"), ctx["captured_at"], tag="other")
+                       clean_html(entry.get("summary")), entry.get("link"), ctx["captured_at"],
+                       tag="other", remote=True)  # WWR's feed contains remote jobs only
     return (*_collect(feed.entries, build), len(feed.entries))
 
 
@@ -485,8 +512,12 @@ def dedupe(postings):
         if (verified_requisition(key) and key in by_key
                 and by_key[key]["posting"].source_id != posting.source_id):
             by_key[key]["also"].append(posting.source_id)
+            seen = by_key[key]['seen']
+            seen[posting.source_id] = min(seen.get(posting.source_id, posting.captured_at),
+                                          posting.captured_at)
             continue
-        entry = {"posting": posting, "also": [], "similar": by_similar.get(_similar(posting)),
+        entry = {"posting": posting, "also": [], 'seen': {},
+                 "similar": by_similar.get(_similar(posting)),
                  'shared': by_key[key]['posting'].job_id if not verified_requisition(key) and key in by_key else None}
         by_key.setdefault(key, entry)
         by_similar.setdefault(_similar(posting), posting.job_id)
@@ -496,6 +527,7 @@ def dedupe(postings):
         parts = []
         if entry["also"]:
             parts.append("Also listed by: " + ", ".join(sorted(set(entry["also"]))))
+            parts.extend(f'First seen by {source}: {stamp}' for source, stamp in sorted(entry['seen'].items()))
         if entry['shared']:
             parts.append(f"Possible duplicate of {entry['shared']} (shared application link; requisition identity unverified; needs review)")
         elif entry["similar"]:
@@ -508,7 +540,8 @@ def to_row(posting: Posting, note: str = "") -> dict:
     """Deterministic Jobs row; the description is an exact leading excerpt of source text."""
     quote = posting.text[:300].rstrip()
     rank = {"ai": 1, "bigtech": 2, "other": 3}[posting.tag]
-    details = f"Source: {posting.apply_url}\nEvidence: {quote}" + (f"\n{note}" if note else "")
+    details = (f"Source: {posting.apply_url}\nEvidence: {quote}"
+               f"\nFirst seen by {posting.source_id}: {posting.captured_at}" + (f"\n{note}" if note else ""))
     if posting.remote:
         details += '\nWork mode: Remote (source metadata)'
     return {"Job ID": posting.job_id, "Date found": posting.captured_at[:10],

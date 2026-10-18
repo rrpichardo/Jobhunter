@@ -1,6 +1,8 @@
 # Reciprocal coding-agent review
 
 Codex builds → Claude Code reviews. Claude Code builds → Codex reviews.
+The user requires opposite-agent review only. Do not request the implementation
+agent to review its own fixes or add that approval as another merge gate.
 Only one implementation owner edits at a time; a reviewer reads and reports.
 Read AGENTS.md and PLAN.md before review. Record the full reviewed commit SHA,
 concrete findings, test evidence, and remaining cloud gaps on the PR. Re-review

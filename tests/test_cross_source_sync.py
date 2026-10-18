@@ -114,3 +114,63 @@ def test_custom_greenhouse_requisition_reconciles_across_runs():
     deliver(store, [row('himalayas:2', 'himalayas', 'https://example.com/careers?gh_jid=111')], 'second')
     assert len(store.tables['Jobs']) == 2
     assert store.tables['Jobs'][1][0] == 'remotive:1'
+
+
+def test_same_batch_discovery_attribution_survives_later_direct_only_syncs():
+    from jobhunter.postings import dedupe
+    direct = Posting('greenhouse:acme:123', 'greenhouse:acme', 'Acme', 'Product Manager, AI',
+                     'United States', 'Build AI products.', URL, STAMP)
+    other = Posting('remotive:9', 'remotive', 'Acme', direct.title, direct.location,
+                    direct.text, URL, STAMP)
+    store = MemoryStore()
+    deliver(store, [to_row(*item) for item in dedupe([direct, other])], 'both')
+    headers, values = store.tables['Jobs']
+    initial = values[headers.index('More details')]
+    assert f'First seen by greenhouse:acme: {STAMP}' in initial
+    assert f'First seen by remotive: {STAMP}' in initial
+    for name, value in [('Status', 'Applied'), ('Notes', 'Keep this note'), ('My rating', '5')]:
+        values[headers.index(name)] = value
+    deliver(store, [to_row(direct)], 'direct-only')
+    details = store.tables['Jobs'][1][headers.index('More details')]
+    assert 'Also listed by: remotive' in details
+    from dataclasses import replace
+    third = replace(other, job_id='himalayas:2', source_id='himalayas')
+    incoming = [to_row(*item) for item in dedupe([direct, third])]
+    deliver(store, incoming, 'third-source')
+    expected = store.tables['Jobs'][1][headers.index('More details')]
+    assert 'Also listed by: himalayas, remotive' in expected
+    assert expected.count('Also listed by:') == 1
+    for source in ('greenhouse:acme', 'remotive', 'himalayas'):
+        assert expected.count(f'First seen by {source}: {STAMP}') == 1
+    deliver(store, incoming, 'third-source-repeat')
+    assert store.tables['Jobs'][1][headers.index('More details')] == expected
+    assert len(store.tables['Jobs']) == 2
+    result = dict(zip(headers, store.tables['Jobs'][1]))
+    assert (result['Status'], result['Notes'], result['My rating']) == ('Applied', 'Keep this note', '5')
+
+
+def test_legacy_same_batch_attribution_is_retained_without_inventing_its_time():
+    from jobhunter.sheet_records import JOB_HEADERS
+    store = MemoryStore()
+    old = row('greenhouse:acme:123', 'greenhouse:acme')
+    old['More details'] = 'Source: ' + URL + '\nAlso listed by: remotive'
+    store.tables['Jobs'] = [list(JOB_HEADERS), [old[h] for h in JOB_HEADERS]]
+    deliver(store, [row('greenhouse:acme:123', 'greenhouse:acme')], 'legacy')
+    details = store.tables['Jobs'][1][JOB_HEADERS.index('More details')]
+    assert 'Also listed by: remotive' in details
+    assert 'First seen by remotive:' not in details  # historical time was not retained
+
+
+def test_discovery_times_are_ordered_by_instant_and_not_timezone_text():
+    from dataclasses import replace
+    direct = Posting('greenhouse:acme:123', 'greenhouse:acme', 'Acme', 'Product Manager, AI',
+                     'United States', 'Build AI products.', URL, '2026-10-18T09:00:00+00:00')
+    store = MemoryStore()
+    deliver(store, [to_row(direct)], 'first-instant')
+    earlier = replace(direct, captured_at='2026-10-18T10:30:00+02:00')
+    deliver(store, [to_row(earlier)], 'earlier-instant')
+    headers = store.tables['Jobs'][0]
+    details = store.tables['Jobs'][1][headers.index('More details')]
+    assert 'First seen by greenhouse:acme: 2026-10-18T10:30:00+02:00' in details
+    deliver(store, [to_row(direct)], 'later-instant')
+    assert store.tables['Jobs'][1][headers.index('More details')] == details

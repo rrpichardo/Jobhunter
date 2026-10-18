@@ -58,8 +58,11 @@ probe results as historical evidence, not proof the current environment works.
 - One active implementation owner at a time. Work on a feature branch; use the
   `codex/` prefix for Codex work and `claude/` for Claude work. Preserve others'
   uncommitted changes. Coordinate handoffs through commits and PRs.
-- Reciprocal review is required: Codex-authored changes receive Claude Code
-  review; Claude-authored changes receive Codex review. Before requesting review,
+- Reciprocal review is required and belongs to the opposite agent only:
+  Codex-authored changes receive Claude Code review; Claude-authored changes
+  receive Codex review. Do not request a same-agent code-review approval or add
+  it as another merge gate. Implementation tests and debugging still belong to
+  the implementation owner. Before requesting review,
   push the revision and record its full SHA. Follow `docs/REVIEW_WORKFLOW.md`.
   Missing access, a skipped job, or an unanswered request is not approval.
 - Open a PR for implementation changes. Have the other coding agent review the
