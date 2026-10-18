@@ -322,3 +322,10 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
 - `uv run --locked python -m pytest -q`: 107 tests/10 subtests passed locally;
   diff whitespace check passed. Application writer live proof and fresh Claude
   review remain outstanding; no milestone completion or deployment claim.
+
+### M0 writer review/repair cycle 1 / 3
+
+- First whole-change Claude Code review is being requested for the writer branch.
+  It must cover the current committed head, not just the connection checkpoint.
+  No existing review covers the new journal/lock/writer. Record findings and
+  preserve this counter across handoffs; no review success is assumed in advance.

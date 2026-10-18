@@ -181,3 +181,14 @@ Follow `docs/superpowers/plans/2026-10-17-m0-sheet-writer.md` and the binding pl
 - Standing merge authorization exists after applicable tests/CI and latest Claude
   review pass with actionable issues resolved. Never bypass branch protections or
   merge unreviewed code. For Claude-authored changes obtain Codex review.
+
+## Active writer implementation checkpoint
+
+The user chose to continue with Codex. PR #6 is merged at fa899c3; the active branch
+is codex/m0-sheet-sync. The initial writer commit is 25b62e7 (later bookkeeping and
+review fixes may follow). Do not recreate these modules: sheet_records, sheet_io,
+sheet_lock, sheet_journal, sheets and scripts/sheets_sync now exist. The full local
+suite passes 107 tests/10 subtests. See M0_WRITER_RUNBOOK.md and the updated writer
+execution plan. The first current-head Claude review is cycle 1/3; live application
+write/recovery/overlap checks remain outstanding. Endpoint-only proof is not that
+application proof. Resume at review findings and cloud verification, not from zero.
