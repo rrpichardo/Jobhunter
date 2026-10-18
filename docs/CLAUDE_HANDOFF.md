@@ -1,5 +1,18 @@
 # Claude Code continuation handoff
 
+## Latest continuation — PR review and operator checklist
+
+- PLAN.md now records the unresolved user setup/decision list, including enabling
+  dedicated-account alerts and later cleanup of old main-account subscriptions.
+  Forwarding registration is verified, but fresh alert delivery/cloud Gmail access
+  are not. Historical LinkedIn/TrueUp/Glassdoor alert metadata was inspected only
+  under the user's explicit setup permission; it does not broaden routine scope.
+- Claude reviewed `341560c` for PR #15 and confirmed the stale-head fix, but found
+  an old usage-limit reply still ended automatic-review waits without a new human
+  request. A regression failed before repair; fresh suite: 386 tests / 10 subtests.
+  The new repair requires pushed-head Claude review and CI. The old head's green
+  checks do not approve the repair. See ATTEMPTS.md cycle 2; do not reset counters.
+
 ## Codex continuation checkpoint — October 18, 2026
 
 - PR #13 is merged. Another process merged PR #14 at `6c29058` while Codex was

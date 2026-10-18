@@ -54,13 +54,13 @@ while :; do
     if [ "$(jq -r .has_unresolved_findings <<<"$state")" = true ]; then echo "CODEX_FINDINGS $short"; findings; exit 1; fi
     clean
   fi
-  # 3. Only a usage-limit reply after the latest human review request counts.
-  # With no request timestamp available, only consider replies since this wait began.
+  # 3. Only new usage-limit replies count: automatic reviews may have no new
+  # human request. Historical replies cannot terminate a freshly started wait.
   if echo "$comment_data" | jq -e --arg b "$bot" --arg start "$started" '
     ([.comments[] | select(.author.login != $b)
       | select(.body | test("@codex[[:space:]]+review"; "i"))
-      | .createdAt] | max // $start) as $since
-    | [.comments[] | select(.author.login == $b and .createdAt >= $since)]
+      | .createdAt] + [$start] | max) as $since
+    | [.comments[] | select(.author.login == $b and .createdAt > $since)]
     | sort_by(.createdAt) | last | .body // "" | test("usage limit"; "i")' >/dev/null; then
     echo "CODEX_USAGE_LIMIT $short"; exit 2
   fi

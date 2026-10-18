@@ -1,5 +1,20 @@
 # JobHunter implementation setup
 
+## October 18 forwarding verified; dedicated alerts still pending
+
+- Forwarding destination verification is now complete in the Gmail settings UI.
+  Global forwarding remains disabled. The destination `JobHunter` label exists.
+- User confirmed dedicated-account email job alerts have not yet been enabled
+  and requests setup assistance. Enable and test these before claiming Gmail
+  collection works. Historical main-account alert sender/subject examples were
+  inspected under explicit setup-only authorization; no bodies or unrelated mail
+  were requested, and no cleanup/unsubscribe was performed. Historical metadata
+  is not evidence of fresh forwarding or current source coverage.
+- Configure conservative alert-only starter filters from verified sender/subject
+  patterns, then test a fresh dedicated-account alert through destination labeling
+  and cloud collection. Old main-account subscriptions/messages are a separate,
+  deferred user-assisted cleanup. See PLAN.md's current operator checklist.
+
 ## October 18 continuation — Gmail setup in progress
 
 - User confirmed the existing Claude-connected Gmail is the intended forwarding

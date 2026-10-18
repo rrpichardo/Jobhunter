@@ -70,11 +70,26 @@ def test_old_usage_limit_does_not_end_new_request(tmp_path):
     result = run_watcher(tmp_path, [comment(BOT, "usage limit reached"),
         comment("owner", "@codex review", "2026-01-02T00:00:00Z")])
     assert result.returncode == 3, result.stdout + result.stderr
+    assert "CODEX_TIMEOUT" in result.stdout
+
+
+def test_old_usage_limit_does_not_end_automatic_review_wait(tmp_path):
+    # An automatic review on a new head need not add a human request comment.
+    result = run_watcher(tmp_path, [comment("owner", "@codex review"),
+        comment(BOT, "usage limit reached", "2026-01-02T00:00:00Z")])
+    assert result.returncode == 3, result.stdout + result.stderr
+    assert "CODEX_TIMEOUT" in result.stdout
+
+
+def test_old_usage_limit_without_request_is_ignored(tmp_path):
+    result = run_watcher(tmp_path, [comment(BOT, "usage limit reached")])
+    assert result.returncode == 3, result.stdout + result.stderr
+    assert "CODEX_TIMEOUT" in result.stdout
 
 
 def test_current_usage_limit_is_reported(tmp_path):
     result = run_watcher(tmp_path, [comment("owner", "@codex review"),
-        comment(BOT, "usage limit reached", "2026-01-02T00:00:00Z")])
+        comment(BOT, "usage limit reached", "2999-01-02T00:00:00Z")])
     assert result.returncode == 2, result.stdout + result.stderr
 
 

@@ -1,5 +1,23 @@
 # Implementation attempt log
 
+## October 18 PR #15 watcher — review/repair cycle 2
+
+- After the reported session-limit reset, Claude CLI reviewed exact head
+  `341560c2f8af5ba2a34e779329d20f6d216df8e0`. It confirmed the stale-head fix
+  and found an actionable remaining old-limit case: automatic review for a new
+  commit need not create a new human request. An old request then kept the old
+  usage-limit reply inside the script's time window. No reviewer suite execution
+  is claimed; Claude inspected the diff and exercised jq expressions.
+- A regression reproduced exit 2 for that earlier-round reply before repair.
+  The window now starts no earlier than the watcher start, even with an old human
+  request. Historical replies and same-second timestamp ambiguity are ignored;
+  completed exact-head review receipts are still recognized. Seven focused tests
+  and the full 386-test / 10-subtest suite pass. Bash syntax and diff checks pass.
+- The prior head's Linux/Windows CI and rerun Claude action are green, but do not
+  cover this repair. Push the new revision and obtain fresh Claude review and CI.
+  Cycle counters carry forward: the next fresh review is cycle 3 / 3 for this
+  watcher milestone. A further repair/review cycle requires user authorization.
+
 ## October 18 PR #14 watcher — review/repair cycle 1
 
 - Codex reviewed Claude head `5cf687c1e3cfde90def9eab9f2cd2f74f8b3b633`:
