@@ -20,7 +20,8 @@ from urllib.parse import quote
 import httpx
 import yaml
 
-from jobhunter.artifacts import safe_error_code, write_artifact
+from jobhunter.artifacts import read_artifact, safe_error_code, write_artifact
+from jobhunter.hn_hiring import postings_from_result
 from jobhunter.postings import (AI_TERMS, DETAIL_SOURCES, LISTING_ONLY, PARSERS, Posting, collection_match,
                                 collection_stub_match, collection_priority, collection_title_priority,
                                 dedupe, role_family, to_row, within_lookback)
@@ -255,12 +256,14 @@ def entries(registry):
         yield from registry.get(group, [])
 
 
-def run(registry, client, *, delay=1.0, sleep=time.sleep, environ=None, gmail_result=None,
+def run(registry, client, *, delay=1.0, sleep=time.sleep, environ=None, gmail_result=None, hn_result=None,
         now=lambda: datetime.now(timezone.utc).isoformat(), lookback_days=LOOKBACK_DAYS):
     environ = os.environ if environ is None else environ
     stamp = now()
     sources, jobs, notes = [], [], {}
     for entry in entries(registry):
+        if hn_result is not None and entry['id'] == hn_result['source']['source_id']:
+            continue  # the validated comment extraction replaces the listing-only count
         record_, selected, note = probe_source(client, entry, stamp, delay=delay, sleep=sleep,
                                                     environ=environ, lookback_days=lookback_days)
         notes[entry["id"]] = note
@@ -268,6 +271,10 @@ def run(registry, client, *, delay=1.0, sleep=time.sleep, environ=None, gmail_re
             sources.append(record_)
             jobs.extend(selected)
         sleep(delay)
+    if hn_result is not None:
+        sources.append(hn_result['source'])
+        jobs.extend(hn_result['postings'])
+        notes[hn_result['source']['source_id']] = hn_result['source']['error'] or 'comments-in-window'
     if gmail_result is not None:
         sources.append(gmail_result['source'])
         jobs.extend(gmail_result['postings'])
@@ -313,6 +320,8 @@ def main(argv=None, *, client=None, sleep=time.sleep) -> int:
     parser.add_argument("--delay", type=float, default=1.0, help="seconds between requests")
     parser.add_argument("--lookback-days", type=int, default=LOOKBACK_DAYS,
                         help="keep postings dated inside this many days (first run = backfill); undated are kept")
+    parser.add_argument("--hn-result", help="validated Hacker News result from scripts.hn_hiring validate")
+    parser.add_argument("--hn-result-sha256", help="digest printed when that result was written")
     args = parser.parse_args(argv)
     owned = client is None
     client = client or httpx.Client()
@@ -320,7 +329,12 @@ def main(argv=None, *, client=None, sleep=time.sleep) -> int:
         registry = yaml.safe_load(Path(args.config).read_text(encoding="utf-8"))
         if not 1 <= args.lookback_days <= 365:
             raise ValueError('invalid_lookback_days')
-        payload = run(registry, client, delay=args.delay, sleep=sleep, lookback_days=args.lookback_days)
+        hn_result = None
+        if args.hn_result:
+            source, found = postings_from_result(read_artifact(args.hn_result, expected_sha256=args.hn_result_sha256))
+            hn_result = {'source': source, 'postings': found}
+        payload = run(registry, client, delay=args.delay, sleep=sleep, lookback_days=args.lookback_days,
+                      hn_result=hn_result)
         print(summary(payload))
         failed = sum(s["status"] in {"failed", "blocked"} for s in payload["sources"])
         digest = write_artifact(args.output, payload)

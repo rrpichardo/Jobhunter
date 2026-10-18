@@ -18,8 +18,11 @@ Read the full PLAN.md and registry, not only this shortened inventory:
 - Public boards: Remotive, Remote OK, Himalayas, Jobicy, The Muse, WWR, Built In.
 - YC public Product Manager jobs AND separate logged-in Work at a Startup.
 - VC boards: Accel/Primary Getro, a16z and other planned portfolio/discovery paths.
-- Hacker News Who Is Hiring; current registry only retrieves thread listings,
-  not complete hiring-comment extraction/delivery. That integration is unfinished.
+- Hacker News Who Is Hiring; main's registry only retrieves thread listings. Branch
+  `claude/hn-hiring-comments` adds `scripts.hn_hiring candidates` (public fetch and
+  filter), a Claude extraction step, `validate`, and `source_probe --hn-result`.
+  The routine prompt that runs the extraction step does not exist yet, so HN is
+  built but not scheduled or proven in the cloud.
 - a16z is also listing-only in the current registry; do not claim it delivers jobs.
 - Approved newsletters/RSS and forwarded job alerts: Next Play, Ali Rohde,
   LinkedIn/TrueUp/Indeed/Glassdoor and other plan-approved senders; current Gmail

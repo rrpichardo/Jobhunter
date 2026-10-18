@@ -29,7 +29,7 @@ development evidence only: retest in JobHunterEnv before relying on a row.
 | Built In | detail page JSON-LD `datePosted` | none | Listing has no date, so every shortlisted page is opened (up to the 300 safety stop) |
 | Getro (Accel, Primary) | `createdAt` on the listing is a guess | none | Unverified; same as YC |
 | a16z | none | none | Listing-only, delivers no jobs yet |
-| Hacker News Who Is Hiring | comment `created_at` | thread per month | Listing-only today. Backfill = the current thread, plus last month's if it is inside 28 days (not built) |
+| Hacker News Who Is Hiring | comment `created_at_i` (checked) | thread per month | Built on branch `claude/hn-hiring-comments`: reads the current thread plus last month's, keeps top-level comments inside the window that mention a collected role. Checked once on the public API October 18: 2 threads, 516 top-level comments, 266 in window, 28 candidates. The Claude extraction step is not yet in a routine prompt |
 | Gmail alerts | message date | Gmail `newer_than:28d` (planned) | Live adapter not built |
 | LinkedIn jobs / posts | page filters "Past month" | yes, in the search | Collector not built |
 | X hiring posts | post date | yes: `since:` search operator | Collector not built |
