@@ -2,6 +2,13 @@
 
 ## October 18 broader collection and Gmail intake milestone
 
+- Cycle 2 Claude review of `67ca7f8fa9710fbf877a8cb28e85b1fd826dd990`
+  confirmed earlier repairs but found LinkedIn `/comm/` email URLs, mixed US
+  city/LATAM locations, Colombian department/work-mode suffixes and detail-fetch
+  shortlist ordering still needed repairs. All four reproduced in failing tests;
+  repaired suite: 486 tests and 10 subtests passed, diff check clean. Fresh
+  cycle 3/3 is required on the pushed repair; do not merge an unreviewed repair.
+
 - Cycle 1 Claude review of pushed `4d429652e72f4bc50482987222e375eed283bdf4`
   found repeat-email identity, Colombian geography, unresolved low salary,
   partial-error caps, cross-card evidence, capped role ordering and Next step
@@ -37,8 +44,8 @@
 - Gmail forwarding-checkbox blocker remains 3/3. Next: receive a real alert,
   confirm precise metadata rules, user manually completes forwarding action,
   then verify fresh label-scoped message extraction and Sheet delivery in cloud.
-- Fresh repair verification: 475 tests and 10 subtests passed; diff check passed.
-  Cycle 1 is consumed; fresh cycle 2/3 is required on the pushed repair revision.
+- Earlier repair verification: 475 tests and 10 subtests passed; diff check passed.
+  Cycle 2 is consumed; fresh cycle 3/3 is required on the pushed repair revision.
   Passing local tests do not establish current CI/review or cloud proof.
 
 ## October 18 PR #15 cycle 3 result — further work authorized

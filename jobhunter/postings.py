@@ -221,20 +221,25 @@ def role_family(title: str) -> str | None:
 
 def collection_region(location: str, *, remote: bool = False) -> str | None:
     """US / LATAM / unresolved; None means explicitly outside collection scope."""
-    if re.fullmatch(r'\s*(?:(?:bogot[aá]|medell[ií]n),\s*CO|santo domingo,\s*DO)\s*', location, re.I):
+    us_evidence = bool(EXPLICIT_US.search(location) or US_TERMS.search(location)
+        or US_STATE_NAME.search(location)
+        or any(match.group().lstrip(', ').strip() not in AMBIGUOUS_REGIONAL_CODES
+               for match in LOCATION_US_CODE.finditer(location)))
+    city = r'(?:bogot[aá]|medell[ií]n)'
+    mode = r'(?:remote|hybrid|on[- ]?site|in[- ]?office)'
+    suffix = rf'\s*(?:\(\s*{mode}\s*\)|[-/,]?\s*{mode})?\s*'
+    country_city = rf'\s*(?:{city}(?:,\s*[^,;()]+)?,\s*CO|santo domingo,\s*DO){suffix}'
+    if re.fullmatch(country_city, location, re.I):
+        if us_evidence:
+            return 'unresolved'
         return 'LATAM'
+    if re.match(rf'\s*{city}\b', location, re.I) and re.search(r',\s*CO\b', location, re.I):
+        return 'unresolved'  # uncertain CO suffix never silently establishes Colorado
     if re.fullmatch(r'\s*(?:bogot[aá]|medell[ií]n|santo domingo)\s*', location, re.I):
         return 'unresolved'  # city names alone do not establish the country
     if LATIN_AMERICA.search(location):
-        us_state = any(US_LOCATION_SUFFIX.fullmatch(location[match.end():])
-                       and match.group().lstrip(', ').strip() not in AMBIGUOUS_REGIONAL_CODES
-                       for match in LOCATION_US_CODE.finditer(location))
-        us_state = us_state or any(US_LOCATION_SUFFIX.fullmatch(location[match.end():])
-                                  for match in US_STATE_NAME.finditer(location))
-        if EXPLICIT_US.search(location):
+        if us_evidence:
             return 'unresolved'  # mixed US/LATAM availability does not choose a work location
-        if us_state:
-            return 'US'
         if remote or REMOTE_TERMS.search(location) or ONSITE_COUNTRIES.search(location):
             return 'LATAM'
         return None
@@ -272,13 +277,18 @@ def collection_match(posting: Posting) -> bool:
                 and salary_preference(posting)[0] != 'below floor')
 
 
-def collection_priority(posting: Posting) -> int:
-    """Apply the plan's role ordering before a capped source selects candidates."""
-    family = role_family(posting.title)
+def collection_title_priority(title: str, tag: str = 'other', text: str = '') -> int:
+    """Available listing evidence orders roles before spending detail-fetch slots."""
+    family = role_family(title)
     if family == 'Product management':
-        ai_role = bool(AI_TERMS.search(posting.title + ' ' + posting.text))
-        return (0 if ai_role else 3) + {'ai': 0, 'bigtech': 1, 'other': 2}[posting.tag]
+        ai_role = bool(AI_TERMS.search(title + ' ' + text))
+        return (0 if ai_role else 3) + {'ai': 0, 'bigtech': 1, 'other': 2}[tag]
     return next((6 + index for index, (name, _) in enumerate(ROLE_FAMILIES[1:]) if name == family), 99)
+
+
+def collection_priority(posting: Posting) -> int:
+    """Apply the same role ordering to fully fetched posting candidates."""
+    return collection_title_priority(posting.title, posting.tag, posting.text)
 
 
 

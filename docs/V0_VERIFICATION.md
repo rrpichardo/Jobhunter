@@ -2,6 +2,12 @@
 
 ## October 18 Gmail connector readiness and broader collection candidate
 
+Latest local review repairs pass 486 tests and 10 subtests, with a clean diff
+check. Actual JobHunterEnv locked tests passed 475/10 on `67ca7f8`, with exit 0,
+full SHA confirmed and clean tree; this predates the latest cycle-2 repairs.
+Exact-SHA evidence is in PR16 comments. Fresh current-head Claude review and CI
+remain required; no production Gmail adapter or scheduled delivery is verified.
+
 Actual Claude cloud session:
 https://claude.ai/code/session_01Kydab84oh1GMjzuFahVswG . A bounded read-only
 check used the existing Gmail connector. Codex expanded the actual

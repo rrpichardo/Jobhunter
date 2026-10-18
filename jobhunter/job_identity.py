@@ -12,7 +12,7 @@ TRACKING_PARAMS = re.compile(r"^(utm_.*|ref|referrer|source|src|gh_src|lever-sou
 
 def canonical_key(url: str) -> str:
     """Keep employer requisitions and case-sensitive URL components; remove tracking."""
-    linkedin = re.match(r'^https://(?:www\.)?linkedin\.com/jobs/view/(?:[^/?#]+-)?([0-9]+)(?:[/?#]|$)', url, re.I)
+    linkedin = re.match(r'^https://(?:www\.)?linkedin\.com/(?:comm/)?jobs/view/(?:[^/?#]+-)?([0-9]+)(?:[/?#]|$)', url, re.I)
     if linkedin:
         return 'https://www.linkedin.com/jobs/view/' + linkedin.group(1)
     for pattern, kind in ATS_LINKS:

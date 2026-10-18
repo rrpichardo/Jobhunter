@@ -81,7 +81,9 @@ def test_broader_roles_flow_through_probe_without_ai_signal():
     assert record['pm_candidates'] == 3 and record['selected_for_m0'] == 3
 
 
-@pytest.mark.parametrize('location', ['Bogotá, CO', 'Medellín, CO', 'Santo Domingo, DO'])
+@pytest.mark.parametrize('location', ['Bogotá, CO', 'Medellín, CO', 'Santo Domingo, DO',
+    'Bogotá, CO (Hybrid)', 'Bogotá, CO - Hybrid', 'Medellín, Antioquia, CO',
+    'Medellín, Antioquia, CO (Remote)', 'Santo Domingo, DO (Hybrid)'])
 def test_approved_regional_cities_use_latam_floor(location):
     candidate = job(location=location, salary='USD 80,000 annually')
     assert p.collection_region(location) == 'LATAM'
@@ -103,8 +105,11 @@ def test_unknown_location_still_excludes_salary_below_every_floor(location):
     assert not p.collection_stub_match(candidate.title, location, candidate.salary)
 
 
-def test_mixed_us_latam_location_retained_without_assuming_which_floor_applies():
-    candidate = job(location='Remote (US or Colombia)', salary='USD 90,000 annually')
+@pytest.mark.parametrize('location', ['Remote (US or Colombia)',
+    'New York, NY or Bogotá, Colombia', 'San Francisco, CA; Remote - Latin America',
+    'Austin, Texas or Remote (Colombia)', 'Bogotá, Colombia; Seattle', 'Bogotá, CO or New York, NY'])
+def test_mixed_us_latam_location_retained_without_assuming_which_floor_applies(location):
+    candidate = job(location=location, salary='USD 90,000 annually')
     assert p.collection_match(candidate)
     assert p.salary_preference(candidate)[0] == 'unresolved'
 
@@ -125,3 +130,24 @@ def test_board_caps_prioritize_product_roles_over_adjacent_roles():
             'board':'acme', 'company':'Acme', 'url':'https://test.example/jobs'}, '2026-10-18T00:00:00+00:00')
     assert jobs[0].title == 'Product Manager, AI'
     assert len(jobs) == 8
+
+
+def test_detail_fetch_slots_prioritize_product_roles_before_requesting_pages():
+    import html
+    import json
+    titles = ['Project Manager'] * 8 + ['Product Manager']
+    postings = [{'id':i, 'title':title, 'url':f'/companies/acme/jobs/{i}',
+                 'location':'United States', 'companyName':'Acme', 'salaryRange':''}
+                for i, title in enumerate(titles)]
+    listing = '<div data-page="' + html.escape(json.dumps({'props':{'jobPostings':postings}}), quote=True) + '"></div>'
+    detail = '<script type="application/ld+json">{"@type":"JobPosting","description":"Build products."}</script>'
+    seen = []
+    def serve(request):
+        seen.append(str(request.url))
+        return httpx.Response(200, text=listing if 'jobs/role' in str(request.url) else detail)
+    with httpx.Client(transport=httpx.MockTransport(serve)) as client:
+        _, jobs, _ = source_probe.probe_source(client, {'id':'yc-product', 'kind':'yc',
+            'url':'https://www.ycombinator.com/jobs/role/product-manager'}, '2026-10-18T00:00:00+00:00')
+    assert jobs[0].title == 'Product Manager'
+    assert any(url.endswith('/8') for url in seen)
+    assert len(seen) == 9  # one listing plus eight details, not extra requests

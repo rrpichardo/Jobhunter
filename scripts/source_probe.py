@@ -22,7 +22,8 @@ import yaml
 
 from jobhunter.artifacts import safe_error_code, write_artifact
 from jobhunter.postings import (AI_TERMS, DETAIL_SOURCES, LISTING_ONLY, PARSERS, Posting, collection_match,
-                                collection_stub_match, collection_priority, dedupe, role_family, to_row)
+                                collection_stub_match, collection_priority, collection_title_priority,
+                                dedupe, role_family, to_row)
 
 USER_AGENT = "JobHunterBot/0.1 (personal job search; polite single requests)"
 MAX_BYTES = 40 * 1024 * 1024
@@ -167,7 +168,7 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
         if kind in DETAIL_SOURCES:
             stubs, rejected = DETAIL_SOURCES[kind][0](data, {**ctx, "url": url})
             shortlist = [s for s in stubs if collection_stub_match(s["title"], s["location"], s["salary"])]
-            shortlist.sort(key=lambda stub: not bool(AI_TERMS.search(stub['title'])))
+            shortlist.sort(key=lambda stub: collection_title_priority(stub['title'], entry.get('tag', 'other')))
             detail_skipped = max(0, len(shortlist) - PER_SOURCE_LIMIT)
             postings, failed, problem, detail_attempts = fetch_details(
                 client, entry, shortlist[:PER_SOURCE_LIMIT], stamp, delay=delay, sleep=sleep)

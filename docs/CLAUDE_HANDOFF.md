@@ -2,6 +2,12 @@
 
 ## Latest continuation — broader alerts and salary preferences
 
+PR #16 is the implementation milestone. Cycle-1 and cycle-2 Claude findings
+were reproduced and repaired; latest local suite is 486 tests / 10 subtests.
+Fresh pushed-head cycle 3/3 review and CI remain required. Actual JobHunterEnv
+locked tests passed 475/10 on earlier repair `67ca7f8`; current-revision cloud
+test confirmation is still needed. PR comments retain exact-SHA cloud evidence.
+
 PR #15 was merged at `974ec2c`; its pending-review entries below are historical.
 LinkedIn dedicated-account UI now confirms 18 daily email/notification alerts,
 including broader non-AI roles and remote US/LATAM PM searches (SETUP.md).

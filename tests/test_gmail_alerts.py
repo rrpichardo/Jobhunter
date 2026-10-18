@@ -158,7 +158,7 @@ def test_security_body_is_not_extracted_even_with_job_like_subject():
 
 def test_repeated_daily_alerts_have_stable_identity_despite_linkedin_tracking():
     urls = ['https://www.linkedin.com/jobs/view/12345/?refId=day1&midToken=secret1',
-            'https://www.linkedin.com/jobs/view/12345/?refId=day2&midToken=secret2']
+            'https://www.linkedin.com/comm/jobs/view/12345/?refId=day2&midToken=secret2&lipi=mail']
     postings = []
     for index, url in enumerate(urls):
         body = BODY.replace(FACTS[0]['apply_url'], url)
