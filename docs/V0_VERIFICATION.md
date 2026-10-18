@@ -309,3 +309,35 @@ Two whitespace cleanups wrongly emptied `docs/ATTEMPTS.md` and `docs/V0_VERIFICA
 all code were unaffected. Both files were restored from `6a61f35` with the later evidence re-added in
 new commits (no history rewrite). Check with `git diff --stat` that docs changes have no unexpected
 deletions before committing.
+
+## Merged main verified in JobHunterEnv — October 18, 2026
+
+Scope: after PRs #4-#10 were merged, `main` at `36539f4` (which includes repair commits written by
+another session after the last cloud runs of `c6bcf8c`) was run end to end in the actual Claude cloud
+environment. Same cloud session as above (https://claude.ai/code/session_01DsCkZnt2X9EtuQRVq6Gq5u);
+uv 0.13.1 from a scratch virtualenv, tree clean, nothing committed, pushed or edited. Not a
+scheduled run and not the daily trial.
+
+- Stage 1: `uv sync --locked` and **304 tests passed** (10 subtests).
+- Stage 2: `scripts.live_harness` on hidden `_M0Test_` tabs only: **`summary: scenarios=8 failures=0`**,
+  exit 0, no pre-existing lock. The two lock-retaining scenarios were not run.
+- Stage 3: a read-only snapshot of the real Jobs tab (148 rows, no duplicate IDs) was saved first. The
+  probe exited 0 (**47 sources, 149 jobs, failed_or_blocked=0, duplicates_merged=0**, probe_sha256
+  `908d194313d8a8a1d97ff57b248476eaaa48a49a8cd2738eef90afca6d67b3e7`); new on `main`, yc-product and
+  getro-accel report `details_skipped=6` and `=8` (job pages the stricter code skipped; both stay `OK`).
+  `scripts.sheets_sync --run-id m3-sources-003` and its identical repeat exited 0 with identical output.
+- Readback (GET only), compared with the snapshot: **155 Jobs rows** (148 + 7 new), no duplicate or
+  blank Job ID, header unchanged; all 148 earlier rows present exactly once with no ID change, merge
+  or ambiguity error (including `greenhouse:anthropic:5434361008`); every Status is New and no Notes
+  or My rating cell has content. New rows: lever:spotify 1, yc-product 4, builtin-product 1, jobicy 1.
+  Sources 47 rows, blank Error everywhere (lever:spotify moved from OK-zero-jobs to OK). Run Log has
+  four rows, one per run; the lock was released afterwards.
+- **Behavior change to be aware of:** 21 earlier rows (7 ashby:openai, 3 ashby:ramp, 1 ashby:linear,
+  2 ashby:elevenlabs, 7 ashby:harvey, remoteok 1137510) had exactly one line appended to the machine-owned
+  `More details` column, a 36-character work-mode note taken from the source's own metadata. Nothing was
+  removed, and no other column changed on any earlier row (Status, Notes, My rating and Date found
+  untouched).
+- Same four "Possible duplicate ... needs review" flags as before (three Databricks pairs, one Harvey
+  pair); both rows of each pair are kept.
+- Not proven: scheduled M0 (no routine exists), Codex review of the merged code (cycle 3/3 of the writer
+  review was never delivered), Gmail, LinkedIn, X, and the sources that need keys, accounts or logins.
