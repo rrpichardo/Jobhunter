@@ -95,8 +95,10 @@ Repairs included in this checkpoint, still needing fresh independent review:
    interrupt before/after Jobs, recovery and independent-process overlap. Retain
    hidden fixture tabs if cleanup cannot be proved safe. Pace requests to avoid
    Sheets per-user quotas; fail closed on unknown mutations. Do not auto-unlock.
-5. **Done October 18, 2026 with a fresh harvest (old data was lost): run `m0-real-001` and
-   its repeat passed; see V0_VERIFICATION.md. Scheduled M0 is still open.**
+5. **Done October 18, 2026 on code `c5e2398` with a fresh harvest (old data was lost):
+   run `m0-real-001` and its repeat passed; see V0_VERIFICATION.md for scope and limits.
+   This predates writer fix `e3536e4`; current-head live verification and scheduled
+   M0 are still open.**
    Original text: in actual JobHunterEnv, write the already validated real posting, repeat its
    unchanged run ID, and inspect Jobs/Run Log evidence. Expand actual command
    output; an agent summary alone is insufficient. Then prove scheduled M0.
@@ -119,10 +121,14 @@ Local authenticated Claude Sonnet CLI reviews were separate development checks.
 - Scratchpad `/tmp/claude-0/-home-user-Jobhunter/bd94b49d-acc0-5310-ad78-3b3f143cc8cd/scratchpad`:
   `uvbin`, `venv`, `uvcache`; `m0dir2.txt` points to saved harvest/extraction,
   and normalized `records_0f7b436.json` has one posting. May disappear.
-  Trusted original harvest SHA256:
+  Historical trusted harvest SHA256 (its scratch files were subsequently lost):
   `84423ba33cc8923e9cdfa6548da0da08f35b4e56bebce92def20f6be0ff49a8e`.
   Never regenerate the trust reference from a modified artifact. If missing,
   report loss and make a new bounded public harvest with independently retained hash.
+  The approved replacement harvest used for `m0-real-001` has digest
+  `d7849a78f6e81b637ef35dfeff9275a0be9c6180ab79b912311f8bcda33c7019`.
+  See V0_VERIFICATION.md, "M0 real posting write in JobHunterEnv"; do not apply the
+  old digest to that replacement or rely on the lost scratch paths above.
 
 ## Google setup: already completed; do not repeat
 
