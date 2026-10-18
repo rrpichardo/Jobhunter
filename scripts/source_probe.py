@@ -1,8 +1,8 @@
 """Probe every V0 source once and build one combined delivery artifact; no Sheet writes.
 
 Run with `uv run --locked python -m scripts.source_probe --output <new file outside checkout>`.
-One bounded GET per source, no retries, no login, no social access, no secrets. A 401/403/
-406/429 stops that source immediately (`blocked`). Keys, accounts and mailboxes that are not
+One bounded GET per source, no retries, no login, no social access, no secrets.
+Keys, accounts and mailboxes that are not
 set up are recorded `needs setup` without any request. Keyed APIs (JSearch, Jooble) get exactly one
 request each and their keys are never recorded, printed or put in an error. The artifact is delivered
 separately with `scripts.sheets_sync`.
@@ -105,7 +105,7 @@ def fetch_keyed(client, request):
 
 
 def fetch_details(client, entry, stubs, stamp, *, delay, sleep):
-    """One polite GET per shortlisted job page; a refusal stops the rest for this source."""
+    """Fetch shortlisted job pages and retain per-source response evidence."""
     postings, rejected, problem, attempts = [], 0, None, 0
     detail = DETAIL_SOURCES[entry["kind"]][1]
     for stub in stubs:
@@ -116,7 +116,7 @@ def fetch_details(client, entry, stubs, stamp, *, delay, sleep):
             rejected += 1
             if status in BLOCKED:
                 problem = ('blocked', f'http_{status}', status)
-                break  # stop this source immediately; never retry or probe further
+                break
             if problem is None:
                 problem = ('failed', error or f'http_{status}', status)
             continue

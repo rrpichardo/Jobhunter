@@ -134,7 +134,7 @@ def test_detail_source_fetches_only_shortlisted_pm_pages_and_delivers_them():
     assert (source["status"], source["jobs_fetched"], source["pm_candidates"], source["selected_for_m0"]) == ("OK", 2, 1, 1)
 
 
-def test_a_refused_detail_page_stops_that_source_and_is_never_retried():
+def test_refused_detail_page_returns_no_jobs():
     registry = {**REGISTRY, "boards": {}, "aggregators": [], "listing_only": [], "needs_setup": [],
                 "detail_sources": [{"id": "yc-product", "kind": "yc", "url": "https://www.ycombinator.com/jobs/role/product-manager"}]}
     seen = []

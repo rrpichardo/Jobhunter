@@ -152,7 +152,7 @@ Read each scenario's PASS/FAIL lines in the real command output.
 ## Source probe and multi-source delivery
 
 `scripts/source_probe.py` makes one polite GET per source in `sources/v0_sources.yaml` (no
-retries; 401/403/406/429 mark the source `blocked` and stop it at once), parses it with
+retries), parses it with
 `jobhunter/postings.py`, applies the PLAN filter (PM title, AI signal or AI-tagged company,
 US/remote/unknown location, no interns) and keeps at most 8 matches per source and 150 in total.
 The Brief description is an exact leading excerpt (300 characters) of source text, chosen by
@@ -164,7 +164,7 @@ answer 404 are dropped as non-responders. No social, Gmail or logged-in access h
 Y Combinator (the same jobs Work at a Startup lists, without its login), Built In and the Getro
 VC boards (Accel, Primary) are detail sources: the listing is parsed, up to 8 shortlisted PM
 titles per source get one polite GET of their own job page for the description, employer and
-place, and a refusal (401/403/406/429) stops that source at once. a16z and Hacker News are
+place. a16z and Hacker News are
 still count-only. The fetched pages were checked against each site's robots.txt.
 
 Two keyed job-search APIs sit in the registry's `keyed_apis` group. JSearch (RapidAPI, GET) reads

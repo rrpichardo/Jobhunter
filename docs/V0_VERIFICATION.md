@@ -287,8 +287,8 @@ not the 14-day trial, and not approval to merge. Same cloud session as above
 
 Same cloud session, code `c6bcf8c` on `claude/m1-source-coverage`, tree clean, `uv sync --locked`,
 **206 tests passed**. The probe now fetches individual job pages for Y Combinator, Built In and the
-Getro boards (robots.txt checked; one polite GET each, at most 8 per source, a refusal stops the
-source) and merges duplicates only on identical employer links.
+Getro boards (robots.txt checked; one polite GET each, at most 8 per source) and merges
+duplicates only on identical employer links.
 
 - `scripts.source_probe`: exit 0, **`sources=47 delivered_jobs=148 failed_or_blocked=0
   duplicates_merged=0`**; no detail page was refused. Run directory `/root/m2_sources_run_002`.

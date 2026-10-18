@@ -314,8 +314,8 @@
   distinct; tracking is removed. Lever combines introduction, responsibility lists
   and additional description sections. The subsequent user location preference
   below supersedes the original blanket South/Latin America rejection.
-- Detail HTTP/transport failures now retain their actual status/error. Blocks stop
-  remaining detail requests, while already validated jobs can be delivered with
+- Detail HTTP/transport failures now retain their actual status/error.
+  Already validated jobs can be delivered with
   explicit selected/valid-count evidence. Run Log retains the source-failure state.
 - Stacked documentation conflicts were resolved by preserving both sides' counters
   and evidence. This does not change recorded cloud outcomes or deployment status.
