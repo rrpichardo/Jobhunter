@@ -1,5 +1,19 @@
 # Implementation attempt log
 
+## October 18 retrospective diagnostic follow-up — writer cycle 6
+
+- Claude's context-complete retrospective review of superseded #7 found a CLI
+  diagnostic that still applied to current #8: an unexpected writer failure was
+  mislabeled invalid input. A regression failed after an injected post-mutation
+  exception; the CLI now emits fixed `unexpected_sync_error`, retaining recovery
+  guidance and suppressing raw exception details. No retry policy changed.
+- The retrospective adapter/engine coverage concern is already addressed by the
+  current fake-workbook live-harness tests, including applied/unapplied timeout
+  cases. Pending replay follows recorded journal order; operators must not edit
+  hidden recovery state. The one-megabyte journal bound remains intentional.
+- Locked writer suite: 157 tests and 10 subtests passed. Local review cycle 6 is
+  covered by the user's "do as many as needed" direction; no pushes or live calls.
+
 ## October 18 user continuation instruction — review limits superseded
 
 - After the source milestone reached its original three-review cap, the user
