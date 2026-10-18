@@ -479,3 +479,15 @@ def test_parse_jooble_ids_and_rejections():
     for bad in ({"jobs": None}, [], {}):
         with pytest.raises(ValueError, match="invalid_board_response"):
             p.parse_jooble(bad, JB_CTX)
+
+
+def test_jsearch_v2_nested_response_with_null_salary_fields():
+    # Shape seen live from /search-v2: jobs under data.jobs, salary fields null, no currency key.
+    v2_item = {**JS_ITEM, "job_min_salary": None, "job_max_salary": None, "job_salary_period": None}
+    v2_item.pop("job_salary_currency", None)
+    postings, rejected, total = p.parse_jsearch(
+        {"status": "OK", "request_id": "r", "parameters": {}, "data": {"cursor": "c", "jobs": [v2_item]}}, JS_CTX)
+    assert (total, rejected, len(postings)) == (1, 0, 1)
+    assert postings[0].salary == ""
+    with pytest.raises(ValueError):
+        p.parse_jsearch({"status": "OK", "data": {"cursor": "c"}}, JS_CTX)

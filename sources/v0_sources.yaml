@@ -42,7 +42,7 @@ keyed_apis:  # exactly one request per run each; keys come from environment vari
   - id: jsearch
     kind: jsearch
     env: [JSEARCH_API_KEY]  # sent as the X-RapidAPI-Key header; free plan is 200 requests a month
-    url: "https://jsearch.p.rapidapi.com/search"
+    url: "https://jsearch.p.rapidapi.com/search-v2"  # /search was retired (HTTP 404, checked live)
     params: {query: "AI product manager in USA", page: 1, num_pages: 1, date_posted: week}
   - id: jooble
     kind: jooble

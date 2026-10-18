@@ -344,8 +344,12 @@ def _first_https(*links):
 
 def parse_jsearch(data, ctx):
     """JSearch (RapidAPI) results; any field may be missing or null."""
-    if (not isinstance(data, dict) or not isinstance(data.get("data"), list)
-            or data.get("status", "OK") != "OK"):
+    if not isinstance(data, dict) or data.get("status", "OK") != "OK":
+        raise ValueError("invalid_board_response")
+    jobs = data.get("data")
+    if isinstance(jobs, dict):  # /search-v2 nests the list: {"data": {"jobs": [...], "cursor": ...}}
+        jobs = jobs.get("jobs")
+    if not isinstance(jobs, list):
         raise ValueError("invalid_board_response")
 
     def build(item):
@@ -364,7 +368,7 @@ def parse_jsearch(data, ctx):
                        salary=_salary(item.get("job_min_salary"), item.get("job_max_salary"),
                                       item.get("job_salary_currency"), item.get("job_salary_period")),
                        tag="other", remote=remote)
-    return (*_collect(data["data"], build), len(data["data"]))
+    return (*_collect(jobs, build), len(jobs))
 
 
 def parse_jooble(data, ctx):

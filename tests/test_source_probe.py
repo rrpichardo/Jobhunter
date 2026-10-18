@@ -403,7 +403,7 @@ def test_keyed_sources_make_one_request_each_and_deliver_through_the_shared_filt
     js, jb = seen
     assert dict(js.url.params) == {"query": "AI product manager in USA", "page": "1", "num_pages": "1",
                                    "date_posted": "week"}
-    assert js.url.path == "/search"
+    assert js.url.path == "/search-v2"
     assert js.headers["X-RapidAPI-Key"] == KEY and js.headers["X-RapidAPI-Host"] == "jsearch.p.rapidapi.com"
     assert jb.url.path == f"/api/{KEY}"
     assert json.loads(jb.content) == {"keywords": "AI product manager", "location": "United States", "page": "1"}
