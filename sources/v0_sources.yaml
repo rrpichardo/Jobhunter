@@ -1,0 +1,55 @@
+# V0 source registry. `candidate: true` boards are auto-probed guesses: a 404 drops them
+# silently (kept as responders only). Tags are reviewed registry facts: ai | bigtech | other.
+# Entries needing keys, accounts or a labeled mailbox are never fetched here: they are
+# recorded `needs setup` with the exact next action.
+boards:
+  greenhouse:
+    - {board: anthropic, company: Anthropic, tag: ai}
+    - {board: scaleai, company: Scale AI, tag: ai, candidate: true}
+    - {board: databricks, company: Databricks, tag: ai, candidate: true}
+    - {board: stripe, company: Stripe, tag: other, candidate: true}
+    - {board: figma, company: Figma, tag: other, candidate: true}
+    - {board: airbnb, company: Airbnb, tag: bigtech, candidate: true}
+    - {board: coinbase, company: Coinbase, tag: other, candidate: true}
+    - {board: instacart, company: Instacart, tag: other, candidate: true}
+    - {board: datadog, company: Datadog, tag: other, candidate: true}
+    - {board: cloudflare, company: Cloudflare, tag: other, candidate: true}
+    - {board: reddit, company: Reddit, tag: bigtech, candidate: true}
+    - {board: pinterest, company: Pinterest, tag: bigtech, candidate: true}
+  lever:
+    - {board: palantir, company: Palantir, tag: bigtech, candidate: true}
+    - {board: spotify, company: Spotify, tag: bigtech, candidate: true}
+    - {board: mistral, company: Mistral AI, tag: ai, candidate: true}
+  ashby:
+    - {board: openai, company: OpenAI, tag: ai, candidate: true}
+    - {board: ramp, company: Ramp, tag: other, candidate: true}
+    - {board: notion, company: Notion, tag: other, candidate: true}
+    - {board: linear, company: Linear, tag: other, candidate: true}
+    - {board: cohere, company: Cohere, tag: ai, candidate: true}
+    - {board: perplexity, company: Perplexity, tag: ai, candidate: true}
+    - {board: elevenlabs, company: ElevenLabs, tag: ai, candidate: true}
+    - {board: sierra, company: Sierra, tag: ai, candidate: true}
+    - {board: harvey, company: Harvey, tag: ai, candidate: true}
+aggregators:
+  - {id: remotive, kind: remotive, url: "https://remotive.com/api/remote-jobs?category=product&limit=50"}
+  - {id: remoteok, kind: remoteok, url: "https://remoteok.com/api"}
+  - {id: himalayas, kind: himalayas, url: "https://himalayas.app/jobs/api?limit=50"}
+  - {id: jobicy, kind: jobicy, url: "https://jobicy.com/api/v2/remote-jobs?count=50&tag=product"}
+  - {id: themuse, kind: themuse, url: "https://www.themuse.com/api/public/jobs?category=Product%20Management&page=1"}
+  - {id: weworkremotely, kind: wwr, url: "https://weworkremotely.com/categories/remote-product-jobs.rss"}
+listing_only:  # reachable and counted, but no description text yet, so nothing is delivered
+  - {id: yc-product, kind: yc, url: "https://www.ycombinator.com/jobs/role/product-manager"}
+  - {id: a16z-ai-pm, kind: a16z, url: "https://jobs.a16z.com/jobs?q=AI%20product%20manager"}
+  - {id: getro-accel, kind: getro, url: "https://jobs.accel.com/jobs"}
+  - {id: getro-primary, kind: getro, url: "https://jobs.primary.vc/jobs"}
+  - {id: hn-who-is-hiring, kind: hn, url: "https://hn.algolia.com/api/v1/search_by_date?tags=story,author_whoishiring&hitsPerPage=3"}
+needs_setup:
+  - {id: jsearch, env: [JSEARCH_API_KEY], action: "Create a free JSearch key and add JSEARCH_API_KEY to JobHunterEnv."}
+  - {id: adzuna, env: [ADZUNA_APP_ID, ADZUNA_APP_KEY], action: "Create free Adzuna keys and add ADZUNA_APP_ID and ADZUNA_APP_KEY to JobHunterEnv."}
+  - {id: jooble, env: [JOOBLE_API_KEY], action: "Create a free Jooble key and add JOOBLE_API_KEY to JobHunterEnv."}
+  - {id: linkedin-logged-in, env: [], action: "Create the dedicated LinkedIn account, log in locally, and supply its cookie in environment settings; Claude does not log in."}
+  - {id: x-hiring-posts, env: [], action: "Create the dedicated X account and supply auth_token/ct0 cookies in environment settings."}
+  - {id: gmail-job-alerts, env: [], action: "Forward alerts to the connected Gmail and add the JobHunter label filter; then verify the label."}
+  - {id: nextplay-rss, env: [], action: "Record the verified Next Play feed URL, then enable RSS plus extraction."}
+  - {id: alirohde-rss, env: [], action: "Record the verified Ali Rohde Jobs feed URL, then enable RSS plus extraction."}
+  - {id: cosign, env: [], action: "Network-gated beta; revisit with the user's account."}

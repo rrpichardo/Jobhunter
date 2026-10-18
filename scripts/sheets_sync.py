@@ -24,6 +24,37 @@ google_workbook_forbidden google_tls_error google_timeout google_transport_error
 artifact_too_large invalid_extraction_delivery run_id_quarantined'''.split())
 
 
+def _deliver_many(args, payload, store):
+    """Schema 2: many sources and their jobs in one locked run. Exit 0 once readback verifies;
+    failed, blocked and needs-setup sources are recorded as evidence, not treated as sync failure."""
+    sources, jobs = payload.get('sources'), payload.get('jobs')
+    if not isinstance(sources, list) or not isinstance(jobs, list) or not sources:
+        raise ValueError('invalid_sync_input')
+    if args.run_id is not None and not re.fullmatch('[A-Za-z0-9_-]{1,80}', args.run_id):
+        raise ValueError('invalid_run_id')
+    delivered = {}
+    for job in jobs:
+        delivered[job.get('Source') if isinstance(job, dict) else None] = delivered.get(
+            job.get('Source') if isinstance(job, dict) else None, 0) + 1
+    extraction = payload.get('extraction')
+    if jobs and (not isinstance(extraction, dict) or extraction.get('status') != 'complete'
+                 or extraction.get('selected') != len(jobs) or extraction.get('validated') != len(jobs)):
+        raise ValueError('invalid_extraction_delivery')
+    for source in sources:
+        if not isinstance(source, dict) or source.get('selected_for_m0') != delivered.pop(source.get('source_id'), 0):
+            raise ValueError('invalid_extraction_delivery')
+    if delivered:  # a job whose source has no record
+        raise ValueError('invalid_extraction_delivery')
+    prepare_payload(jobs, sources)  # validate everything before opening a Google connection
+    backend = GspreadStore(open_workbook()) if store is None else store
+    result = sync_jobs(backend, jobs, sources, run_id=args.run_id, chunk_size=args.chunk_size)
+    problems = sum(source['status'] in {'failed', 'blocked'} for source in sources)
+    print(f"sync_verified: run_id={result['run_id']} unique_jobs={result['unique_jobs']} "
+          f"sources={len(sources)} recovered_runs={result['recovered_runs']}")
+    print(f'source_problems_recorded={problems}')
+    return 0
+
+
 def main(argv=None, *, store=None):
     parser = argparse.ArgumentParser(description='M0 Python Sheet writer; no source collection.')
     parser.add_argument('--input')
@@ -42,6 +73,8 @@ def main(argv=None, *, store=None):
                   'data kept under m0/quarantined/ in _State')
             return 0
         payload = read_artifact(args.input)
+        if isinstance(payload, dict) and payload.get('schema_version') == 2:
+            return _deliver_many(args, payload, store)
         if (not isinstance(payload, dict) or type(payload.get('schema_version')) is not int
                 or payload['schema_version'] != 1 or not isinstance(payload.get('source'), dict)
                 or not isinstance(payload.get('jobs'), list)):

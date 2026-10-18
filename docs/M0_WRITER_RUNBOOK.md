@@ -134,6 +134,29 @@ the global lock in place (exit 3). Run them only with operator agreement, since 
 lock blocks the real writer until an operator decides how to clear it.
 Read each scenario's PASS/FAIL lines in the real command output.
 
+## Source probe and multi-source delivery
+
+`scripts/source_probe.py` makes one polite GET per source in `sources/v0_sources.yaml` (no
+retries; 401/403/406/429 mark the source `blocked` and stop it at once), parses it with
+`jobhunter/postings.py`, applies the PLAN filter (PM title, AI signal or AI-tagged company,
+US/remote/unknown location, no interns) and keeps at most 8 matches per source and 150 in total.
+The Brief description is an exact leading excerpt (300 characters) of source text, chosen by
+Python, never by a model. Sources needing keys, accounts or a labeled mailbox are recorded
+`needs setup` with no request. YC, a16z, Getro and HN are listing-only: counted and recorded as
+`OK-zero-jobs`, nothing delivered, until a detail fetch exists. Guessed company boards that
+answer 404 are dropped as non-responders. No social, Gmail or logged-in access happens here.
+
+```sh
+uv run --locked python -m scripts.source_probe --output /private/run/probe.json
+uv run --locked python -m scripts.sheets_sync --input /private/run/probe.json --run-id m1-probe-001
+```
+
+The artifact uses `schema_version: 2` (`sources` list plus `jobs`); `sheets_sync` writes every
+source's evidence and all jobs in one locked run. For schema 2 exit 0 means the readback was
+verified; failed, blocked and needs-setup sources are recorded evidence, shown as
+`source_problems_recorded=N`. Cross-source duplicate detection is not implemented yet: the same
+role listed on a company board and an aggregator becomes two rows.
+
 ## Poisoned pending run: manual quarantine
 
 A pending run that can never be replayed (corrupt journal cells, a payload that
