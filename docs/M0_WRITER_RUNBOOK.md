@@ -53,10 +53,15 @@ work; incomplete Claude extraction batches are rejected before Google access.
   job text. This is candidate collection, not a full eligibility decision.
 - Do not sort, insert, delete or move underlying Jobs rows during a sync. Use
   filter views while writing; edits to existing user-owned cells remain supported.
-- Every write attempt starts from a fresh identity map. New jobs use explicit
-  blank-row ranges, not a blind append retry. After an uncertain insertion, read
-  IDs again before deciding which cells still need writing. Retries are capped
-  at three, respect Retry-After and stop if the requested wait exceeds 60 seconds.
+- Each bounded retry rereads the identity map. Only a definitively rejected
+  mutation (such as HTTP 429) may be retried. An ambiguous request is never
+  resubmitted merely because desired cell values appear present or absent.
+  The adapter atomically includes a unique receipt in global lock cell C1 with
+  each structural/value mutation. Matching owner plus that exact receipt confirms
+  application after a lost response. Stale/absent receipts or failed reads leave
+  a sticky unknown outcome: stop all mutations and retain the global lock.
+  Retries are capped at three, respect Retry-After and stop above 60 seconds.
+  HTTP redirects, auth refresh retries and transport retries are disabled.
 - Pending normalized machine records and source evidence are journaled as bounded
   JSON chunks plus a hash/manifest in one atomic `_State` values request before
   Jobs mutation. No user notes or secret state are journaled. Complete manifests
@@ -78,14 +83,22 @@ An uncertain deletion is read back, never repeated against a possible later owne
 There is no lease expiry or lock stealing. The `_State` run marker/journal is not
 an atomic lock. A crash may leave the structural lock in place. `writer_locked`,
 `lock_acquisition_unconfirmed`, `lock_release_unconfirmed` or `lock_ownership_lost`
-requires an operator check. Confirm **every prior writer is stopped**, inspect the
-non-secret owner/timestamp and pending manifests, then explicitly authorize a
-single manual lock removal. Do not delete it because it looks old or while another
-session might resume. Hidden sheets do not protect against manual tampering.
+requires an operator check. `sheet_mutation_unconfirmed` retains the lock:
+stop all writers/schedules, establish that the server-side request has finished,
+then inspect and reconcile its exact outcome before any manual unlock. Stopping
+only the client, an arbitrary wait, or a stale read is insufficient proof. Never
+steal a lock or remove it because it looks old. Manual unlock requires an explicit
+operator decision after all writers and in-flight requests are accounted for.
+Hidden sheets do not protect against manual tampering.
 
 With no active writer/lock, rerun the same unchanged input/run ID or start a fresh
 valid harvest batch. Pending batches recover first; completed run IDs verify
-without rewriting. If an input artifact vanished before it was journaled, report
+without rewriting only while their expected Jobs/Sources rows still match.
+A newer run can legitimately change those rows; replay of an old completed ID
+then reports `completed_run_changed`. Use a fresh run ID for a new batch; do not
+edit an old immutable payload. Verified writes with an unconfirmed release report
+`writes_verified_lock_release_unconfirmed`; an original failure/interrupt is
+preserved if cleanup also fails. If an input artifact vanished before it was journaled, report
 that loss and re-harvest; do not claim durable recovery from ephemeral local files.
 
 ## Remaining live acceptance checks
@@ -97,3 +110,15 @@ interruptions before/after Jobs writes, and overlapping independent writers.
 Use sanitized fixture jobs for destructive failure injection and replay; don't
 repeat social collection. Isolated endpoint proof alone does not satisfy these.
 Scheduled M0 and full-source V0 remain separate outstanding gates.
+
+## Handoff limitations
+
+PR #7 remains draft. Cycle-1 repairs are incomplete: a manual poisoned-journal
+quarantine procedure/tool, preventing completed Run Log rows from being downgraded
+on recovery, and per-run source history remain outstanding. No automatic dropping
+of pending work is authorized. See CLAUDE_HANDOFF.md before cloud execution.
+
+Internal `GspreadStore(namespace='_M0Test_<8–32 lowercase letters/digits>')`
+uses isolated hidden data tabs and the same global lock/receipt. It is not exposed
+by the production CLI. The live harness must first reject an existing namespace;
+its isolation and failure-injection checks have not been run against Google.

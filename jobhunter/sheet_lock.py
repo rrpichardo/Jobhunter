@@ -26,11 +26,15 @@ class SheetLock:
         if owner != self.owner:
             raise ValueError('writer_locked' if owner is not None else 'lock_acquisition_unconfirmed')
         self.held = True
+        if hasattr(self.store, 'activate_owner'):
+            self.store.activate_owner(self.owner)
 
     def release(self):
         if not self.held:
             return
         self.held = False
+        if hasattr(self.store, 'deactivate_owner'):
+            self.store.deactivate_owner(self.owner)
         try:
             owner = self.store.lock_owner()
         except Exception:

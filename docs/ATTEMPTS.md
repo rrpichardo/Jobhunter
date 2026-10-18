@@ -329,3 +329,33 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
   It must cover the current committed head, not just the connection checkpoint.
   No existing review covers the new journal/lock/writer. Record findings and
   preserve this counter across handoffs; no review success is assumed in advance.
+
+
+### User-requested Claude Code handoff — writer cycle 1 remains open
+
+- Review of 4c9800c completed; actual findings posted on PR #7 at
+  https://github.com/rrpichardo/Jobhunter/pull/7#issuecomment-6243645600 .
+  Current fixes address control/line-ending validation, scoped journal checks,
+  delayed-write safety with atomic unique receipts, hidden HTTP resubmissions,
+  original-error preservation and release-outcome diagnostics. Read-only Astra
+  analysis supported the receipt design; no second implementation owner edited.
+- Internal test namespace added after its regression test failed as expected.
+  Global lock remains shared. Full local suite:125 passed,10 subtests passed.
+  Fresh current-head review is still outstanding; cycle2 has NOT been started.
+- Remaining cycle-1 work: manual poisoned-journal quarantine/recovery, preventing
+  completed Run Log downgrade on replay, additional uncertainty tests. Per-run
+  source history and all application live checks remain outstanding.
+- User now requests stopping for a committed/pushed handoff and PR. Preserve
+  draft #7; no merge or deployment claim. CLAUDE_HANDOFF.md has exact next actions.
+- Billing: user chose to leave existing free-trial link unchanged; dialog canceled,
+  project linkage rechecked. No billing setting changed. Do not repeat this ask.
+
+- Final handoff verification: `uv run --locked python -m pytest -q` passed
+  125 tests/10 subtests; `git diff --check` passed. No new live API collection,
+  writer mutation, or scheduled proof was attempted during handoff preparation.
+- Reciprocal review: AGENTS.md/CLAUDE.md require Codex review for Claude work.
+  User signed into ChatGPT in Richard. Official review settings load but show no
+  repositories, including Jobhunter search; no saved Codex Cloud environments.
+  Automatic review remains blocked on repository connection, not user sign-in.
+  No permission, credits, billing or automatic-review setting changed. Local
+  installed `codex review --help` verified; manual review route documented.

@@ -1,6 +1,7 @@
 """Deterministic Sheet plans; no network calls or AI-selected cell updates."""
 
 from dataclasses import dataclass
+import re
 
 JOB_HEADERS = ('Job ID', 'Date found', 'Job title', 'Company', 'Salary', 'Location',
                'Brief description', 'Apply link', 'Source', 'Rank (prelim)', 'Fit',
@@ -22,14 +23,23 @@ def normalize_jobs(records):
     for record in records:
         if not isinstance(record, dict) or set(record) != set(JOB_HEADERS):
             raise ValueError('invalid_job_fields')
+        record = record.copy()
         for header, value in record.items():
             if header == 'Rank (prelim)':
                 if type(value) is not int or value not in {1, 2, 3}:
                     raise ValueError('invalid_preliminary_rank')
             elif not isinstance(value, str) or len(value) > 40000:
                 raise ValueError('invalid_job_value')
+            else:
+                if re.search(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', value):
+                    raise ValueError('invalid_job_value')
+                try:
+                    value.encode('utf-8')
+                except UnicodeError:
+                    raise ValueError('invalid_job_value') from None
+                record[header] = value.replace('\r\n', '\n').replace('\r', '\n')
         identity = record['Job ID']
-        if not identity.strip() or len(identity) > 512 or identity != identity.strip():
+        if not identity.strip() or len(identity) > 512 or any(c.isspace() for c in identity):
             raise ValueError('invalid_job_id')
         unique[identity] = record | {'Status': 'New', 'Notes': '', 'My rating': ''}
     return list(unique.values())

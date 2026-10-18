@@ -21,3 +21,10 @@ When reviewing a pull request:
 - Prioritize actionable problems over cosmetic preferences.
 - Post findings on the pull request.
 - Review only: do not change code or merge the pull request.
+
+## When Claude authors changes
+
+Request **Codex** review of the latest pushed revision using
+[docs/REVIEW_WORKFLOW.md](docs/REVIEW_WORKFLOW.md). Claude reviewing its own PR
+does not satisfy the opposite-agent gate. Post the reviewed SHA and findings,
+resolve actionable issues, rerun checks, and request fresh review after fixes.

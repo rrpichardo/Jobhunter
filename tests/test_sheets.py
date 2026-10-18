@@ -146,3 +146,39 @@ def test_a_failed_write_leaves_an_explicit_pending_run_log():
     assert len(backend.tables['Run Log']) == 2
     assert backend.tables['Run Log'][1][-1] == 'pending'
     assert backend.tables['Run Log'][1][2] == ''
+
+
+def test_unconfirmed_mutation_retains_lock_and_stops_all_later_writes():
+    backend = MemoryStore()
+    original = backend.write
+    def unresolved(title, writes):
+        if title == 'Jobs':
+            backend.mutation_unknown = True
+            raise ValueError('sheet_mutation_unconfirmed')
+        original(title, writes)
+    backend.write = unresolved
+    with pytest.raises(ValueError, match='sheet_mutation_unconfirmed'): sync(backend, [job()], 'unknown')
+    assert backend.owner is not None
+    assert len([1 for title, _ in backend.writes if title == 'Sources']) == 0
+
+
+def test_original_error_is_not_masked_by_lock_cleanup_failure():
+    from jobhunter.sheet_io import SheetIOError
+    backend = MemoryStore()
+    original = backend.write
+    def fail(title, writes):
+        if title == 'Jobs': raise SheetIOError('sheet_http_429', transient=True)
+        original(title, writes)
+    backend.write = fail
+    backend.drop_lock = lambda: (_ for _ in ()).throw(RuntimeError('cleanup failed'))
+    with pytest.raises(SheetIOError, match='sheet_http_429') as caught:
+        sync(backend, [job()], 'failed')
+    assert 'lock_cleanup_failed' in caught.value.__notes__
+
+
+def test_verified_write_with_failed_release_reports_that_writes_are_verified():
+    backend = MemoryStore()
+    backend.drop_lock = lambda: (_ for _ in ()).throw(RuntimeError('cleanup failed'))
+    with pytest.raises(ValueError, match='writes_verified_lock_release_unconfirmed'):
+        sync(backend, [job()], 'verified')
+    assert len(backend.tables['Jobs']) == 2

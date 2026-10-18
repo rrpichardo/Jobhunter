@@ -62,3 +62,15 @@ def test_oversized_or_untyped_values_are_rejected():
     for bad in (job(**{'Notes': {'bad': 'type'}}), job(**{'Job title': 'x' * 40001}),
                 job(**{'Rank (prelim)': float('nan')}), job(**{'Job ID': ''})):
         with pytest.raises(ValueError): plan_jobs([list(JOB_HEADERS)], [bad])
+
+
+@pytest.mark.parametrize('text', ['bad\x00text', 'bad\x07text', 'bad\ud800text'])
+def test_unsafe_source_text_is_rejected_before_it_can_poison_recovery(text):
+    from jobhunter.sheet_records import JOB_HEADERS, plan_jobs
+    with pytest.raises(ValueError, match='invalid_job_value'):
+        plan_jobs([list(JOB_HEADERS)], [job(**{'Job title': text})])
+
+
+def test_line_endings_are_canonical_before_journaling_and_comparison():
+    from jobhunter.sheet_records import normalize_jobs
+    assert normalize_jobs([job(**{'Brief description': 'one\r\ntwo\rthree'})])[0]['Brief description'] == 'one\ntwo\nthree'

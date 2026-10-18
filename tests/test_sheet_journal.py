@@ -46,3 +46,12 @@ def test_journal_rejects_oversized_payload_and_invalid_run_id():
         with pytest.raises(ValueError):
             SheetJournal(backend).prepare(identity, payload, '2026-10-17T00:00:00Z')
     assert not backend.writes
+
+
+def test_unrelated_numeric_allowance_state_does_not_block_writer_recovery():
+    from jobhunter.sheet_journal import SheetJournal
+    backend = store()
+    backend.tables['_State'].append(['social/x/2026-10-17/count', 1])
+    SheetJournal(backend).prepare('run1', {'jobs': []}, '2026-10-17T00:00:00Z')
+    assert SheetJournal(backend).pending()[0][0] == 'run1'
+    assert backend.tables['_State'][1][1] == 1

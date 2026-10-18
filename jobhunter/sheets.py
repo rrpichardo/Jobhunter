@@ -139,6 +139,7 @@ def sync_jobs(store, records, source_records, *, run_id=None, chunk_size=100,
     _stamp(started)
     lock = SheetLock(store, uuid.uuid4().hex, started)
     lock.acquire()
+    failure = None
     try:
         def ensure():
             store.refresh()
@@ -184,5 +185,18 @@ def sync_jobs(store, records, source_records, *, run_id=None, chunk_size=100,
         deliver(identity, payload, manifest, verify_only=manifest['state'] == 'done')
         return {'run_id': identity, 'input_jobs': len(records), 'unique_jobs': len(payload['jobs']),
                 'recovered_runs': len(pending)}
+    except BaseException as exc:
+        failure = exc
+        raise
     finally:
-        lock.release()
+        if getattr(store, 'mutation_unknown', False):
+            if failure is not None:
+                failure.add_note('lock_retained_unconfirmed_mutation')
+        else:
+            try:
+                lock.release()
+            except Exception:
+                if failure is not None:
+                    failure.add_note('lock_cleanup_failed')
+                else:
+                    raise ValueError('writes_verified_lock_release_unconfirmed') from None

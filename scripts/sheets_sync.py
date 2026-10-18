@@ -17,6 +17,7 @@ job_source_not_successful ambiguous_headers missing_headers invalid_existing_row
 duplicate_existing_id writer_locked lock_acquisition_unconfirmed lock_identity_collision invalid_lock_owner
 lock_release_unconfirmed lock_ownership_lost lock_acquisition_already_attempted too_many_pending_runs
 completed_run_changed sheet_write_verification_failed sheet_retry_delay_exceeds_budget sheet_write_too_large
+sheet_mutation_unconfirmed writer_lock_required writes_verified_lock_release_unconfirmed
 sheet_request_failed sheet_tls_error sheet_transport_error invalid_sheet_response unapproved_tab
 invalid_google_configuration google_workbook_unavailable google_proxy_auth_missing google_workbook_not_found
 google_workbook_forbidden google_tls_error google_timeout google_transport_error invalid_json
@@ -62,6 +63,11 @@ def main(argv=None, *, store=None):
         return 130
     except Exception as exc:
         code = str(exc)
+        if code == 'writes_verified_lock_release_unconfirmed':
+            print('writes_verified: lock_release_unconfirmed; operator recovery required')
+            return 2
+        if 'lock_cleanup_failed' in getattr(exc, '__notes__', []):
+            print('lock_cleanup_failed: inspect lock before retry')
         if code not in SAFE_ERRORS and not re.fullmatch('(sheet|google)_http_[1-5][0-9]{2}', code):
             code = 'invalid_sync_input'
         print(f'sync_failed: {code}; check pending state and lock before another run')

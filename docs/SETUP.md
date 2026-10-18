@@ -160,3 +160,16 @@ Initial cloud read access now succeeded at `0260388`: gspread opened only the
 configured workbook and counted one worksheet, exit 0, clean tree. Actual command
 output inspected in the UI. No Sheet write, RAW write/readback or lock batch
 endpoint proof yet. No key/token/file was supplied to Python; proxy secret used.
+
+
+### Handoff checkpoint superseding earlier setup status
+
+Google network secret and non-secret variables are saved; actual read access and
+isolated RAW/structural endpoints succeeded (ATTEMPTS.md). Application writer,
+recovery, overlap and schedule remain unproved. Google readback found JobHunter
+linked automatically to the existing free trial. User explicitly chose to leave
+that link unchanged; the disable dialog was canceled and linkage rechecked.
+No billing setting or upgrade was made. Do not unlink or ask again.
+
+Reciprocal Codex review setup is tracked in REVIEW_WORKFLOW.md. Do not equate
+repository instructions with a verified automatic-review account setting.

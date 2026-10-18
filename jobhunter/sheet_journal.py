@@ -40,7 +40,7 @@ class SheetJournal:
         entries = {}
         for key, (_, values) in identities.items():
             value = values[headers['Value']] if headers['Value'] < len(values) else ''
-            if not isinstance(value, str) or len(value) > CHUNK_SIZE:
+            if key.startswith(PREFIX) and (not isinstance(value, str) or len(value) > CHUNK_SIZE):
                 raise ValueError('invalid_pending_journal')
             entries[key] = value
         return rows, entries
