@@ -1,5 +1,19 @@
 # Implementation attempt log
 
+## October 18 source review cycle 5 — US location collisions
+
+- Claude reviewed local `dda10ef` and found US cities named for regional
+  countries were excluded. Three regressions failed for Panama City, FL; Mexico,
+  MO; and Peru, IL. Terminal US state codes now preserve those leads while DC/CO
+  alone cannot bypass the Colombia salary condition. Explicit US country evidence
+  remains accepted. Original location and eligibility rules are unchanged.
+- Multiple existing verified identities still stop for operator reconciliation,
+  preserving user data. Current provider parsers always emit their configured
+  source ID; speculative future invariant failures are not a reproduced bug.
+- Propagated writer cycle 6 locally. Locked full suite: 289 tests and 10 subtests
+  passed; diff whitespace checks passed. Fresh Claude patch review is required.
+  The user authorized further cycles; no push, merge to main or live run occurred.
+
 ## October 18 current local source follow-up
 
 - The user superseded the three-cycle pause with "do as many as needed" while

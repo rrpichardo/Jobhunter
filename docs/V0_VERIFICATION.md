@@ -4,7 +4,7 @@
 
 The historical cloud runs below prove only the revisions they name. Local review
 repairs have not been pushed or exercised against live sources/Google Sheets.
-The current local full suite passes 283 tests and 10 subtests; this is offline
+The current local full suite passes 289 tests and 10 subtests; this is offline
 evidence, not a Claude reviewer test run or deployment proof.
 
 Identity policy after review: merge verified ATS requisitions and matching explicit
