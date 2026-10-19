@@ -216,7 +216,7 @@ ROLE_FAMILIES = (
                                      r'(?:MBA|management) (?:development|rotation(?:al)?) program)\b', re.I)),
     ('Strategy', re.compile(r'\b(?:strategy (?:manager|lead|director)|'
                            r'(?:manager|director|head|vp) (?:of )?(?:corporate |business )?strategy)\b', re.I)),
-    ('Entrepreneurship', re.compile(r'\b(?:entrepreneur|founder) in residence\b', re.I)),
+    ('Entrepreneurship', re.compile(r'\b(?:entrepreneur|founder)[- ]in[- ]residence\b', re.I)),
     ('Project management', re.compile(r'\bproject (?:manager|management lead|director)\b', re.I)),
 )
 

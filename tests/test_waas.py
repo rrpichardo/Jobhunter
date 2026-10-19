@@ -76,3 +76,8 @@ def test_the_same_job_on_two_role_pages_is_one_row():
                          STAMP)
     kept = p.dedupe([mk('waas-product'), mk('waas-operations')])
     assert len(kept) == 1 and 'Also listed by: waas-operations' in kept[0][1]
+
+
+def test_founder_in_residence_is_recognised_with_or_without_hyphens():
+    for title in ('Founder-in-Residence', 'Founder in Residence', 'Entrepreneur-in-Residence', 'Entrepreneur in residence'):
+        assert p.role_family(title) == 'Entrepreneurship', title
