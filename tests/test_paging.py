@@ -52,7 +52,38 @@ def test_a_failed_later_page_keeps_earlier_pages_and_reports_the_stop():
     with muse_client(pages, seen, fail_page=1) as client:
         record, jobs, note = probe.probe_source(client, MUSE, STAMP, sleep=lambda s: None)
     assert [j.job_id for j in jobs] == ['themuse:1'] and 'paging_stopped=http_500' in note
-    assert record['status'] == 'OK' and record['coverage'] == 'partial-response'
+    # the failure is durable evidence in the source record, not only a probe note; page-one jobs are kept
+    assert record['status'] == 'failed' and record['error'] == 'http_500' and record['http_status'] == 500
+    assert record['coverage'] == 'partial-response' and record['attempts'] == 2 and record['selected_for_m0'] == 1
+
+
+def test_a_later_page_failure_record_and_its_partial_jobs_are_accepted_by_the_writer_validation():
+    from jobhunter.sheets import prepare_payload
+    seen = []
+    with muse_client([[muse_job(1)], [muse_job(2)]], seen, fail_page=1) as client:
+        record, jobs, _ = probe.probe_source(client, MUSE, STAMP, sleep=lambda s: None)
+    rows = [probe.to_row(j) for j in jobs]
+    prepare_payload(rows, [record])  # a failed source may carry the partial jobs it really read
+
+
+def test_a_blocked_later_page_is_recorded_as_blocked():
+    def serve(request):
+        if request.url.params['page'] == '0':
+            return httpx.Response(200, json={'page_count': 2, 'results': [muse_job(1)]})
+        return httpx.Response(429)
+    with httpx.Client(transport=httpx.MockTransport(serve)) as client:
+        record, jobs, _ = probe.probe_source(client, MUSE, STAMP, sleep=lambda s: None)
+    assert record['status'] == 'blocked' and record['error'] == 'http_429' and len(jobs) == 1
+
+
+def test_a_malformed_later_muse_page_is_a_fixed_error_that_keeps_earlier_jobs():
+    def serve(request):
+        if request.url.params['page'] == '0':
+            return httpx.Response(200, json={'page_count': 2, 'results': [muse_job(1)]})
+        return httpx.Response(200, json={'page_count': 2, 'results': 'not a list'})
+    with httpx.Client(transport=httpx.MockTransport(serve)) as client:
+        record, jobs, _ = probe.probe_source(client, MUSE, STAMP, sleep=lambda s: None)
+    assert record['status'] == 'failed' and record['error'] == 'invalid_json' and len(jobs) == 1
 
 
 def test_the_page_safety_stop_limits_pages_and_says_so():
@@ -107,8 +138,32 @@ def test_a_hostile_cursor_is_never_followed():
         return httpx.Response(200, json={'jobs': [jobicy_job(1, '2026-10-17T00:00:00+00:00')], 'hasMore': True,
                                          'nextCursor': 'x&redirect=https://evil.example'})
     with httpx.Client(transport=httpx.MockTransport(serve)) as client:
-        _, jobs, note = probe.probe_source(client, JOBICY, STAMP, sleep=lambda s: None)
+        record, jobs, note = probe.probe_source(client, JOBICY, STAMP, sleep=lambda s: None)
     assert len(jobs) == 1 and 'paging_stopped=invalid_cursor' in note
+    assert record['status'] == 'failed' and record['error'] == 'invalid_board_response'
+
+
+def test_a_null_trailing_job_does_not_abort_the_run_and_readable_jobs_survive():
+    def serve(request):
+        return httpx.Response(200, json={'jobs': [jobicy_job(1, '2026-10-17T00:00:00+00:00'), None],
+                                         'hasMore': True, 'nextCursor': 'page-1'}
+                              if request.url.params.get('cursor') is None else
+                              {'jobs': [jobicy_job(2, '2026-10-16T00:00:00+00:00')], 'hasMore': False, 'nextCursor': None})
+    with httpx.Client(transport=httpx.MockTransport(serve)) as client:
+        record, jobs, _ = probe.probe_source(client, JOBICY, STAMP, lookback_days=28, sleep=lambda s: None)
+    assert sorted(j.job_id for j in jobs) == ['jobicy:1', 'jobicy:2']  # the null item is quarantined by the parser
+    assert record['rejected_items'] == 1
+
+
+def test_a_malformed_jobicy_page_is_contained_per_source():
+    def serve(request):
+        if request.url.params.get('cursor') is None:
+            return httpx.Response(200, json={'jobs': [jobicy_job(1, '2026-10-17T00:00:00+00:00')],
+                                             'hasMore': True, 'nextCursor': 'page-1'})
+        return httpx.Response(200, json={'jobs': 'oops', 'hasMore': True, 'nextCursor': 'page-2'})
+    with httpx.Client(transport=httpx.MockTransport(serve)) as client:
+        record, jobs, _ = probe.probe_source(client, JOBICY, STAMP, sleep=lambda s: None)
+    assert [j.job_id for j in jobs] == ['jobicy:1'] and record['error'] == 'invalid_json'
 
 
 def test_the_cli_page_safety_stop_flag_is_validated_and_printed(tmp_path, capsys):
