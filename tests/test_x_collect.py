@@ -54,8 +54,10 @@ def test_every_search_names_a_role_the_delivery_filter_collects():
     from jobhunter.postings import ROLE_TEXT, role_family
     for query in sc.load_queries('sources/social_queries.yaml', 'x-twscrape'):
         phrases = re.findall(r'"([^"]+)"', query)
-        assert phrases and any(ROLE_TEXT.search(phrase) for phrase in phrases), query
-        assert any(role_family(phrase) for phrase in phrases), query  # and a title like it is really delivered
+        assert phrases, query
+        for phrase in phrases:  # EVERY quoted phrase, so one good phrase cannot hide a wasted one
+            assert ROLE_TEXT.search(phrase), (query, phrase)
+            assert role_family(phrase), (query, phrase)  # and a title like it is really delivered
 
 
 def test_the_registry_queries_load_and_respect_the_query_limit():
@@ -188,8 +190,9 @@ class FakeTweet:
 
 
 def install_fake_twscrape(monkeypatch, tweets=(), search_error=None, init_error=None, no_response=False, account='active'):
-    """A stand-in for twscrape 0.20.1: search_raw yields one response per tweet; an empty-but-answered search
-    yields one response holding no tweets; a blocked search yields nothing at all."""
+    """A stand-in for twscrape 0.20.1. Like the real library: a search that X really answered adds to the account's
+    per-queue request counter even when the answer holds no tweets (and then yields nothing); a call dropped by an
+    HTML/Cloudflare block yields nothing and adds nothing."""
     log = types.SimpleNamespace(api_args=None, cookies=None, level=None, yielded=0, closed=False)
 
     class HttpStatusError(Exception):
@@ -199,12 +202,15 @@ def install_fake_twscrape(monkeypatch, tweets=(), search_error=None, init_error=
     class NoAccountError(Exception):
         pass
 
-    states = {'active': types.SimpleNamespace(active=True, locks={}),
-              'banned': types.SimpleNamespace(active=False, locks={}),
-              'cooling': types.SimpleNamespace(active=True, locks={'SearchTimeline': datetime(2099, 1, 1, tzinfo=timezone.utc)}),
-              'naive-lock': types.SimpleNamespace(active=True, locks={'SearchTimeline': datetime(2099, 1, 1)}),
-              'expired-lock': types.SimpleNamespace(active=True, locks={'SearchTimeline': datetime(2000, 1, 1, tzinfo=timezone.utc)}),
+    def state(active=True, locks=None):
+        return types.SimpleNamespace(active=active, locks=locks or {}, stats={})
+
+    states = {'active': state(), 'banned': state(active=False),
+              'cooling': state(locks={'SearchTimeline': datetime(2099, 1, 1, tzinfo=timezone.utc)}),
+              'naive-lock': state(locks={'SearchTimeline': datetime(2099, 1, 1)}),
+              'expired-lock': state(locks={'SearchTimeline': datetime(2000, 1, 1, tzinfo=timezone.utc)}),
               'missing': None}
+    current = states[account]
 
     class Pool:
         async def add_account_cookies(self, username, cookies):
@@ -213,7 +219,7 @@ def install_fake_twscrape(monkeypatch, tweets=(), search_error=None, init_error=
             log.cookies = (username, cookies)
 
         async def get_account(self, username):
-            return states[account]
+            return current
 
     class API:
         def __init__(self, db_file, raise_when_no_account=False):
@@ -223,16 +229,16 @@ def install_fake_twscrape(monkeypatch, tweets=(), search_error=None, init_error=
         async def search_raw(self, query, limit=-1):
             if search_error:
                 raise search_error(log) if callable(search_error) else search_error
-            if no_response:
-                return
             try:
-                if not tweets:
-                    yield types.SimpleNamespace(json=lambda: [])  # X answered, with nothing to show
+                if no_response:
+                    return  # dropped silently: nothing yielded, nothing counted
                 for tweet in tweets:
                     log.yielded += 1
                     yield types.SimpleNamespace(json=lambda tweet=tweet: [tweet])
             finally:
                 log.closed = True
+                if not no_response and current is not None:  # recorded when the stream closes, as in twscrape
+                    current.stats['SearchTimeline'] = current.stats.get('SearchTimeline', 0) + 1
 
     def parse_tweets(obj, limit=-1):
         return iter(obj if limit < 0 else obj[:limit])
@@ -332,7 +338,7 @@ def test_a_refusal_stays_blocked_through_the_validated_source_record(tmp_path, c
     assert {sc.LOGIN_FAILED, sc.RATE_LIMITED} == set(pf.BLOCKED_ERRORS)
 
 
-def test_an_answer_with_no_tweets_is_a_genuine_zero_not_a_failure(monkeypatch):
+def test_an_answered_search_with_no_tweets_is_a_genuine_zero_even_though_the_library_yields_nothing(monkeypatch):
     install_fake_twscrape(monkeypatch, tweets=[])
     fetcher = x.TwscrapeFetcher('tok', 'ct')
     try:
@@ -373,3 +379,20 @@ def test_a_blocked_first_search_stops_the_run_records_blocked_and_spends_the_day
     payload = json.loads(out.read_text())
     assert code == 0 and payload['error'] == 'social_login_failed' and payload['candidates'] == []
     assert rows(store)['allowance/x-twscrape/2026-10-19']['state'] == 'blocked'
+
+
+def test_a_genuine_zero_first_query_does_not_stop_the_run_or_record_blocked(monkeypatch, tmp_path):
+    install_fake_twscrape(monkeypatch, tweets=[])  # X answered every search, none had posts
+    code, out, store = run(tmp_path, None, environ=COOKIES)
+    payload = json.loads(out.read_text())
+    assert code == 0 and payload['error'] == '' and payload['stats']['queries_run'] == 10  # every search was sent
+    assert rows(store)['allowance/x-twscrape/2026-10-19']['state'] == 'zero'
+
+
+def test_a_startup_failure_after_the_day_is_reserved_is_still_written_down(monkeypatch, tmp_path):
+    log, _ = install_fake_twscrape(monkeypatch, init_error=RuntimeError('sqlite i/o error'))
+    code, out, store = run(tmp_path, None, environ=COOKIES)
+    payload = json.loads(out.read_text())
+    assert code == 0 and payload['error'] == 'social_collector_error' and payload['candidates'] == []
+    assert 'sqlite' not in out.read_text() and rows(store)['allowance/x-twscrape/2026-10-19']['state'] == 'failed'
+    assert not __import__('pathlib').Path(log.api_args[0]).parent.exists()  # and the cookie file is gone
