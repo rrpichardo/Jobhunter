@@ -265,10 +265,17 @@ def test_one_rejected_fact_holds_a_comment_even_when_another_fact_in_it_was_acce
     assert result['processed_ids'] == []  # but the comment is read again until every fact in it validates
 
 
-def test_a_fact_for_an_unknown_comment_holds_nothing(tmp_path, capsys):
-    code, out = validate_with(tmp_path, capsys, {'processed': ['2001'], 'facts': [fact(comment_id='9999'), fact(comment_id=9998)]})
+def test_a_fact_for_a_real_comment_not_reported_as_read_holds_nothing(tmp_path, capsys):
+    # 2003 exists but is not in processed: it simply stays unread; the read comment 2001 is not affected
+    code, out = validate_with(tmp_path, capsys, {'processed': ['2001'], 'facts': [fact(comment_id='2003'), fact(comment_id=2003)]})
     result = json.loads(out.read_text())
     assert code == 0 and result['rejected_comment_ids'] == [] and result['processed_ids'] == ['2001']
+
+
+@pytest.mark.parametrize('claimed', ['200l', '9999', 9999, '', ' 2001'])
+def test_a_mistyped_or_invented_comment_id_holds_every_comment_that_was_read(tmp_path, capsys, claimed):
+    code, out = validate_with(tmp_path, capsys, {'processed': ['2001'], 'facts': [fact(comment_id=claimed)]})
+    assert code == 0 and json.loads(out.read_text())['processed_ids'] == []
 
 
 def test_a_numeric_comment_id_in_a_rejected_fact_still_holds_its_comment(tmp_path, capsys):
