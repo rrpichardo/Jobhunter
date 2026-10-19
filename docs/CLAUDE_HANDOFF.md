@@ -51,7 +51,7 @@ NOT replace Codex.** Heads at the time of writing:
 Claude replayed every planned merge, in order, on a throwaway local branch that was never pushed, starting from `main` at `f71464f`.
 Heads used: #42 `b90c1d2`, #44 `209efbc`, #45 `e9d29ec`, #46 (this PR), #49 `c5535dc`, #40 `5ceb6cc`, #41 `4c0fe90`, #43 `0303164`,
 #47 `9400d18`, #48 `4e86e41`. Result: every conflict is additive (both sides add entries) and the fully combined result passes
-**1,055 tests** with the social extra. Heads move, so re-check before acting. Exact steps and resolutions:
+**1,056 tests** with the social extra (re-checked with the newest heads of #42, #46 and #49). Heads move, so re-check before acting. Exact steps and resolutions:
 
 | Step | PR | Result in the replay | What to do |
 | --- | --- | --- | --- |

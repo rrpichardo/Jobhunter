@@ -64,7 +64,7 @@ Until you answer A11 the reading stays on Sonnet.
 
 **E. Possible later add-on (Work at a Startup logged-in lists).** A read-only probe on October 19 found that the public product page shows 24 of 241 jobs and has no paging. It could not test the logged-in lists, because the saved `WAAS_SESSION_COOKIE` has no cookie name (B10). Once that is fixed, Claude retests and, if the logged-in lists show more, builds them (A1 is approved, read-only).
 
-**D. Claude's next steps:** the merge order and the exact conflict fixes were checked by a trial replay (all ten PRs combined pass 1,055 tests; see the "Merge plan" table in `docs/CLAUDE_HANDOFF.md`). When Codex is back: review, fix, merge in order (#42, #44, #45, #46, then #40 and the PRs
+**D. Claude's next steps:** the merge order and the exact conflict fixes were checked by a trial replay (all ten PRs combined pass 1,056 tests; see the "Merge plan" table in `docs/CLAUDE_HANDOFF.md`). When Codex is back: review, fix, merge in order (#42, #44, #45, #46, then #40 and the PRs
 stacked on it). Then the live X and LinkedIn test, then a first manual run, then A3.
 
 **Decisions already made (do not ask again):** A1 build LinkedIn, X and Work at a Startup (read-only); A3 only after
