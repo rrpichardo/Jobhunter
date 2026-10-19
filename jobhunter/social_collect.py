@@ -14,7 +14,7 @@ from jobhunter.post_facts import clean_social_candidates
 
 # Starting limits from docs/PLAN.md (user-confirmed October 18); tune after the first live run.
 LIMITS = {
-    'x-twscrape': {'queries': 10, 'posts': 200},
+    'x-twscrape': {'queries': 10, 'posts': 200, 'per_query': 40},  # one busy search cannot starve the other nine
     'linkedin-login': {'job_searches': 5, 'post_searches': 5, 'detail_views': 50},
 }
 DELAY_SECONDS = (3.0, 9.0)  # randomized pause between live requests
@@ -29,11 +29,20 @@ QUERY = re.compile(r'[A-Za-z0-9 "\'.,:()&/+#@-]{3,200}')
 
 
 class FetchBlocked(Exception):
-    """The site refused the saved session (logged out, restricted or checkpointed)."""
+    """The site refused the saved session (logged out, restricted or checkpointed). `found` holds any posts read
+    from this search before the refusal."""
+
+    def __init__(self, found=()):
+        super().__init__()
+        self.found = list(found)
 
 
 class FetchRateLimited(Exception):
-    """The site asked us to slow down."""
+    """The site asked us to slow down. `found` holds any posts read from this search before it did."""
+
+    def __init__(self, found=()):
+        super().__init__()
+        self.found = list(found)
 
 
 def load_queries(path, source_id):
@@ -61,10 +70,10 @@ def pause(rng, low=DELAY_SECONDS[0], high=DELAY_SECONDS[1]):
     return low + (high - low) * rng()
 
 
-def collect_posts(search, queries, *, max_posts, sleep, rng):
+def collect_posts(search, queries, *, max_posts, sleep, rng, per_query=None):
     """(items, queries_run, error word). `search(query, limit)` returns dicts with url, created_at, text, links.
 
-    Stops at max_posts or the first failure; what was read before a failure is kept. A failure records only a
+    Stops at max_posts or the first failure; what was read before a failure is kept. `per_query` caps one search. A failure records only a
     fixed word, never the exception text.
     """
     items, seen, ran, error = [], set(), 0, ''
@@ -72,26 +81,28 @@ def collect_posts(search, queries, *, max_posts, sleep, rng):
         remaining = max_posts - len(items)
         if remaining <= 0:
             break
+        if per_query:
+            remaining = min(remaining, per_query)
         if ran:
             sleep(pause(rng))
+        failure = ''
         try:
             found = search(query, remaining)
-        except FetchBlocked:
-            error = LOGIN_FAILED
-            break
-        except FetchRateLimited:
-            error = RATE_LIMITED
-            break
-        except Exception:  # noqa: BLE001 - the message could carry a URL or token; keep only a fixed word
-            error = COLLECTOR_ERROR
-            break
-        ran += 1
+        except (FetchBlocked, FetchRateLimited) as exc:
+            found = exc.found  # what was read before the refusal is kept
+            failure = LOGIN_FAILED if isinstance(exc, FetchBlocked) else RATE_LIMITED
+        except Exception as exc:  # noqa: BLE001 - the message could carry a URL or token; keep only a fixed word
+            found, failure = getattr(exc, 'found', []), COLLECTOR_ERROR
+        ran += 0 if failure else 1
         for item in found:
             url = item.get('url') if isinstance(item, dict) else None
             if url in seen or len(items) >= max_posts:
                 continue
             seen.add(url)
             items.append(item)
+        if failure:
+            error = failure
+            break
     return items, ran, error
 
 
