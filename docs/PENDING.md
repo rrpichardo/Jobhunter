@@ -2,9 +2,25 @@
 
 Created October 18, 2026 from the working session. This is the list to come back to.
 When something is done, change its status here and in the PR that did it. Nothing
-below is a claim that the work exists; `Status` says what is true. Branch and PR
-numbers: #18 docs, #19 keep-every-match and 4-week window, #20 Hacker News,
-#21 AI read-queue and draft routine prompt (each stacked on the one before).
+below is a claim that the work exists; `Status` says what is true. The PRs form one
+stack, each on top of the one before it, and NONE is merged. Codex was at its usage
+limit when last tried (October 19, 00:30 UTC), so no Claude-written PR has an
+opposite-agent review yet:
+
+| PR | What | Tests at its head |
+| --- | --- | --- |
+| #18 | Docs handoff (Codex wrote it, Claude reviewed `4177f4e`; Claude's two commits need Codex) | docs only |
+| #19 | Keep every match, writer batches, 4-week window, `posted_at` (Codex found one P1, fixed) | 615 |
+| #20 | Hacker News comments with code-validated facts | 636 |
+| #21 | AI read-queue in `_State` and the draft routine prompt | 661 |
+| #22 | This register, LIMITS.md, README and front-end plan items | docs only |
+| #23 | Safety-stop flags for the first manual pull | 670 |
+| #24 | Paging for The Muse and Jobicy (fixes The Muse skipping page one) | 679 |
+| #25 | Skip job pages for jobs already in the Sheet | 689 |
+| #26 | Daily social allowance guard | 722 |
+| #27 | Shared validator for X and LinkedIn posts | 760 |
+
+Merge order is the table order, each only after a Codex review of its exact head.
 
 ## How the first run and the daily runs work (user direction, October 18)
 
