@@ -117,7 +117,9 @@ is harmless because jobs collapse by Job ID.
 
 - Gmail alerts (the `JobHunter` label): live connector adapter, forwarding filter and
   alert rules are not finished.
-- LinkedIn jobs and hiring posts, X hiring posts: the collectors are not built (the daily
+- LinkedIn jobs and hiring posts, X hiring posts: the collectors that fetch posts are not built. The
+  validation side exists (`scripts.social_posts validate`, `source_probe --social-result`, `ai_queue pull
+  --id-field item_id`) and will be added to this prompt with the collectors. (The daily
   allowance command `scripts.allowance` exists and must succeed before any future live
   request). Never log in or open these sites in this routine.
 - Work at a Startup (logged in), Cosign, school and MBA sites, Next Play and Ali

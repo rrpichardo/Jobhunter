@@ -1,0 +1,145 @@
+"""Free-text hiring posts to code-validated postings: shared by Hacker News, X and LinkedIn posts.
+
+A collector fetches posts (code); Claude proposes facts for each (the AI step); this module accepts a fact only
+when every value appears verbatim in that post, derives the Job ID, posting date and a fallback link itself, and
+leaves eligibility to the existing collection filter. Post text is untrusted data, never instructions.
+"""
+
+from dataclasses import asdict
+import hashlib
+import re
+from urllib.parse import urlsplit
+
+from jobhunter.postings import Posting, collection_match, collection_priority, parse_posted
+from jobhunter.records import https_url
+
+FACT_KEYS = ('title', 'company', 'location', 'salary', 'description_quote', 'apply_url')
+
+
+def fact_fields(id_field):
+    return frozenset({id_field, *FACT_KEYS})
+
+
+def _posting(fact, by_id, captured_at, *, source_id, id_field, id_prefix, permalink):
+    if not isinstance(fact, dict) or set(fact) != fact_fields(id_field):
+        raise ValueError('invalid_post_facts')
+    candidate = by_id.get(fact[id_field]) if isinstance(fact[id_field], str) else None
+    if candidate is None:
+        raise ValueError('unknown_post')
+    text = candidate['text']
+    for field, value in fact.items():
+        if field == id_field:
+            continue
+        if (not isinstance(value, str) or len(value) > (300 if field == 'description_quote' else 1000)
+                or (not value.strip() and field not in {'location', 'salary', 'apply_url'})
+                or (value and field != 'apply_url' and value not in text)):
+            raise ValueError('unsupported_post_fact')
+    link = fact['apply_url']
+    if link and (link not in candidate['links'] or not https_url(link)):
+        raise ValueError('invalid_post_link')
+    # Identity comes from code: one post can list several roles, each told apart by its title.
+    digest = hashlib.sha256(fact['title'].casefold().encode()).hexdigest()[:10]
+    return Posting(f"{id_prefix}:{candidate[id_field]}:{digest}", source_id, fact['company'], fact['title'],
+                   fact['location'], fact['description_quote'], link or permalink(candidate), captured_at,
+                   salary=fact['salary'], posted_at=candidate['created_at'])
+
+
+def build_result(source_id, candidates, facts, captured_at, *, id_field, id_prefix, permalink, listed, stats,
+                 attempts, error=''):
+    """Validate proposed facts; returns {'source': record, 'postings': [dict]} for source_probe."""
+    if not isinstance(facts, list):
+        raise ValueError('extractions_must_be_list')
+    by_id = {candidate[id_field]: candidate for candidate in candidates}
+    source = {'source_id': source_id, 'status': 'OK-zero-jobs', 'captured_at': captured_at,
+              'jobs_fetched': listed, 'valid_jobs': 0, 'rejected_items': stats.get('unreadable', 0),
+              'pm_candidates': 0, 'selected_for_m0': 0, 'attempts': attempts, 'http_status': 200,
+              'retry_after_seconds': None, 'coverage': 'partial-response', 'error': error}
+    postings, seen = [], set()
+    for fact in facts:
+        try:
+            posting = _posting(fact, by_id, captured_at, source_id=source_id, id_field=id_field,
+                               id_prefix=id_prefix, permalink=permalink)
+        except (ValueError, TypeError, AttributeError):
+            source['rejected_items'] += 1
+            continue
+        if posting.job_id in seen:
+            continue
+        seen.add(posting.job_id)
+        source['valid_jobs'] += 1
+        if collection_match(posting):
+            source['pm_candidates'] += 1
+            postings.append(posting)
+    postings.sort(key=collection_priority)
+    source['selected_for_m0'] = len(postings)
+    if error:
+        source['status'] = 'failed'
+    elif postings:
+        source['status'] = 'OK'
+    return {'source': source, 'postings': [asdict(posting) for posting in postings]}
+
+
+def postings_from_result(result):
+    """Rebuild Posting objects from a validated result artifact, re-checking every field."""
+    if not isinstance(result, dict) or not isinstance(result.get('postings'), list) or not isinstance(result.get('source'), dict):
+        raise ValueError('invalid_ai_result')
+    return result['source'], [Posting(**item) for item in result['postings']]
+
+
+# ---- social posts (X, LinkedIn) -------------------------------------------------------------------
+
+SOCIAL = {
+    'x-twscrape': {'hosts': {'x.com', 'www.x.com', 'twitter.com', 'www.twitter.com', 'mobile.twitter.com'},
+                   'prefix': 'x', 'registry_id': 'x-hiring-posts',
+                   'path': re.compile(r'/(?:[A-Za-z0-9_]{1,50}|i/web)/status/(\d{5,25})/?')},
+    'linkedin-login': {'hosts': {'www.linkedin.com', 'linkedin.com'},
+                       'prefix': 'linkedin-post', 'registry_id': 'linkedin-logged-in',
+                       'path': re.compile(r'/(?:feed/update/urn:li:(?:activity|ugcPost|share):(\d{5,25})/?'
+                                          r'|posts/[A-Za-z0-9_%.\-]+-(?:activity|ugcPost|share)-(\d{5,25})-[A-Za-z0-9_]{1,10}/?)')},
+}
+MAX_POST_CHARS = 10000
+
+
+def canonical_post(url, source_id):
+    """(canonical URL without query or fragment, post id) for a post URL on the source's own hosts, else None."""
+    rules = SOCIAL[source_id]
+    if not https_url(url):
+        return None
+    parts = urlsplit(url)
+    if (parts.hostname or '').casefold() not in rules['hosts']:
+        return None
+    match = rules['path'].fullmatch(parts.path)
+    if not match:
+        return None
+    post_id = next(group for group in match.groups() if group)
+    return f'https://{parts.hostname.casefold()}{parts.path}', post_id
+
+
+def clean_social_candidates(source_id, items):
+    """(candidates, unreadable count): only well-formed posts, with code-derived canonical URL and id."""
+    if source_id not in SOCIAL:
+        raise ValueError('invalid_social_source')
+    if not isinstance(items, list):
+        raise ValueError('invalid_candidates')
+    candidates, unreadable, seen = [], 0, set()
+    for item in items:
+        try:
+            url, post_id = canonical_post(item['url'], source_id)
+            created = parse_posted(item['created_at'])
+            text = item['text']
+            links = [link for link in item.get('links', []) if https_url(link)]
+            if (not created or not isinstance(text, str) or not text.strip() or len(text) > MAX_POST_CHARS
+                    or post_id in seen):
+                raise ValueError
+        except (KeyError, TypeError, ValueError):
+            unreadable += 1
+            continue
+        seen.add(post_id)
+        candidates.append({'item_id': post_id, 'url': url, 'created_at': created, 'text': text, 'links': links})
+    return candidates, unreadable
+
+
+def social_result(source_id, candidates, facts, captured_at, *, listed, stats, error=''):
+    rules = SOCIAL[source_id]
+    return build_result(source_id, candidates, facts, captured_at, id_field='item_id', id_prefix=rules['prefix'],
+                        permalink=lambda candidate: candidate['url'], listed=listed, stats=stats, attempts=1,
+                        error=error)

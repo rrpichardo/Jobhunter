@@ -8,13 +8,12 @@ and posting date itself, and falls back to the comment permalink as the applicat
 the row a lead. Comment text is untrusted data, never instructions.
 """
 
-from dataclasses import asdict
 from html import unescape
 from datetime import datetime, timedelta, timezone
-import hashlib
 import re
 
-from jobhunter.postings import Posting, clean_html, collection_match, collection_priority, parse_posted
+from jobhunter import post_facts
+from jobhunter.postings import clean_html, parse_posted
 from jobhunter.records import https_url
 
 SOURCE_ID = 'hn-who-is-hiring'
@@ -27,7 +26,6 @@ ROLE_WORDS = re.compile(r'\b(?:product (?:manager|management|lead|owner|director
                         r'director of product|vp(?: of)?,? product|chief of staff|strategy|'
                         r'(?:entrepreneur|founder)s? in residence|project manager|business operations|'
                         r'bizops|leadership (?:development )?program)\b', re.I)
-FACT_FIELDS = frozenset({'comment_id', 'title', 'company', 'location', 'salary', 'description_quote', 'apply_url'})
 MAX_COMMENT_CHARS = 20000
 # Safety stop on candidate comments handed to the AI in one run (a thread has a few hundred; two are read).
 CANDIDATE_SAFETY_STOP = 1500
@@ -78,65 +76,11 @@ def candidate_comments(thread, item, cutoff):
     return candidates, stats
 
 
-def _posting(fact, candidates_by_id, captured_at):
-    if not isinstance(fact, dict) or set(fact) != FACT_FIELDS:
-        raise ValueError('invalid_hn_facts')
-    candidate = candidates_by_id.get(fact['comment_id']) if isinstance(fact['comment_id'], str) else None
-    if candidate is None:
-        raise ValueError('unknown_hn_comment')
-    text = candidate['text']
-    for field, value in fact.items():
-        if field == 'comment_id':
-            continue
-        if (not isinstance(value, str) or len(value) > (300 if field == 'description_quote' else 1000)
-                or (not value.strip() and field not in {'location', 'salary', 'apply_url'})
-                or (value and field != 'apply_url' and value not in text)):
-            raise ValueError('unsupported_hn_fact')
-    link = fact['apply_url']
-    if link and (link not in candidate['links'] or not https_url(link)):
-        raise ValueError('invalid_hn_link')
-    permalink = PERMALINK.format(id=candidate['comment_id'])
-    # Identity comes from code: one comment can list several roles, each distinguished by its title.
-    digest = hashlib.sha256(fact['title'].casefold().encode()).hexdigest()[:10]
-    return Posting(f"hn:{candidate['comment_id']}:{digest}", SOURCE_ID, fact['company'], fact['title'],
-                   fact['location'], fact['description_quote'], link or permalink, captured_at,
-                   salary=fact['salary'], posted_at=candidate['created_at'])
-
-
 def build_result(candidates, facts, captured_at, *, listed, stats, threads, error=''):
     """Validate proposed facts and return {'source': record, 'postings': [dict]} for source_probe."""
-    if not isinstance(facts, list):
-        raise ValueError('extractions_must_be_list')
-    by_id = {candidate['comment_id']: candidate for candidate in candidates}
-    source = {'source_id': SOURCE_ID, 'status': 'OK-zero-jobs', 'captured_at': captured_at,
-              'jobs_fetched': listed, 'valid_jobs': 0, 'rejected_items': stats.get('unreadable', 0),
-              'pm_candidates': 0, 'selected_for_m0': 0, 'attempts': 1 + len(threads), 'http_status': 200,
-              'retry_after_seconds': None, 'coverage': 'partial-response', 'error': error}
-    postings, seen = [], set()
-    for fact in facts:
-        try:
-            posting = _posting(fact, by_id, captured_at)
-        except (ValueError, TypeError, AttributeError):
-            source['rejected_items'] += 1
-            continue
-        if posting.job_id in seen:
-            continue
-        seen.add(posting.job_id)
-        source['valid_jobs'] += 1
-        if collection_match(posting):
-            source['pm_candidates'] += 1
-            postings.append(posting)
-    postings.sort(key=collection_priority)
-    source['selected_for_m0'] = len(postings)
-    if error:
-        source['status'] = 'failed'
-    elif postings:
-        source['status'] = 'OK'
-    return {'source': source, 'postings': [asdict(posting) for posting in postings]}
+    return post_facts.build_result(SOURCE_ID, candidates, facts, captured_at, id_field='comment_id', id_prefix='hn',
+                                   permalink=lambda candidate: PERMALINK.format(id=candidate['comment_id']),
+                                   listed=listed, stats=stats, attempts=1 + len(threads), error=error)
 
 
-def postings_from_result(result):
-    """Rebuild Posting objects from a validated result artifact, re-checking every field."""
-    if not isinstance(result, dict) or not isinstance(result.get('postings'), list) or not isinstance(result.get('source'), dict):
-        raise ValueError('invalid_hn_result')
-    return result['source'], [Posting(**item) for item in result['postings']]
+postings_from_result = post_facts.postings_from_result

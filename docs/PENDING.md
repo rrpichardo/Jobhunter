@@ -72,8 +72,13 @@ numbers: #18 docs, #19 keep-every-match and 4-week window, #20 Hacker News,
 - DONE on branch `claude/social-allowance`: the daily allowance reservation in `_State`
   (`scripts.allowance reserve/finish/status`; exit 3 means spent, any other failure
   means collect nothing).
-- LinkedIn and X collector code with offline tests, each a PR of its own. No live
-  access before A1 and A2.
+- DONE on branch `claude/social-post-facts`: the validation half of X and LinkedIn
+  hiring posts (`jobhunter/post_facts.py`, `scripts.social_posts validate`,
+  `source_probe --social-result`): canonical post URLs, verbatim facts, code-derived
+  Job IDs, the post URL as the lead link. Hacker News now shares that validator.
+- STILL TO BUILD, one PR each: the LinkedIn collector and the X collector that fetch
+  the posts (they need the approved method A1 and the pinned library or browser
+  setup, and a live run needs A2). No live access before then.
 - Retry Codex reviews when the limit resets, fix real findings, then merge in order.
 
 ## E. Pending deliverables the user asked for (not built)

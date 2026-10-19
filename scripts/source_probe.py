@@ -22,7 +22,7 @@ import httpx
 import yaml
 
 from jobhunter.artifacts import read_artifact, safe_error_code, write_artifact
-from jobhunter.hn_hiring import postings_from_result
+from jobhunter.post_facts import SOCIAL, postings_from_result
 from jobhunter.postings import (AI_TERMS, DETAIL_SOURCES, LISTING_ONLY, PARSERS, Posting, collection_match,
                                 collection_stub_match, collection_priority, collection_title_priority,
                                 dedupe, parse_posted, role_family, to_row, within_lookback)
@@ -317,15 +317,18 @@ def entries(registry):
         yield from registry.get(group, [])
 
 
-def run(registry, client, *, delay=1.0, sleep=time.sleep, environ=None, gmail_result=None, hn_result=None,
+def run(registry, client, *, delay=1.0, sleep=time.sleep, environ=None, gmail_result=None, hn_result=None, ai_results=(),
         now=lambda: datetime.now(timezone.utc).isoformat(), lookback_days=LOOKBACK_DAYS, detail_stop=None,
         page_stop=None, known_ids=frozenset()):
     environ = os.environ if environ is None else environ
     stamp = now()
     sources, jobs, notes = [], [], {}
+    results = ([hn_result] if hn_result is not None else []) + list(ai_results)
+    replaced = {r['source']['source_id'] for r in results}
+    replaced |= {SOCIAL[i]['registry_id'] for i in replaced if i in SOCIAL}
     for entry in entries(registry):
-        if hn_result is not None and entry['id'] == hn_result['source']['source_id']:
-            continue  # the validated comment extraction replaces the listing-only count
+        if entry['id'] in replaced:
+            continue  # a validated AI extraction replaces the listing-only count or the needs-setup placeholder
         record_, selected, note = probe_source(client, entry, stamp, delay=delay, sleep=sleep,
                                                     environ=environ, lookback_days=lookback_days, detail_stop=detail_stop,
                                                     page_stop=page_stop, known_ids=known_ids)
@@ -334,16 +337,16 @@ def run(registry, client, *, delay=1.0, sleep=time.sleep, environ=None, gmail_re
             sources.append(record_)
             jobs.extend(selected)
         sleep(delay)
-    if hn_result is not None:
-        sources.append(hn_result['source'])
-        jobs.extend(hn_result['postings'])
-        notes[hn_result['source']['source_id']] = hn_result['source']['error'] or 'comments-in-window'
+    for result in results:
+        sources.append(result['source'])
+        jobs.extend(result['postings'])
+        notes[result['source']['source_id']] = result['source']['error'] or 'posts-in-window'
     if gmail_result is not None:
         sources.append(gmail_result['source'])
         jobs.extend(gmail_result['postings'])
         notes['gmail-job-alerts'] = gmail_result['source']['error'] or 'bounded-message-page'
     for item in registry["needs_setup"]:
-        if item['id'] == 'gmail-job-alerts' and gmail_result is not None:
+        if (item['id'] == 'gmail-job-alerts' and gmail_result is not None) or item['id'] in replaced:
             continue
         missing = [name for name in item["env"] if not environ.get(name)]
         sources.append(record(item["id"], "needs setup", stamp, attempts=0))
@@ -390,6 +393,10 @@ def main(argv=None, *, client=None, sleep=time.sleep) -> int:
                         help="pages fetched from one paged public API (The Muse, Jobicy); a guard reported in the note")
     parser.add_argument("--known-ids", help="Job IDs already in the Sheet (scripts.known_ids); detail sources skip them")
     parser.add_argument("--known-ids-sha256", help="digest printed when that file was written")
+    parser.add_argument("--social-result", action="append", default=[],
+                        help="validated X or LinkedIn result from scripts.social_posts validate (repeatable)")
+    parser.add_argument("--social-result-sha256", action="append", default=[],
+                        help="digest printed for each --social-result, in the same order")
     parser.add_argument("--hn-result", help="validated Hacker News result from scripts.hn_hiring validate")
     parser.add_argument("--hn-result-sha256", help="digest printed when that result was written")
     args = parser.parse_args(argv)
@@ -416,8 +423,14 @@ def main(argv=None, *, client=None, sleep=time.sleep) -> int:
         if args.hn_result:
             source, found = postings_from_result(read_artifact(args.hn_result, expected_sha256=args.hn_result_sha256))
             hn_result = {'source': source, 'postings': found}
+        if len(args.social_result) != len(args.social_result_sha256):
+            raise ValueError('invalid_ai_result')
+        ai_results = []
+        for path, digest in zip(args.social_result, args.social_result_sha256):
+            source, found = postings_from_result(read_artifact(path, expected_sha256=digest))
+            ai_results.append({'source': source, 'postings': found})
         payload = run(registry, client, delay=args.delay, sleep=sleep, lookback_days=args.lookback_days,
-                      hn_result=hn_result, detail_stop=args.detail_safety_stop, page_stop=args.page_safety_stop, known_ids=known)
+                      hn_result=hn_result, ai_results=ai_results, detail_stop=args.detail_safety_stop, page_stop=args.page_safety_stop, known_ids=known)
         print(summary(payload))
         failed = sum(s["status"] in {"failed", "blocked"} for s in payload["sources"])
         digest = write_artifact(args.output, payload)
