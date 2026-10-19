@@ -34,6 +34,7 @@ SOURCE = 'x-twscrape'
 COOKIE_VARIABLES = ('X_AUTH_TOKEN', 'X_CT0')
 EXIT_SPENT, EXIT_NEEDS_SETUP = 3, 4
 SEARCH_QUEUE = 'SearchTimeline'  # twscrape's name for the search request queue
+MAX_PAGES = 10  # X returns about 20 posts a page; 10 pages is well past the 200-post limit
 ACCOUNT = 'jobhunter-x'  # a label for twscrape's private account table; not a real account name
 
 
@@ -77,7 +78,7 @@ class TwscrapeFetcher:
     def search(self, query, limit):
         before = self._successful_requests()
         try:
-            found = self._loop.run_until_complete(self._search(query, limit))
+            found, pages, stopped = self._loop.run_until_complete(self._search(query, limit))
         except self._twscrape.NoAccountError:
             # twscrape raises this both when the session was rejected/banned (account inactive) and when the only
             # account is cooling down after a rate limit (account active but locked): tell them apart.
@@ -89,10 +90,12 @@ class TwscrapeFetcher:
             if code == 429:
                 raise FetchRateLimited from None
             raise
-        if not found and self._successful_requests() <= before:
-            # Nothing came back AND twscrape never counted a successful request: it dropped the call silently (an
-            # HTML/Cloudflare block ends the stream with no response). A genuine empty search still counts one.
-            raise FetchBlocked
+        if not stopped and self._successful_requests() - before <= pages:
+            # The stream ran out by itself, so twscrape must have counted one last answer that held no new posts
+            # (a genuine empty search is counted too). Without it, a request was dropped silently (an HTML or
+            # Cloudflare block ends the stream with no response), whether or not earlier pages came back: keep
+            # what was read, but report the refusal.
+            raise FetchBlocked(found)
         return found
 
     def _successful_requests(self):
@@ -106,28 +109,22 @@ class TwscrapeFetcher:
     def _why_no_account(self):
         try:
             account = self._loop.run_until_complete(self._api.pool.get_account(ACCOUNT))
-        except Exception:  # noqa: BLE001 - unknown state: report the safe, fixed "refused" word
-            return FetchBlocked()
+        except Exception:  # noqa: BLE001 - the account could not be inspected: a collector defect, not a refusal
+            return CollectorFailure()
         if account is None or not account.active:
             return FetchBlocked()  # logged out, banned or checkpointed
         if self._rate_limit_seen:
             return FetchRateLimited()  # X itself said so, and the account is cooling down
         return CollectorFailure()  # locked after a network or unknown error: a defect, not a rate limit
 
-    def _successful_requests(self):
-        """twscrape adds to the account's per-queue counter only after a response passed its checks."""
-        try:
-            account = self._loop.run_until_complete(self._api.pool.get_account(ACCOUNT))
-            return int((account.stats or {}).get(SEARCH_QUEUE, 0)) if account is not None else 0
-        except Exception:  # noqa: BLE001 - unknown state counts as "no success seen", the safe direction
-            return 0
-
     async def _search(self, query, limit):
-        found = []
-        # twscrape treats `limit` as a target and can yield more, so stop here and close the stream ourselves
-        # (closing it also lets twscrape record the request count that search() relies on).
-        async with contextlib.aclosing(self._api.search_raw(query, limit=limit)) as pages:
-            async for page in pages:
+        """(posts, pages read, stopped by us). twscrape's own `limit` is a target it can overshoot and it stops
+        counting differently from us, so it is left off: this loop enforces the post limit and a page cap, and
+        closes the stream (closing it also lets twscrape record the request count that search() relies on)."""
+        found, pages = [], 0
+        async with contextlib.aclosing(self._api.search_raw(query)) as stream:
+            async for page in stream:
+                pages += 1
                 for tweet in self._twscrape.models.parse_tweets(page.json(), limit - len(found)):
                     if tweet.retweetedTweet is not None:
                         continue  # a repost repeats someone else's post
@@ -135,9 +132,9 @@ class TwscrapeFetcher:
                                   'links': [link.url for link in tweet.links], 'author': tweet.user.username})
                     if len(found) >= limit:
                         break
-                if len(found) >= limit:
-                    break
-        return found
+                if len(found) >= limit or pages >= MAX_PAGES:
+                    return found, pages, True
+        return found, pages, False
 
     def close(self):
         if self._sink is not None:

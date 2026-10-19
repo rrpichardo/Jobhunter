@@ -29,11 +29,20 @@ QUERY = re.compile(r'[A-Za-z0-9 "\'.,:()&/+#@-]{3,200}')
 
 
 class FetchBlocked(Exception):
-    """The site refused the saved session (logged out, restricted or checkpointed)."""
+    """The site refused the saved session (logged out, restricted or checkpointed). `found` holds any posts read
+    from this search before the refusal."""
+
+    def __init__(self, found=()):
+        super().__init__()
+        self.found = list(found)
 
 
 class FetchRateLimited(Exception):
-    """The site asked us to slow down."""
+    """The site asked us to slow down. `found` holds any posts read from this search before it did."""
+
+    def __init__(self, found=()):
+        super().__init__()
+        self.found = list(found)
 
 
 def load_queries(path, source_id):
@@ -74,24 +83,24 @@ def collect_posts(search, queries, *, max_posts, sleep, rng):
             break
         if ran:
             sleep(pause(rng))
+        failure = ''
         try:
             found = search(query, remaining)
-        except FetchBlocked:
-            error = LOGIN_FAILED
-            break
-        except FetchRateLimited:
-            error = RATE_LIMITED
-            break
+        except (FetchBlocked, FetchRateLimited) as exc:
+            found = exc.found  # what was read before the refusal is kept
+            failure = LOGIN_FAILED if isinstance(exc, FetchBlocked) else RATE_LIMITED
         except Exception:  # noqa: BLE001 - the message could carry a URL or token; keep only a fixed word
-            error = COLLECTOR_ERROR
-            break
-        ran += 1
+            found, failure = [], COLLECTOR_ERROR
+        ran += 0 if failure else 1
         for item in found:
             url = item.get('url') if isinstance(item, dict) else None
             if url in seen or len(items) >= max_posts:
                 continue
             seen.add(url)
             items.append(item)
+        if failure:
+            error = failure
+            break
     return items, ran, error
 
 
