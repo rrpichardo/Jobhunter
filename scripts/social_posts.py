@@ -44,11 +44,13 @@ def main(argv=None) -> int:
         stats = {**data['stats'], 'unreadable': data['stats'].get('unreadable', 0) + unreadable}
         result = social_result(args.source, read, extractions['facts'], data['captured_at'],
                                listed=len(candidates), stats=stats, error=str(data.get('error') or ''))
-        result['processed_ids'] = sorted(processed)
+        # A post whose proposed fact was rejected stays queued, so one extraction error cannot lose a job.
+        held = set(result['rejected_item_ids'])
+        result['processed_ids'] = sorted(set(processed) - held)
         digest = write_artifact(args.output, result)
         source = result['source']
         print(f"status={source['status']} valid={source['valid_jobs']} delivered={source['selected_for_m0']} "
-              f"rejected={source['rejected_items']}")
+              f"rejected={source['rejected_items']} held_for_retry={len(held)}")
         print(f'social_result_sha256={digest}')
         return 0
     except (ValueError, TypeError, KeyError, OSError) as exc:
