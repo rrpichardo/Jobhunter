@@ -38,6 +38,7 @@ that still need a Codex review of their exact head, with ready-to-paste requests
 2. Start a JobHunterEnv session from that branch with `mcp__claude-code-remote__create_session` (`environment_id`
    `env_01M9moVSWZBGvWAZYrqTm49s`, `source_url` the repository, `source_revision` `claude/combined-live-run`) and have it follow
    `docs/FIRST_LIVE_TEST.md` exactly, reading posts with a Haiku subagent, never printing a cookie value, never retrying a spent day.
+   The complete ready-to-paste prompt for that session is `docs/LIVE_RUN_PROMPT.md`.
 3. If step 2 is clean, the same session runs the first manual run (`run_window --mode manual`, 28 days, the writer in paced
    batches), then the user checks the Sheet the next morning, then decides A3 (create the daily routine).
 
