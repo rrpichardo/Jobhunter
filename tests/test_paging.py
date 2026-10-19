@@ -3,6 +3,7 @@
 import json
 
 import httpx
+import pytest
 
 from scripts import source_probe as probe
 
@@ -177,3 +178,15 @@ def test_the_registry_starts_the_muse_at_page_zero():
     config = yaml.safe_load(open('sources/v0_sources.yaml', encoding='utf-8'))
     muse = next(e for e in config['aggregators'] if e['id'] == 'themuse')
     assert 'page=0' in muse['url']
+
+
+@pytest.mark.parametrize('failure,code', [(httpx.ReadTimeout('slow'), 'timeout'), (httpx.ConnectError('down'), 'transport_error')])
+def test_a_later_page_that_never_answers_records_no_http_status(failure, code):
+    def serve(request):
+        if request.url.params['page'] == '0':
+            return httpx.Response(200, json={'page_count': 2, 'results': [muse_job(1)]})
+        raise failure
+    with httpx.Client(transport=httpx.MockTransport(serve)) as client:
+        record, jobs, _ = probe.probe_source(client, MUSE, STAMP, sleep=lambda s: None)
+    assert record['status'] == 'failed' and record['error'] == code and record['http_status'] is None
+    assert len(jobs) == 1

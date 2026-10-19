@@ -252,7 +252,11 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
                 else "invalid_board_response"
             http = int(code[5:]) if code.startswith("http_") else None
             attempts += stopped not in ("invalid_cursor", "invalid_page")  # the failed request was an attempt too
-            problem = ("blocked" if http in BLOCKED else "failed", code, http if http is not None else 200)
+            if code in ("timeout", "transport_error"):
+                reply = None  # no response arrived, so no status is claimed (same as a first-page failure)
+            else:
+                reply = http if http is not None else 200  # a malformed reply that really was received
+            problem = ("blocked" if http in BLOCKED else "failed", code, reply)
     try:
         if kind in LISTING_ONLY:
             counts = LISTING_ONLY[kind](data, ctx)
