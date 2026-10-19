@@ -249,6 +249,15 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
             shortlist.sort(key=lambda stub: collection_title_priority(stub['title'], entry.get('tag', 'other')))
             stop = DETAIL_SAFETY_STOP if detail_stop is None else detail_stop
             detail_skipped = max(0, len(shortlist) - stop)
+            if detail_skipped:
+                # Jobs inspected but not delivered (outside the window, rejected) are never in the Sheet, so
+                # skipping delivered IDs alone cannot move past them. Half the stop stays in title-priority
+                # order; the other half starts each day where the previous day's rotation ended, so the whole
+                # shortlist is reached within ceil(N / (stop - stop // 2)) days, with no stored cursor.
+                head = stop // 2
+                rest = shortlist[head:]
+                start = (datetime.fromisoformat(stamp).date().toordinal() * (stop - head)) % len(rest)
+                shortlist = shortlist[:head] + rest[start:] + rest[:start]
             postings, failed, problem, detail_attempts = fetch_details(
                 client, entry, shortlist[:stop], stamp, delay=delay, sleep=sleep)
             attempts += detail_attempts
