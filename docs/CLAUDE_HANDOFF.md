@@ -19,7 +19,7 @@ NOT replace Codex.** Heads at the time of writing:
 | --- | --- | --- | --- | --- |
 | #40 | claude/social-collectors | main | 5ceb6cc | X collector (twscrape), shared candidate code; base of the stack below |
 | #41 | claude/docs-run-modes | #40 | 4c0fe90 | manual 28 days / daily 3 days, `scripts.run_window` guard |
-| #42 | claude/role-forward-deployed | main | afedfb2 | Forward-Deployed / AI Deployment / AI Implementation Strategist roles (Codex finding on 62fc1be fixed here) |
+| #42 | claude/role-forward-deployed | main | b90c1d2 | Forward-Deployed / AI Deployment / AI Implementation Strategist roles (Codex finding on 62fc1be fixed here, then tightened after an independent review) |
 | #43 | claude/linkedin-posts | #40 | 0303164 | LinkedIn hiring-post collector (Playwright), card reader |
 | #44 | claude/waas | main | 209efbc | Work at a Startup public pages (needs `Accept: text/html`) |
 | #45 | claude/a16z | main | e9d29ec | a16z portfolio jobs, four searches |
@@ -30,12 +30,12 @@ NOT replace Codex.** Heads at the time of writing:
 
 **Do next, in order:**
 1. No scheduled sweep exists. Codex answered a request on #42 at 20:11 UTC on October 19 (its limit has reset, at least for now): it
-   reviewed `62fc1be`, found one real issue (fixed in `afedfb2`), and #42 now needs a review of that head. The user asked Claude not to
+   reviewed `62fc1be`, found one real issue (fixed in `afedfb2`, then tightened in `b90c1d2` after an independent review), and #42 now needs a review of that head. The user asked Claude not to
    try Codex while it was thought unavailable, so ask the user for a "go", then comment `@codex review <full head SHA>` on one PR at a
    time (heads move: re-read them). Fix real findings in NEW commits, never rewrite history. Merge only with a Codex approval at the
    exact head plus green CI.
 2. Merge order: #42, #44, #45 (the second of #44/#45 needs a trivial conflict fix in `dedupe`/the registry), #46, #49,
-   then #40, and after it retarget #41, #43, #47 to `main` (merge `main` into each first), then #48 after #43. #48 carries #42's older commits, so merge `main` into it after #42 lands to pick up `afedfb2`.
+   then #40, and after it retarget #41, #43, #47 to `main` (merge `main` into each first), then #48 after #43. #48 carries #42's older commits, so merge `main` into it after #42 lands to pick up `b90c1d2`.
 3. First live X and LinkedIn test: `docs/FIRST_LIVE_TEST.md`. The user said yes (A2) for after Codex approves #40 and #43. It
    runs in the JobHunterEnv environment (the cookies live there: `X_AUTH_TOKEN`, `X_CT0`, `LINKEDIN_LI_AT`, also
    `WAAS_SESSION_COOKIE`, `JSEARCH_API_KEY`, `JOOBLE_API_KEY`; names verified, values never printed). Use
@@ -45,6 +45,39 @@ NOT replace Codex.** Heads at the time of writing:
    models found the same 15 jobs (`docs/evals/results/haiku_reading_2026-10-19.md`, PR #49). The user's rule 3 (read the posts and the
    4 wording differences) is open, so the reading stays on Sonnet. Repeat on X and LinkedIn posts after the live test.
 5. Then a first manual run (`run_window --mode manual`), then the user decides A3 (create the daily routine).
+
+### Merge plan, checked by a trial replay (October 19, about 22:00 UTC)
+
+Claude replayed every planned merge, in order, on a throwaway local branch that was never pushed, starting from `main` at `f71464f`.
+Heads used: #42 `b90c1d2`, #44 `209efbc`, #45 `e9d29ec`, #46 (this PR), #49 `6cbc3ec`, #40 `5ceb6cc`, #41 `4c0fe90`, #43 `0303164`,
+#47 `9400d18`, #48 `4e86e41`. Result: every conflict is additive (both sides add entries) and the fully combined result passes
+**1,055 tests** with the social extra. Heads move, so re-check before acting. Exact steps and resolutions:
+
+| Step | PR | Result in the replay | What to do |
+| --- | --- | --- | --- |
+| 1 | #42 | clean | merge |
+| 2 | #44 | clean | merge |
+| 3 | #45 | **conflict** in `jobhunter/postings.py` (the `DETAIL_SOURCES` dict) and `sources/v0_sources.yaml` | merge `main` into #45's branch and **keep both sides**: both the `waas` and `a16z` entries in `DETAIL_SOURCES`; the `waas-*` and the `a16z-*` source lines in the YAML. 881 tests passed after this |
+| 4 | #46 | clean | merge |
+| 5 | #49 | clean | merge |
+| 6 | #40 | **conflict** in `docs/PENDING.md` (decisions table, section A), because #46 rewrote the same rows | merge `main` into #40's branch; take #40's wording for A1, A3, A5 and A6 and #46's wording for A2 and A8 (they record the user's October 19 decisions) |
+| 7 | #41, #43, #47 | clean after #40 | retarget each to `main` (merge `main` into the branch first), then merge |
+| 8 | #48 | **conflict** in `docs/SOURCES_HOW_READ.md` and `jobhunter/post_facts.py` (the `SOCIAL` dict) | merge `main` into #48's branch; keep both the `alirohde-rss` and the `linkedin-jobs` entries; in the docs table keep #47's two newsletter rows and #48's "LinkedIn job listings" row and drop the stale "none yet" and "Newsletters: Next Play, Ali Rohde ... not built" lines. #48 also carries older #42 commits, so this merge picks up `b90c1d2` |
+
+Each of these merges changes a PR head, so it needs a fresh Codex review of that exact head (the conflict fixes are small).
+
+### Live-test rehearsal, done offline (October 19, about 21:50 UTC)
+
+Nothing here touched X or LinkedIn. On the `claude/linkedin-posts` branch (#43, which contains #40) with `uv sync --locked --extra social`:
+946 tests pass; every flag named in `docs/FIRST_LIVE_TEST.md` exists on the commands it names; `x_collect` and `linkedin_collect` with no
+cookies exit 4, print names only and write nothing; the real `BrowserSession` class starts the pinned Playwright 1.56.0 with the
+preinstalled Chromium 141 and closes cleanly (no network); the searches are 10 for X and 5 post searches for LinkedIn.
+**Gaps found:**
+1. Runbook step 4 (`scripts.run_window --mode manual`) fails with "No module named scripts.run_window" on #43, because that tool is in
+   **#41**. So #41 must be merged before the live test (A2 now says #40, #41 and #43). Also fix the runbook text when #43 is next touched.
+2. After #48 is merged, LinkedIn runs 10 searches (5 posts and 5 jobs), so the runbook's healthy line `queries_run=5` becomes 10.
+3. This session has none of the cookies; the live test must run in a JobHunterEnv session. The unavoidable remaining risk is LinkedIn's
+   live page layout, which only the real run can show (the card reader is tested on saved HTML only).
 
 **Gotchas learned:** the pinned uv is 0.13.1 (`python3 -m venv ~/uvvenv && ~/uvvenv/bin/pip install uv==0.13.1`; run tests with
 `~/uvvenv/bin/uv run --locked --extra social python -m pytest -q`); `httpx` is blocked by Substack's bot filter (use

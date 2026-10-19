@@ -14,13 +14,13 @@ this section if it is out of date.
 
 | What | Where it stands |
 | --- | --- |
-| A2 First live X and LinkedIn test | You said yes (October 19): run it after Codex's limit resets and #40 and #43 are approved and merged. Cookie names CHECKED in JobHunterEnv (names only, October 19): `X_AUTH_TOKEN`, `X_CT0` and `LINKEDIN_LI_AT` are set; `WAAS_SESSION_COOKIE`, `JSEARCH_API_KEY`, `JOOBLE_API_KEY` and the spreadsheet id are set too. The collector tests (91) pass in that environment with the social extra. Runbook: `docs/FIRST_LIVE_TEST.md`. You do not need to do anything for it except copy the spreadsheet first. |
+| A2 First live X and LinkedIn test | You said yes (October 19): run it after #40, #41 and #43 are Codex-approved and merged (#41 is needed because the runbook's step 4, `run_window`, lives there; found by an offline rehearsal on October 19). Cookie names CHECKED in JobHunterEnv (names only, October 19): `X_AUTH_TOKEN`, `X_CT0` and `LINKEDIN_LI_AT` are set; `WAAS_SESSION_COOKIE`, `JSEARCH_API_KEY`, `JOOBLE_API_KEY` and the spreadsheet id are set too. The collector tests (91) pass in that environment with the social extra. Runbook: `docs/FIRST_LIVE_TEST.md`. You do not need to do anything for it except copy the spreadsheet first. |
 | A3 Create the daily routine | Only after a manual run is checked. |
 | A4 Merging | You said (October 19) to merge what Codex approves and to use the `engineering:code-review` check in the meantime. |
 | A10 NEW: close the old stack PRs #21 to #30 | Their content already landed on `main` through #39, so they are stale duplicates (they still show as open). Closing them is housekeeping; Claude will not close anything without your OK. |
 | A7 Limits | 5 LinkedIn post searches, 5 LinkedIn job searches, 10 X searches a day. Say so if you want them changed. |
 | A11 NEW: Haiku decision (rule 3) | The first Haiku-vs-Sonnet run is done (Hacker News only): 100 of 100 posts agree and both models found the same 15 jobs, so the 90% rules pass. The reading stays on Sonnet until YOU read the posts and the 4 wording differences (two location texts, one salary text, one company name) and say whether Haiku is acceptable. Claude gave you an interactive page and an Excel workbook in chat; the saved result is `docs/evals/results/haiku_reading_2026-10-19.md` (PR #49). |
-| A12 NEW: Codex is answering again | Claude sent ONE request (#42, 20:09 UTC) before you said not to try. Codex reviewed the exact head at 20:11 UTC and found one real problem (an engineer title that mentions "strategy" matched the new role family). Claude fixed it in `afedfb2`, replied and resolved the thread. #42 now needs a Codex review of that new head. Claude has NOT sent it, because you asked it not to try Codex. Say "go" and Claude re-requests exact-head reviews one PR at a time, #42 first. |
+| A12 NEW: Codex is answering again | Claude sent ONE request (#42, 20:09 UTC) before you said not to try. Codex reviewed the exact head at 20:11 UTC and found one real problem (an engineer title that mentions "strategy" matched the new role family). Claude fixed it in `afedfb2`, replied and resolved the thread; a second independent review then tightened it further in `b90c1d2`. #42 now needs a Codex review of that new head. Claude has NOT sent it, because you asked it not to try Codex. Say "go" and Claude re-requests exact-head reviews one PR at a time, #42 first. |
 
 **B. Your tasks** (only you can do them; details in section B below)
 
@@ -44,7 +44,7 @@ comment that says Codex still has to review it.
 | --- | --- | --- |
 | #40 | X (Twitter) hiring-post collector | Codex review; base of #41, #43, #47 |
 | #41 | Run modes: 28 days by hand, 3 days daily, refuses after a gap | Codex review (after #40) |
-| #42 | Forward-Deployed / AI Deployment / AI Implementation Strategist roles | Codex reviewed `62fc1be` and found 1 issue (fixed in `afedfb2`, thread resolved); needs Codex review of `afedfb2` |
+| #42 | Forward-Deployed / AI Deployment / AI Implementation Strategist roles | Codex reviewed `62fc1be` and found 1 issue (fixed in `afedfb2`, thread resolved); an independent review of that fix found bare `FDE` titles still passing (fixed in `b90c1d2`); needs Codex review of `b90c1d2` |
 | #43 | LinkedIn hiring-post collector | Codex review (after #40) |
 | #44 | Work at a Startup public pages | Codex review |
 | #45 | a16z portfolio jobs | Codex review |
@@ -62,13 +62,13 @@ Until you answer A11 the reading stays on Sonnet.
 
 **E. Possible later add-on (Work at a Startup logged-in lists).** A read-only probe on October 19 found that the public product page shows 24 of 241 jobs and has no paging. It could not test the logged-in lists, because the saved `WAAS_SESSION_COOKIE` has no cookie name (B10). Once that is fixed, Claude retests and, if the logged-in lists show more, builds them (A1 is approved, read-only).
 
-**D. Claude's next steps:** when Codex is back: review, fix, merge in order (#42, #44, #45, #46, then #40 and the PRs
+**D. Claude's next steps:** the merge order and the exact conflict fixes were checked by a trial replay (all ten PRs combined pass 1,055 tests; see the "Merge plan" table in `docs/CLAUDE_HANDOFF.md`). When Codex is back: review, fix, merge in order (#42, #44, #45, #46, then #40 and the PRs
 stacked on it). Then the live X and LinkedIn test, then a first manual run, then A3.
 
 **Decisions already made (do not ask again):** A1 build LinkedIn, X and Work at a Startup (read-only); A3 only after
 a checked manual run; A5 keep 28 days; A6 no extra JSearch pages; A8 BizOps stays out, and the Forward-Deployed /
 AI Deployment / AI Implementation Strategist titles are in; first manual run 28 days, daily routine 3 days; the
-the reading step stays on Sonnet UNLESS the Haiku eval shows over 90% agreement and you have read the posts (the first run shows 100%, your reading is open, A11); old commits keep their "Claude-Session" line (see below).
+a bigger Haiku test was offered and declined ("with 100 we are good"); the reading step stays on Sonnet UNLESS the Haiku eval shows over 90% agreement and you have read the posts (the first run shows 100%, your reading is open, A11); old commits keep their "Claude-Session" line (see below).
 
 **About the old "Claude-Session" lines.** Some of Claude's older commits end with a line linking to the chat session
 that wrote them. They were left in on purpose: removing them would mean re-creating those commits, which voids every
