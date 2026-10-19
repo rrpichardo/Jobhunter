@@ -38,10 +38,15 @@ development evidence only: retest in JobHunterEnv before relying on a row.
 Safety stops, not targets (all reported, never silent):
 
 - `DETAIL_SAFETY_STOP = 300` job pages per detail source per run. Candidates past
-  it appear as `details_skipped=N` in the source note. Because the same candidates
-  sort first on every run, a source that regularly hits the stop would starve its
-  tail. `scripts.known_ids` plus `source_probe --known-ids` skip Job IDs already in
-  the Sheet, so that no longer happens; an already-delivered job is not refreshed later.
+  it appear as `details_skipped=N` in the source note. `scripts.known_ids` plus
+  `source_probe --known-ids` skip Job IDs already in the Sheet (an already-delivered job is
+  not refreshed later). That alone does not move past pages that were opened but not
+  delivered (outside the window, rejected): they are never in the Sheet, so they would be
+  reopened first every day. When the stop is hit, the shortlist is therefore rotated by
+  capture date so each day's window starts where the previous one ended: the whole
+  shortlist is reached within `ceil(N / stop)` days. This is a stateless rotation, not a
+  stored cursor; an inspected-but-undelivered job is reopened once per cycle, and a retry
+  on the same date inspects the same pages. Title priority holds only within each window.
 - `EXTRACTION_SAFETY_STOP = 1000` Gmail AI extractions per run.
 - One writer batch holds at most `JOB_BATCH_SIZE = 150` jobs (its recovery journal
   must fit in `_State`). Larger runs are split into `<run id>-b001`, `-b002`, ...
