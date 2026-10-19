@@ -1,9 +1,11 @@
 """Reserve, close out or look up the daily live-collection allowance for LinkedIn or X.
 
   uv run --locked python -m scripts.allowance reserve --source linkedin-login --run-id <run>
-  uv run --locked python -m scripts.allowance finish  --source linkedin-login --run-id <run> --outcome ok
+  uv run --locked python -m scripts.allowance finish  --source linkedin-login --run-id <run> --outcome ok --day <day>
   uv run --locked python -m scripts.allowance status  --source linkedin-login
 
+`reserve` prints the New York day it spent; pass it to `finish --day` so a collection that runs past midnight closes
+the day it reserved (without --day the row is looked up by run id among today and yesterday).
 `reserve` must succeed (exit 0) before any live request to that site. Exit 3 means today's allowance is already
 spent: collect nothing and say so in the report. Any other non-zero exit means the reservation is unknown:
 also collect nothing. Cloud-only, like the Sheet writer.
@@ -19,7 +21,7 @@ from jobhunter.sheet_io import GspreadStore
 from scripts.sheets_sync import SAFE_ERRORS
 
 ALLOWANCE_ERRORS = frozenset('''invalid_allowance_source invalid_allowance_outcome invalid_allowance_state
-invalid_allowance_time allowance_not_reserved invalid_run_id'''.split())
+invalid_allowance_time invalid_allowance_day allowance_not_reserved invalid_run_id'''.split())
 EXIT_SPENT = 3
 
 
@@ -33,13 +35,14 @@ def main(argv=None, *, store=None) -> int:
             sub.add_argument('--run-id', required=True)
         if name == 'finish':
             sub.add_argument('--outcome', required=True, choices=sorted(OUTCOMES))
+            sub.add_argument('--day', help='the day `reserve` printed (YYYY-MM-DD)')
     args = parser.parse_args(argv)
     try:
         backend = GspreadStore(open_workbook()) if store is None else store
         if args.command == 'reserve':
             print(f'allowance_reserved: source={args.source} day={reserve(backend, args.source, args.run_id)}')
         elif args.command == 'finish':
-            print(f'allowance_closed: source={args.source} day={finish(backend, args.source, args.run_id, args.outcome)} '
+            print(f'allowance_closed: source={args.source} day={finish(backend, args.source, args.run_id, args.outcome, day=args.day)} '
                   f'outcome={args.outcome}')
         else:
             day, state = status(backend, args.source)

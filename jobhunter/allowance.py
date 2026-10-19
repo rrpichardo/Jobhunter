@@ -32,6 +32,7 @@ PREFIX = 'allowance/'
 SOURCES = frozenset({'linkedin-login', 'x-twscrape'})
 OUTCOMES = frozenset({'ok', 'zero', 'failed', 'blocked'})
 RUN_ID = re.compile(r'[A-Za-z0-9_-]{1,80}')
+DAY = re.compile(r'\d{4}-\d{2}-\d{2}')
 
 
 class AllowanceSpent(ValueError):
@@ -123,20 +124,37 @@ def reserve(store, source, run_id, *, now=lambda: datetime.now(timezone.utc).iso
     return _locked(store, operation, now, sleep, jitter)
 
 
-def finish(store, source, run_id, outcome, *, now=lambda: datetime.now(timezone.utc).isoformat(),
+def finish(store, source, run_id, outcome, *, day=None, now=lambda: datetime.now(timezone.utc).isoformat(),
            sleep=time.sleep, jitter=random.random):
-    """Record how the reserved attempt ended. The allowance stays spent whatever the outcome."""
+    """Record how the reserved attempt ended. The allowance stays spent whatever the outcome.
+
+    A collection can cross midnight in New York, so the row to close is the one `reserve` made, not necessarily
+    today's. Pass the day `reserve` returned; without it the row is looked up by source and run id among today
+    and yesterday. Only a row carrying this run id is ever written, so another day's allowance is never touched.
+    """
     _check(source, run_id)
     if outcome not in OUTCOMES:
         raise ValueError('invalid_allowance_outcome')
+    if day is not None and (not isinstance(day, str) or not DAY.fullmatch(day)):
+        raise ValueError('invalid_allowance_day')
 
     def operation(stamp):
-        day = new_york_day(datetime.fromisoformat(stamp))
-        existing = _state(store.read('_State'), _key(source, day))
-        if existing is None or existing['run'] != run_id:
+        moment = datetime.fromisoformat(stamp)
+        rows = store.read('_State')
+        if day is not None:
+            candidates = [day]
+        else:
+            candidates = [new_york_day(moment), new_york_day(moment - timedelta(days=1))]
+        found = [d for d in dict.fromkeys(candidates)
+                 if (existing := _state(rows, _key(source, d))) is not None and existing['run'] == run_id]
+        if not found:
             raise ValueError('allowance_not_reserved')
-        _write(store, _record(source, day, outcome, stamp, run_id), sleep, jitter)
-        return day
+        if len(found) > 1:  # the same run id on two days: close the one still waiting for an outcome
+            found = [d for d in found if _state(rows, _key(source, d))['state'] == 'reserved']
+            if len(found) != 1:
+                raise ValueError('allowance_not_reserved')
+        _write(store, _record(source, found[0], outcome, stamp, run_id), sleep, jitter)
+        return found[0]
     return _locked(store, operation, now, sleep, jitter)
 
 
