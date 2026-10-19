@@ -1,5 +1,8 @@
 # Claude Code continuation handoff
 
+**Start with docs/PENDING.md** (what only the user can do, what is blocked and what
+Claude continues) and docs/LIMITS.md (every limit and its value).
+
 ## Latest clarification — full source scope and decisions still pending
 
 The user asked for another commit/push/PR handoff after the plain-language

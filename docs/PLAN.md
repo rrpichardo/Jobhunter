@@ -88,6 +88,16 @@ resources already provisioned. Pending choices do not silently change current li
   skip-already-delivered, both listed in docs/BACKFILL_WINDOWS.md. The saved AI
   read-queue in `_State` (`jobhunter/ai_queue.py`, `scripts/ai_queue.py`) is on branch
   `claude/ai-queue`; its counts are printed, not yet a Run Log column. LinkedIn starts at 5 job + 5 post searches per run.
+- [ ] Pending user-facing deliverables (docs/PENDING.md section E): a README that
+  explains every command; a basic front end to see the Run Log and source health and
+  to adjust parameters such as searches per day and the top amount per tool, so the
+  user does not need the terminal; and one config for every limit (docs/LIMITS.md).
+  Not built. The daily run stays cloud-only; the page must not become a local
+  production dependency or add a hosting service.
+- [ ] First pull (user direction, October 18): a one-off MANUAL four-week backfill
+  with safety stops relaxed where possible, not the scheduled routine; check the
+  Sheet the next morning; then the 06:07 routine runs daily. Everything that waits
+  on the user is listed in docs/PENDING.md.
 - [ ] Current user priority: implement LinkedIn hiring-post search in addition
   to job listings, then X hiring-post search, then the real cloud test. Both
   social sources were already in V0; this confirms execution order. See the
