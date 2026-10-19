@@ -289,3 +289,23 @@ def test_a_numeric_comment_id_in_a_rejected_fact_still_holds_its_comment(tmp_pat
 def test_a_rejected_fact_that_names_no_comment_holds_every_comment_that_was_read(tmp_path, capsys, junk):
     code, out = validate_with(tmp_path, capsys, {'processed': ['2001', '2003'], 'facts': [junk]})
     assert code == 0 and json.loads(out.read_text())['processed_ids'] == []
+
+
+def test_business_operations_comments_are_not_candidates_because_delivery_cannot_collect_them():
+    data = item(1000, [comment(2001, 'Acme | Business Operations Manager | Remote US'),
+                       comment(2003, 'Beta | BizOps Lead | NYC'),
+                       comment(2005, 'Gamma | Chief of Staff | Remote US')])
+    found, _ = hn.candidate_comments(THREAD, data, NOW - timedelta(days=28))
+    assert [c['comment_id'] for c in found] == ['2005']
+
+
+def test_the_candidate_file_stays_under_its_byte_stop_and_says_it_was_truncated(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(cli, 'CANDIDATE_BYTE_STOP', 3000)
+    long_text = 'Acme | Product Manager | Remote US ' + 'y' * 1200
+    story = item(1000, [comment(2001 + 2 * i, long_text) for i in range(6)])
+    out = tmp_path.parent / (tmp_path.name + '_bytes.json')
+    assert cli.main(['candidates', '--output', str(out)], client=hn_client(story), sleep=lambda s: None,
+                    now=lambda: NOW) == 0
+    data = json.loads(out.read_text())
+    assert data['truncated'] is True and 0 < len(data['candidates']) < 6
+    assert sum(len(json.dumps(c)) for c in data['candidates']) <= 3000

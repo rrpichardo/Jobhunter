@@ -10,6 +10,7 @@ Public Algolia endpoints only: no login, no secrets, no Sheet writes.
 """
 
 import argparse
+import json
 from datetime import datetime, timedelta, timezone
 import time
 
@@ -17,7 +18,7 @@ import httpx
 
 from jobhunter.artifacts import new_artifact_path, read_artifact, safe_error_code, write_artifact
 from jobhunter.fetch import FetchError, JsonFetcher
-from jobhunter.hn_hiring import (CANDIDATE_SAFETY_STOP, ITEM_URL, SEARCH_URL, SOURCE_ID, build_result,
+from jobhunter.hn_hiring import (CANDIDATE_BYTE_STOP, CANDIDATE_SAFETY_STOP, ITEM_URL, SEARCH_URL, SOURCE_ID, build_result,
                                  candidate_comments, select_threads)
 
 LOOKBACK_DAYS = 28
@@ -29,15 +30,20 @@ def collect_candidates(fetcher, *, now, lookback_days, sleep=time.sleep, safety_
     if not threads:
         raise ValueError('hn_no_threads')
     cutoff = now - timedelta(days=lookback_days)
+    used = 0
     candidates, totals, truncated = [], {'top_level': 0, 'in_window': 0, 'role_mentions': 0, 'unreadable': 0}, False
     for thread in threads:
         sleep(1.0)
         found, stats = candidate_comments(thread, fetcher.get_json(ITEM_URL.format(id=thread['story_id'])), cutoff)
         for key, value in stats.items():
             totals[key] += value
-        room = safety_stop - len(candidates)
-        truncated = truncated or len(found) > room
-        candidates.extend(found[:room])
+        for candidate in found:
+            size = len(json.dumps(candidate, ensure_ascii=True))
+            if len(candidates) >= safety_stop or used + size > CANDIDATE_BYTE_STOP:
+                truncated = True
+                continue
+            candidates.append(candidate)
+            used += size
     return {'schema_version': 1, 'source_id': SOURCE_ID, 'captured_at': now.isoformat(),
             'lookback_days': lookback_days, 'threads': threads, 'stats': totals,
             'truncated': truncated, 'candidates': candidates}

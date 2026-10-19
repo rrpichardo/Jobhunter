@@ -164,6 +164,11 @@ def finish(store, source, run_id, outcome, *, day=None, now=lambda: datetime.now
             found = [d for d in found if _state(rows, _key(source, d))['state'] == 'reserved']
             if len(found) != 1:
                 raise ValueError('allowance_not_reserved')
+        current = _state(rows, _key(source, found[0]))['state']
+        if current != 'reserved':  # a closed attempt is audit evidence; only the same outcome may be repeated
+            if current != outcome:
+                raise ValueError('allowance_already_closed')
+            return found[0]
         _write(store, _record(source, found[0], outcome, stamp, run_id), sleep, jitter)
         return found[0]
     return _locked(store, operation, now, sleep, jitter)

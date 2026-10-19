@@ -249,3 +249,22 @@ def test_finish_without_a_day_finds_the_reservation_across_the_fall_clock_change
     store = MemoryStore()
     assert reserve(store, '2026-11-02T04:59:59+00:00') == '2026-11-01'   # 23:59:59 EST
     assert finish(store, '2026-11-02T05:00:01+00:00', 'zero') == '2026-11-01'
+
+
+def test_a_closed_attempt_is_never_rewritten_with_a_different_outcome():
+    store = MemoryStore()
+    reserve(store, NOON)
+    finish(store, NOON, 'ok')
+    before = json.loads(store.tables['_State'][1][1])
+    with pytest.raises(ValueError, match='allowance_already_closed'):
+        finish(store, NOON, 'failed')
+    assert json.loads(store.tables['_State'][1][1]) == before  # the original audit evidence is untouched
+
+
+def test_repeating_the_same_outcome_is_harmless_and_writes_nothing():
+    store = MemoryStore()
+    reserve(store, NOON)
+    finish(store, NOON, 'zero')
+    writes = len(store.writes)
+    assert finish(store, LATE, 'zero') == '2026-10-18'
+    assert len(store.writes) == writes
