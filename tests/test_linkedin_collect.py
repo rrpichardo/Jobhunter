@@ -76,6 +76,58 @@ def test_the_posts_link_form_is_read_too():
     assert [c['id'] for c in cards] == [pid]
 
 
+def test_a_single_result_is_not_grown_into_the_search_form_or_headings():
+    _, one = card(1)
+    html = ('<html><body><main><div><form><input placeholder="Search"></form><h1>Search results</h1>'
+            f'<div>{one}</div></div></main></body></html>')
+    cards, _ = lc.extract_post_cards(html)
+    assert len(cards) == 1 and 'Search results' not in cards[0]['text'] and 'Search' not in cards[0]['text']
+
+
+def test_a_suggested_post_nested_inside_a_card_is_left_out_of_it_and_does_not_shrink_it():
+    first, _ = card(1)
+    second = post_id(WHEN + timedelta(days=2), 7)
+    html = page(f'<li><div data-urn="urn:li:activity:{first}"><a href="/in/jane/">Jane Doe</a><p>Hiring a PM now.</p>'
+                f'<div><span>Suggested for you</span><div data-urn="urn:li:activity:{second}"><p>Unrelated post text</p></div>'
+                f'</div></div></li>')
+    cards, _ = lc.extract_post_cards(html)
+    by_id = {c['id']: c for c in cards}
+    assert 'Hiring a PM now.' in by_id[first]['text'] and 'Unrelated' not in by_id[first]['text']
+    assert 'Unrelated post text' in by_id[second]['text']
+
+
+def test_ids_in_side_panels_the_page_head_and_scripts_are_not_results():
+    pid = post_id(WHEN, 3)
+    html = (f'<html><head><link rel="canonical" href="https://www.linkedin.com/feed/update/urn:li:activity:{pid}/"></head>'
+            f'<body><aside><a href="/feed/update/urn:li:activity:{pid}/">People also viewed</a></aside>'
+            f'<script>{{"urn":"urn:li:activity:{pid}"}}</script><main><h2>No results found</h2></main></body></html>')
+    cards, stats = lc.extract_post_cards(html)
+    assert cards == [] and stats['post_ids'] == 0 and stats['no_results'] and stats['script_ids'] == 1
+
+
+def test_a_page_that_says_no_results_has_no_cards_even_with_a_stray_link():
+    _, one = card(1)
+    cards, stats = lc.extract_post_cards(page(one, extra='<h2>No results found</h2>'))
+    assert cards == [] and stats['no_results']
+
+
+def test_percent_encoded_ids_are_read():
+    pid = post_id(WHEN, 4)
+    cards, _ = lc.extract_post_cards(page(f'<li><a href="/feed/update/urn%3Ali%3Aactivity%3A{pid}/">3d</a><p>Hiring a PM</p><p>x</p></li>'))
+    assert [c['id'] for c in cards] == [pid]
+
+
+def test_author_is_a_real_name_never_a_slug_and_outside_links_are_unwrapped_and_linkedin_hosts_excluded():
+    pid = post_id(WHEN, 5)
+    html = page(f'<li><a href="https://de.linkedin.com/in/jane-doe-4a5b6c/"><img alt="avatar"></a>'
+                f'<a href="https://de.linkedin.com/in/jane-doe-4a5b6c/">Jane Doe Jane Doe</a>'
+                f'<a href="/feed/update/urn:li:activity:{pid}/">3d</a><p>We are hiring a Product Manager.</p>'
+                '<a href="https://media.licdn.com/dms/image/x.png">pic</a><a href="https://help.linkedin.com/x">help</a>'
+                '<a href="https://www.linkedin.com/redir/redirect?url=https%3A%2F%2Facme.example%2Fjobs%2Fpm&amp;urlhash=abc">Apply</a></li>')
+    card_ = lc.extract_post_cards(html)[0][0]
+    assert card_['author'] == 'Jane Doe' and card_['links'] == ['https://acme.example/jobs/pm']
+
+
 # ---- the fetcher over a fake session ----------------------------------------------------------------
 
 class FakeSession:
@@ -123,6 +175,49 @@ def test_the_post_limit_is_enforced():
 def test_walls_and_errors_map_to_fixed_failures(result, expected):
     with pytest.raises(expected):
         fetcher(result).search('q', 5)
+
+
+def test_ids_that_cannot_be_read_are_a_failure_not_a_healthy_zero():
+    html = page('<li><a href="/feed/update/urn:li:activity:12345678901/">3d</a><p>old</p></li>')  # no believable date
+    with pytest.raises(RuntimeError, match='layout_not_recognised'):
+        fetcher(li.Page('https://www.linkedin.com/search/results/content/', 200, html)).search('q', 5)
+
+
+def test_a_page_where_every_card_is_a_stub_is_a_failure():
+    pid = post_id(WHEN, 6)
+    html = page(f'<li><a href="/feed/update/urn:li:activity:{pid}/">3d</a></li>')
+    with pytest.raises(RuntimeError, match='layout_not_recognised'):
+        fetcher(li.Page('https://www.linkedin.com/search/results/content/', 200, html)).search('q', 5)
+
+
+def test_a_sign_in_form_on_the_results_page_is_a_login_failure():
+    html = '<html><body><main><form><input type="password"></form></main></body></html>'
+    with pytest.raises(sc.FetchBlocked):
+        fetcher(li.Page('https://www.linkedin.com/search/results/content/', 200, html)).search('q', 5)
+
+
+def test_a_browser_error_leaves_a_fixed_record_and_a_redirect_loop_means_a_stale_login():
+    class Failing:
+        def __init__(self, error):
+            self.error = error
+
+        def get(self, url, **options):
+            raise self.error
+    f = li.LinkedInFetcher(Failing(RuntimeError('net::ERR_TOO_MANY_REDIRECTS at https://www.linkedin.com/?token=secret')), since_day='2026-09-21')
+    with pytest.raises(sc.FetchBlocked):
+        f.search('q', 5)
+    assert f.diagnostics[0]['error'] == 'redirect_loop' and 'secret' not in json.dumps(f.diagnostics)
+    g = li.LinkedInFetcher(Failing(RuntimeError('something else with secret')), since_day='2026-09-21')
+    with pytest.raises(RuntimeError, match='browser_error'):
+        g.search('q', 5)
+    assert g.diagnostics[0]['error'] == 'browser_error' and 'secret' not in json.dumps(g.diagnostics)
+
+
+def test_the_diagnostic_path_keeps_only_the_first_segment():
+    f = fetcher(li.Page('https://www.linkedin.com/checkpoint/challenge/AgEsecrettoken123', 200, '<html></html>'))
+    with pytest.raises(sc.FetchBlocked):
+        f.search('q', 5)
+    assert f.diagnostics[0]['path'] == '/checkpoint' and 'secret' not in json.dumps(f.diagnostics)
 
 
 def test_a_page_that_says_no_results_is_a_genuine_zero():
@@ -222,15 +317,40 @@ def test_a_missing_browser_library_asks_for_setup_and_spends_nothing(tmp_path, m
     assert code == 4 and 'social extra' in capsys.readouterr().out and '_State' not in store.tables
 
 
-def test_a_failure_to_start_the_browser_is_written_down_with_a_fixed_word(tmp_path, monkeypatch):
+def test_a_browser_that_cannot_start_spends_nothing_and_leaks_nothing(tmp_path, monkeypatch, capsys):
     def broken(*args, **kwargs):
         raise RuntimeError('token=secret-li-at-value could not launch')
     monkeypatch.setitem(sys.modules, 'playwright', object())
     monkeypatch.setattr(li, 'BrowserSession', broken)
     code, out, store = run(tmp_path, None)
-    payload = json.loads(out.read_text())
-    assert code == 0 and payload['error'] == 'social_collector_error' and 'secret' not in out.read_text()
-    assert rows(store)['allowance/linkedin-login/2026-10-19']['state'] == 'failed'
+    text = capsys.readouterr().out
+    assert code == 4 and '_State' not in store.tables and not out.exists()
+    assert 'secret' not in text and 'no allowance was spent' in text
+
+
+def test_a_cookie_pasted_with_a_newline_quotes_or_spaces_is_cleaned_before_it_reaches_the_browser(tmp_path, monkeypatch):
+    received = []
+
+    class Spy:
+        def __init__(self, value, rng=None):
+            received.append(value)
+            self.diagnostics = []
+
+        def search(self, query, limit):
+            return []
+
+        def close(self):
+            pass
+    monkeypatch.setitem(sys.modules, 'playwright', object())
+    monkeypatch.setattr(li, 'BrowserSession', Spy)
+    monkeypatch.setattr(li, 'LinkedInFetcher', lambda session, **kwargs: session)
+    code, _, _ = run(tmp_path, None, environ={'LINKEDIN_LI_AT': '  "abc123"\n'})
+    assert code == 0 and received == ['abc123']
+
+
+def test_a_blank_cookie_counts_as_not_set(tmp_path, capsys):
+    code, _, store = run(tmp_path, fetcher(ok()), environ={'LINKEDIN_LI_AT': ' \n'})
+    assert code == 4 and '_State' not in store.tables
 
 
 def test_a_doomed_output_path_spends_no_allowance(tmp_path):
@@ -286,4 +406,4 @@ def test_the_browser_session_loads_scrolls_expands_and_returns_the_page_with_the
         session.close()
     cards, _ = lc.extract_post_cards(result.html)
     assert result.status == 200 and [c['id'] for c in cards] == [pid]
-    assert 'li_at=secret-li-at-value' in seen['cookie'] and 'Headless' not in seen['agent'] and 'Chrome/' in seen['agent']
+    assert 'li_at=secret-li-at-value' in seen['cookie'] and result.ready  # the page had a result, so no 25 s wait ran out

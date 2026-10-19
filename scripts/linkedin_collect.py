@@ -36,13 +36,16 @@ EXIT_SPENT, EXIT_NEEDS_SETUP = 3, 4
 SEARCH_URL = 'https://www.linkedin.com/search/results/content/?keywords={keywords}&datePosted=%22{recent}%22&sortBy=%22date_posted%22&origin=FACETED_SEARCH'
 WALL_PATHS = ('/login', '/authwall', '/checkpoint', '/uas/', '/signup')  # LinkedIn sends logged-out visitors here
 SCROLLS = 4
+READY_SECONDS = 25
+READY_SELECTOR = 'a[href*="urn:li:activity"], a[href*="urn:li:ugcPost"], a[href*="urn:li:share"], a[href*="/posts/"], [data-urn*="urn:li:"]'
+NO_RESULTS_TEXT = 'no results found'
 MAX_EXPANDS = 40
 MORE_BUTTON = r'^(?:…|\.\.\.)\s*(?:see\s+)?more$'  # the "…more" that opens a cut-off post; nothing else is clicked
 
 
 class Page:
-    def __init__(self, url, status, html):
-        self.url, self.status, self.html = url, status, html
+    def __init__(self, url, status, html, ready=True):
+        self.url, self.status, self.html, self.ready = url, status, html, ready
 
 
 class BrowserSession:
@@ -54,25 +57,29 @@ class BrowserSession:
         self._playwright = sync_playwright().start()
         try:
             self._browser = self._playwright.chromium.launch(headless=True)
-            major = self._browser.version.split('.')[0]
-            # The browser's own user-agent text, without the word "Headless" that LinkedIn answers with an error page.
-            agent = f'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{major}.0.0.0 Safari/537.36'
-            self._context = self._browser.new_context(user_agent=agent, locale='en-US', viewport={'width': 1366, 'height': 900})
+            # The browser identifies itself as it is (no user-agent override: a disguise that disagrees with the
+            # browser's other signals only adds a mismatch). If LinkedIn refuses it, that is a decision for the user.
+            self._context = self._browser.new_context(locale='en-US', viewport={'width': 1366, 'height': 900})
             self._context.add_cookies([{'name': 'li_at', 'value': li_at, 'domain': '.linkedin.com', 'path': '/',
                                         'secure': True, 'httpOnly': True}])
         except BaseException:
             self.close()
             raise
 
-    def get(self, url):
+    def get(self, url, ready=READY_SELECTOR):
         page = self._context.new_page()
         try:
             response = page.goto(url, wait_until='domcontentloaded', timeout=45000)
             status = response.status if response is not None else 0
-            try:
-                page.wait_for_load_state('networkidle', timeout=12000)
-            except Exception:  # noqa: BLE001 - a busy page may never go idle; read what is there
-                pass
+            found = False
+            if status == 200 and not urlsplit(page.url).path.startswith(WALL_PATHS):
+                try:  # LinkedIn fills results in after the page loads: wait for a result or the "no results" notice
+                    page.wait_for_function(
+                        '([selector, empty]) => !!document.querySelector(selector) || new RegExp(empty, "i").test(document.body.innerText)',
+                        arg=[ready, NO_RESULTS_TEXT], timeout=READY_SECONDS * 1000)
+                    found = True
+                except Exception:  # noqa: BLE001 - read what is there; the numbers say whether anything was
+                    pass
             if status == 200 and not urlsplit(page.url).path.startswith(WALL_PATHS):
                 for _ in range(SCROLLS):  # results load as the page scrolls
                     page.mouse.wheel(0, 3500)
@@ -84,7 +91,7 @@ class BrowserSession:
                     except Exception:  # noqa: BLE001 - a button that vanished is not a failure
                         pass
                 page.wait_for_timeout(800)
-            return Page(page.url, status, page.content())
+            return Page(page.url, status, page.content(), found)
         finally:
             page.close()
 
@@ -107,24 +114,47 @@ class LinkedInFetcher:
         self.session, self.since_day, self.recent = session, since_day, recent
         self.diagnostics = []  # one fixed-shape record per search: no page text, no cookie, no query text
 
-    def search(self, query, limit):
-        page = self.session.get(SEARCH_URL.format(keywords=quote(query, safe=''), recent=self.recent))
-        path = urlsplit(page.url).path
-        record = {'status': page.status, 'wall': path.startswith(WALL_PATHS), 'path': path[:60]}
+    def _load(self, url, **options):
+        """The page, checked for walls. Always leaves one numbers-only record, even when the browser itself fails."""
+        record = {'status': 0, 'wall': False, 'path': ''}
         self.diagnostics.append(record)
+        try:
+            page = self.session.get(url, **options)
+        except Exception as exc:  # noqa: BLE001 - keep a fixed word, never the message (it can carry a URL)
+            text = str(exc)
+            record['error'] = ('redirect_loop' if 'ERR_TOO_MANY_REDIRECTS' in text
+                               else 'timeout' if type(exc).__name__ == 'TimeoutError' else 'browser_error')
+            if record['error'] == 'redirect_loop':
+                raise FetchBlocked from None  # LinkedIn bouncing the session around: the saved login is stale
+            raise RuntimeError('browser_error') from None
+        path = urlsplit(page.url).path
+        record.update({'status': page.status, 'wall': path.startswith(WALL_PATHS), 'ready': page.ready,
+                       'path': ('/' + path.split('/')[1])[:30] if path.count('/') else ''})  # first segment only
         if page.status == 429:
             raise FetchRateLimited
         if record['wall'] or page.status in (401, 403, 999):
             raise FetchBlocked  # logged out, restricted or sent to a check
         if page.status != 200:
             raise RuntimeError('unexpected_status')
+        return page, record
+
+    def _unreadable(self, cards, stats):
+        """Raise when the page is not one we can read, instead of reporting a healthy empty result."""
+        if stats['login_form']:
+            raise FetchBlocked  # a sign-in form on the results page
+        if not cards and not stats['no_results']:
+            raise RuntimeError('layout_not_recognised')  # ids seen but unreadable, or nothing recognisable at all
+        if cards and stats['short_cards'] == len(cards):
+            raise RuntimeError('layout_not_recognised')  # every "card" is a stub: the card boundary was misread
+
+    def search(self, query, limit):
+        page, record = self._load(SEARCH_URL.format(keywords=quote(query, safe=''), recent=self.recent))
+        record['kind'] = 'posts'
         cards, stats = extract_post_cards(page.html)
         record.update(stats)
         fresh = [card for card in cards if card['created_at'].date().isoformat() >= self.since_day]
         record['outside_window'] = len(cards) - len(fresh)
-        if not cards and not stats['no_results'] and not stats['post_ids']:
-            # Not a login wall, no posts and no "no results" notice: the page is not one we understand.
-            raise RuntimeError('layout_not_recognised')
+        self._unreadable(cards, stats)
         return [{'url': card['url'], 'created_at': card['created_at'].isoformat(), 'text': card['text'],
                  'links': card['links'], 'author': card['author']} for card in fresh[:limit]]
 
@@ -151,7 +181,8 @@ def main(argv=None, *, store=None, fetcher=None, environ=None, now=None, sleep=t
             raise ValueError('invalid_lookback_days')
         new_artifact_path(args.output)  # a doomed output path must not spend the day's allowance
         queries = load_queries(args.queries, SOURCE)
-        cookie_name = next((name for name in COOKIE_VARIABLES if environ.get(name)), None)
+        # A pasted value often carries a trailing newline, spaces or quotes; a clean value is what the browser needs.
+        cookie_name = next((name for name in COOKIE_VARIABLES if environ.get(name, '').strip().strip('"\'').strip()), None)
         if cookie_name is None:
             print(f"linkedin_needs_setup: set {COOKIE_VARIABLES[0]} in the environment settings (name only; the value "
                   'is never printed). Nothing was collected and no allowance was spent.')
@@ -160,6 +191,19 @@ def main(argv=None, *, store=None, fetcher=None, environ=None, now=None, sleep=t
             print('linkedin_needs_setup: the social extra is not installed (run uv sync --locked --extra social). '
                   'Nothing was collected and no allowance was spent.')
             return EXIT_NEEDS_SETUP
+        captured = now()
+        if fetcher is None:
+            # Start the browser and hand it the cookie BEFORE the allowance is reserved: neither is a LinkedIn request,
+            # and a launch failure or a malformed cookie must not use up the day.
+            try:
+                fetcher = LinkedInFetcher(BrowserSession(environ[cookie_name].strip().strip('"\'').strip(), rng=rng),
+                                          since_day=since_date(captured, args.lookback_days),
+                                          recent=recent_filter(args.lookback_days))
+            except Exception:  # noqa: BLE001 - the message could carry the cookie; keep only a fixed word
+                print('linkedin_needs_setup: the browser could not start with that cookie value (check that Chromium is '
+                      'installed and that the cookie was pasted without quotes or spaces). Nothing was collected and '
+                      'no allowance was spent.')
+                return EXIT_NEEDS_SETUP
         if store is None:
             from jobhunter.google_auth import open_workbook
             from jobhunter.sheet_io import GspreadStore
@@ -167,16 +211,12 @@ def main(argv=None, *, store=None, fetcher=None, environ=None, now=None, sleep=t
         try:
             day = reserve(store, SOURCE, args.run_id)
         except AllowanceSpent:
+            fetcher.close()
             print('allowance_spent: linkedin-login already used today (America/New_York); collect nothing')
             return EXIT_SPENT
         outcome, items, ran, error, diagnostics = 'failed', [], 0, COLLECTOR_ERROR, []
         try:
-            captured = now()
             try:
-                if fetcher is None:
-                    fetcher = LinkedInFetcher(BrowserSession(environ[cookie_name], rng=rng),
-                                              since_day=since_date(captured, args.lookback_days),
-                                              recent=recent_filter(args.lookback_days))
                 items, ran, error = collect_posts(
                     fetcher.search, queries, max_posts=LIMITS[SOURCE]['posts'], per_query=LIMITS[SOURCE]['per_query'],
                     sleep=sleep, rng=rng)

@@ -26,10 +26,10 @@ Read the printed lines (they hold numbers and fixed words only):
 | --- | --- | --- |
 | `x_collected: queries_run=10 posts=N error=none` | posts above 0 | `social_login_failed`: the X cookies are wrong or expired; `social_rate_limited`: stop for the day; `social_collector_error`: a defect, report it |
 | `linkedin_collected: queries_run=5 posts=N error=none` | posts above 0 | same words |
-| `search_N: status=200 wall=False post_ids=A cards=B undated=0 ...` | `cards` close to `post_ids` | `wall=True` or status 999/403: LinkedIn sent the session to a login or check page (log in yourself, refresh `li_at`); `post_ids=0` with `no_results=False`: the page layout was not recognised (the day is spent, report the `search_N` lines so the reader can be adjusted); `undated` above 0: ids without a believable date |
+| `search_N: status=200 wall=False ready=True post_ids=A cards=B short_cards=0 median_chars=N ...` | `cards` close to `post_ids`, `short_cards` 0 and `median_chars` in the hundreds (a card of a few characters means the card boundary was misread; the run then fails with `social_collector_error` instead of feeding Claude page furniture); `ready=False` means no result appeared within 25 s | `wall=True` or status 999/403: LinkedIn sent the session to a login or check page (log in yourself, refresh `li_at`); `post_ids=0` with `no_results=False`: the page layout was not recognised (the day is spent, report the `search_N` lines so the reader can be adjusted); `undated` above 0: ids without a believable date |
 
-Exit codes: 0 candidates written, 3 allowance already spent today (nothing collected), 4 cookies or library missing
-(nothing spent), 2 anything else (nothing collected). Do NOT retry a spent day.
+Exit codes: 0 candidates written, 3 allowance already spent today (nothing collected), 4 cookies, library or browser
+not set up (including a browser that cannot start with that cookie value; nothing spent), 2 anything else (nothing collected). Do NOT retry a spent day.
 
 ## Step 2: read and deliver (only if step 1 gave posts)
 
