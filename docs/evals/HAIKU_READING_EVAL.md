@@ -2,7 +2,7 @@
 
 Status: RUN ONCE on October 19, 2026 (Hacker News only; see Result). Written at the user's request; the user wants to see the 100 examples and the
 agreement percentage before anything is switched. Until this passes, the reading step stays on the routine session's own
-model (Sonnet) and `docs/ROUTINE_PROMPT.md` says so.
+model (Sonnet); `docs/ROUTINE_PROMPT.md` does not name a model, so switching to Haiku would need an explicit change there.
 
 ## The question and the rule (decided by the user)
 
@@ -24,8 +24,10 @@ Switch only when ALL of these hold; otherwise stay on Sonnet and report why:
   something, and what we compare is what would be delivered.
 - **Agreement per item, not per word.** Two models can phrase a quote differently and both be right. So an item AGREES when both
   deliver the same set of (title, company) pairs after normalising case and punctuation. Both delivering nothing is agreement.
-- **The sample leans on items that matter.** Half of the 100 mention a collected role (where reading decides the outcome), half
-  do not (where the right answer is "nothing"; a model that invents jobs shows up as rejected facts or disagreement).
+- **The sample leans on items that matter.** It takes every post that mentions a collected role (up to half of the 100; where
+  reading decides the outcome) and fills the rest with posts that do not (where the right answer is "nothing"; a model that
+  invents jobs shows up as rejected facts or disagreement). If fewer than half mention a role, as on the first run (15 of 100),
+  most of the sample is the easy "nothing" case, so look at the role posts, not only the overall percentage.
 - **Sonnet is the reference, not the truth.** It is the model we trust today, so Haiku is measured against it; step 3 (a human
   reading the disagreements) is what catches shared mistakes.
 - **A seed makes it repeatable.** The sample is deterministic (`--seed`), so the same 100 items can be re-run after any change
@@ -48,11 +50,13 @@ Switch only when ALL of these hold; otherwise stay on Sonnet and report why:
 ## Result
 
 First run, October 19, 2026, on 100 real Hacker News "Who is hiring?" posts (15 name a collected role, 85 do not):
-**100 of 100 posts agree**, Sonnet and Haiku each delivered the same **15 jobs**, and neither had a value rejected for
-not being in the post. Rules 1 and 2 pass. **Rule 3 (the user reads the posts and differences) is open, so the verdict is
-"not yet" and the reading stays on Sonnet.** Four facts differ in location, salary or company wording; the score cannot see
-those, and they are listed in the results file. Running it also exposed a bug in this tool (a fact with an empty apply link was
-wrongly rejected for Hacker News items), fixed in the same branch with a test.
+**100 of 100 posts agree**, and Sonnet and Haiku each delivered the same **15 jobs** (14 of the 15 role posts delivered one),
+with no value rejected for not being in the post. The informative figure is the 15 role posts, all of which agreed; the 85
+"nothing here" posts were the easy case. Rules 1 and 2 pass. **Rule 3 (the user reads the posts and differences) is open, so
+the verdict is "not yet" and the reading stays on Sonnet.** Four facts differ in location, salary or company wording, which the
+score cannot see; in two of them each model read the location better than the other (details in the results file). The run
+also exposed a bug in this tool (a fact with an empty apply link was wrongly rejected for Hacker News items; fixed with tests)
+and a possible gap in the pipeline's title filter (the plural "Product Managers" is dropped; not changed here).
 
 Full detail, the differences, how to repeat it and the saved inputs:
 [`results/haiku_reading_2026-10-19.md`](results/haiku_reading_2026-10-19.md) (report: `results/haiku_reading_2026-10-19.json`).

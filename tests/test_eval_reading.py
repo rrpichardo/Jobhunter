@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from scripts import eval_reading as ev
 
 TEXT = 'Acme is hiring a Senior Product Manager, AI (Remote US). Salary $200,000 - $250,000.'
@@ -58,9 +60,17 @@ def test_the_command_line_writes_a_report_and_lists_disagreements(tmp_path, caps
 def test_a_hacker_news_fact_with_no_apply_link_is_delivered_with_the_comment_link_as_its_fallback():
     items = [{'comment_id': str(n), 'story_id': '1', 'created_at': '2026-10-15T12:00:00+00:00', 'text': TEXT, 'links': []}
              for n in range(1, 4)]  # Hacker News comments have no `url`; the real pipeline falls back to their permalink
-    facts = {'processed': [i['comment_id'] for i in items], 'facts': [{**fact(i['comment_id']), 'comment_id': i['comment_id']}
-                                                                       for i in items]}
+    facts = {'processed': [i['comment_id'] for i in items],
+             'facts': [{**fact(i['comment_id']), 'comment_id': i['comment_id']} for i in items]}
     for row in facts['facts']:
         del row['item_id']
     report = ev.compare(items, 'comment_id', facts, facts, ('sonnet', 'haiku'))
     assert report['rejected_facts'] == {'sonnet': 0, 'haiku': 0} and report['jobs']['sonnet'] == 3
+
+
+def test_the_fallback_link_is_chosen_by_id_field_and_a_missing_url_is_not_papered_over():
+    assert ev.permalink_for('comment_id')({'comment_id': '5', 'url': 'https://elsewhere.example/x'}) == \
+        'https://news.ycombinator.com/item?id=5'
+    assert ev.permalink_for('item_id')({'item_id': '7', 'url': 'https://x.com/a/status/7'}) == 'https://x.com/a/status/7'
+    with pytest.raises(KeyError):
+        ev.permalink_for('item_id')({'item_id': '7'})  # the real pipeline drops such an item; the eval must not invent a link

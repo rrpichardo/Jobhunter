@@ -60,6 +60,14 @@ def sample(items, size, seed):
     return chosen
 
 
+def permalink_for(field):
+    """The link the real pipeline falls back to when a fact leaves its apply link empty (chosen by id field, so a
+    malformed X or LinkedIn item without a url fails loudly instead of getting a Hacker News link)."""
+    if field == 'comment_id':
+        return lambda c: HN_PERMALINK.format(id=c['comment_id'])
+    return lambda c: c['url']
+
+
 def delivered(items, field, facts):
     """({item id: {(title, company)}}, rejected fact count) after the pipeline's own validation."""
     processed = facts.get('processed') if isinstance(facts, dict) else None
@@ -68,7 +76,7 @@ def delivered(items, field, facts):
         raise ValueError('invalid_extractions')
     read = [i for i in items if i[field] in set(processed)]
     result = build_result('eval', read, listed, '2026-01-01T00:00:00+00:00', id_field=field, id_prefix='eval',
-                          permalink=lambda c: c.get('url') or HN_PERMALINK.format(id=c[field]), listed=len(items), stats={},
+                          permalink=permalink_for(field), listed=len(items), stats={},
                           attempts=1, known_ids={i[field] for i in items})
     by_id = {i[field]: set() for i in items}
     for posting in result['postings']:
