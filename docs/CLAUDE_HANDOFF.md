@@ -32,7 +32,7 @@ NOT replace Codex.** Heads at the time of writing:
 code that exists, not after Codex; Haiku does the reading step; the old PRs #19 to #30 are closed; today's search limits stay for the
 first run. New files: `docs/PARAMETERS.md` (every setting explained for a non-technical reader), `docs/CODEX_REVIEW_QUEUE.md` (the PRs
 that still need a Codex review of their exact head, with ready-to-paste requests, for when credits return).
-**Waiting only for the user to say the Google Sheet is backed up ("copied", item A15 in `docs/PENDING.md`).** Then:
+**RESULT (October 19, 22:17 to 22:36 UTC): the user said "copied" and the live test plus the first manual run were run from `claude/combined-live-run` (commit `846f3be`) in session `session_015VLCYtHCKyG9e468TSVkUg`.** X, the Ali Rohde newsletter, a16z and the other sources worked and 505 unique jobs from 51 sources were written to the Sheet (readback verified). **LinkedIn was refused at login (`social_login_failed`) on its first search, its allowance for the day is spent, and the tool exited 0 anyway; the user must refresh `LINKEDIN_LI_AT` (PENDING B5), and the next LinkedIn try is tomorrow (New York date).** Numbers and open questions (X rejected 42 of 117+42 facts, 34 posts held, newsletter leads-versus-complete) are in PENDING A2. The steps below are how it was done; keep them for the next run. Original text:
 1. Run branch: `claude/combined-live-run` = `main` + all ten open PRs with the conflict fixes in the Merge plan below (1,056 tests pass).
    It is NOT for merging; re-create it if any PR head moved (the recipe is the Merge plan table).
 2. Start a JobHunterEnv session from that branch with `mcp__claude-code-remote__create_session` (`environment_id`
