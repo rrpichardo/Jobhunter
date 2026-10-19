@@ -13,7 +13,7 @@ the distinction between local review, manual cloud proof and scheduled productio
 When the user asks what is pending, what Claude needs from them, or where things stand, read section 0 of
 `docs/PENDING.md` first, check it against GitHub (open PRs, Codex replies), answer in plain, non-technical language,
 and correct that section if it is out of date. Update section 0 in the same change whenever a decision, a task, a PR
-or a review state changes. Do not keep a second list anywhere else.
+or a review state changes. Do not keep a second list anywhere else; `docs/DECISIONS_FORM.md` is only the user's answer sheet for the same IDs.
 
 ## Review instructions
 

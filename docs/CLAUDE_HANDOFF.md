@@ -4,62 +4,43 @@
 Claude continues) and docs/LIMITS.md (every limit and its value). docs/SOURCES_HOW_READ.md
 says which sources are read by code and which by Claude.
 
-## START HERE: state at the end of October 19, 2026 (for the next Claude or Codex session)
+## START HERE: state at the end of October 19, 2026 (about 23:30 UTC), for the next Claude or Codex session
 
-Read `docs/PENDING.md` section 0 first (approvals, user tasks, Codex state, decisions). Then this map.
+Read `docs/PENDING.md` section 0 first: the decisions only the user can make (0.1), the user's tasks (0.2), the Codex queue (0.3)
+and what to do once they answer (0.4). The user's answers go in the last column of `docs/DECISIONS_FORM.md` (same IDs) or arrive in chat;
+copy each answer into PENDING section 0 and act on it (0.4).
 
-**Landed on `main`:** the whole earlier stack through PR #39. Nothing has run against the real workbook since.
+**Landed on `main`:** the earlier stack through PR #39. **Ran for real:** on October 19, 22:17 to 22:36 UTC, the first live test and
+first manual run (28 days) from `claude/combined-live-run` (commit `846f3be`) in session `session_015VLCYtHCKyG9e468TSVkUg`:
+505 jobs from 51 sources written in four batches (readback verified; the Jobs tab now has 710 rows); X, the Ali Rohde newsletter,
+a16z and the boards worked; **LinkedIn was refused at login** (A18). Results and every number: PENDING section 1.
 
-**Open PRs (all Claude-written, all need a Codex review of their exact head; Codex hit its usage limit about 16:31 UTC
-on October 19, so every `@codex review` since says "You have reached your Codex usage limits"). Independent
-`engineering:code-review`-style reads were done on all of them and their findings fixed (comments on each PR); that does
-NOT replace Codex.** Heads at the time of writing:
+**Open PRs (all Claude-written; each needs a Codex review of its exact head and green CI before merging; nothing merges without
+the user's "go" for Codex, A12).** Heads at the time of writing (re-read them from GitHub before acting):
 
 | PR | Branch | Base | Head | What |
 | --- | --- | --- | --- | --- |
-| #40 | claude/social-collectors | main | 5ceb6cc | X collector (twscrape), shared candidate code; base of the stack below |
+| #40 | claude/social-collectors | main | 5ceb6cc | X collector (twscrape); base of #41, #43, #47; worked live |
 | #41 | claude/docs-run-modes | #40 | 4c0fe90 | manual 28 days / daily 3 days, `scripts.run_window` guard |
-| #42 | claude/role-forward-deployed | main | b90c1d2 | Forward-Deployed / AI Deployment / AI Implementation Strategist roles (Codex finding on 62fc1be fixed here, then tightened after an independent review) |
-| #43 | claude/linkedin-posts | #40 | 1c732a2 | LinkedIn hiring-post collector (Playwright), card reader |
-| #44 | claude/waas | main | 209efbc | Work at a Startup public pages (needs `Accept: text/html`) |
-| #45 | claude/a16z | main | e9d29ec | a16z portfolio jobs, four searches |
-| #46 | claude/handoff-oct19 | main | see PR | this status/handoff text, CLAUDE.md "what is pending" rule |
-| #47 | claude/newsletter-alirohde | #40 | 9400d18 | Ali Rohde Jobs weekly newsletter (jobs keyed by application link) |
-| #48 | claude/linkedin-jobs | #43 | 42d109d | LinkedIn job cards in the same session/allowance (contains #42's commit) |
-| #50 | claude/trace-rejections | main | 40729d7 | E4: reason codes and a printed `trace:` for every rejected fact and filter drop; docs/TRACEABILITY.md (opened after the first live run; needs Codex) |
-| #49 | claude/haiku-eval | main | 82bd0d4 | Haiku-vs-Sonnet eval harness, bug fix and first result (100 of 100 agree; user's rule 3 open) |
+| #42 | claude/role-forward-deployed | main | b90c1d2 | Forward-Deployed / AI Deployment / AI Implementation Strategist roles |
+| #43 | claude/linkedin-posts | #40 | 352309d | LinkedIn post collector; live login failed; on hold (A18) |
+| #44 | claude/waas | main | 209efbc | Work at a Startup public pages |
+| #45 | claude/a16z | main | e9d29ec | a16z portfolio jobs; worked live |
+| #46 | claude/handoff-oct19 | main | see PR | this status/handoff documentation |
+| #47 | claude/newsletter-alirohde | #40 | 9400d18 | Ali Rohde Jobs newsletter; worked live |
+| #48 | claude/linkedin-jobs | #43 | 9a86668 | LinkedIn job cards; on hold (A18); carries #42's older commits |
+| #49 | claude/haiku-eval | main | 82bd0d4 | Haiku-vs-Sonnet reading test (ran: 100 of 100 agree; Haiku accepted, A11) |
+| #50 | claude/trace-rejections | main | 40729d7 | E4: a reason for every rejected fact and filter drop; `docs/TRACEABILITY.md` |
 
-**UPDATE, October 19 about 22:30 UTC (read this first):** the user decided to run the live test and the first manual run NOW with the
-code that exists, not after Codex; Haiku does the reading step; the old PRs #19 to #30 are closed; today's search limits stay for the
-first run. New files: `docs/PARAMETERS.md` (every setting explained for a non-technical reader), `docs/CODEX_REVIEW_QUEUE.md` (the PRs
-that still need a Codex review of their exact head, with ready-to-paste requests, for when credits return).
-**RESULT (October 19, 22:17 to 22:36 UTC): the user said "copied" and the live test plus the first manual run were run from `claude/combined-live-run` (commit `846f3be`) in session `session_015VLCYtHCKyG9e468TSVkUg`.** X, the Ali Rohde newsletter, a16z and the other sources worked and 505 unique jobs from 51 sources were written to the Sheet (readback verified). **LinkedIn was refused at login (`social_login_failed`) on its first search, its allowance for the day is spent, and the tool exited 0 anyway; the user must refresh `LINKEDIN_LI_AT` (PENDING B5), and the next LinkedIn try is tomorrow (New York date).** The numbers are in PENDING A2. The rejected X facts (39 facts from 34 posts, plus 3 unreadable posts = the printed `rejected=42`) all had an EMPTY company; see PENDING E8 (a decision for the user). Rejection reasons are now printed by PR #50 (E4). The steps below are how it was done; keep them for the next run. Original text:
-1. Run branch: `claude/combined-live-run` = `main` + all ten open PRs + #50 (E4) with the conflict fixes in the Merge plan below (1,075 tests pass).
-   It is NOT for merging; re-create it if any PR head moved (the recipe is the Merge plan table).
-2. Start a JobHunterEnv session from that branch with `mcp__claude-code-remote__create_session` (`environment_id`
-   `env_01M9moVSWZBGvWAZYrqTm49s`, `source_url` the repository, `source_revision` `claude/combined-live-run`) and have it follow
-   `docs/FIRST_LIVE_TEST.md` exactly, reading posts with a Haiku subagent, never printing a cookie value, never retrying a spent day.
-   The complete ready-to-paste prompt for that session is `docs/LIVE_RUN_PROMPT.md`.
-3. If step 2 is clean, the same session runs the first manual run (`run_window --mode manual`, 28 days, the writer in paced
-   batches), then the user checks the Sheet the next morning, then decides A3 (create the daily routine).
+**Run branch** `claude/combined-live-run` = `main` + all eleven PRs with the conflict fixes in the Merge plan below; 1,075 tests pass.
+It exists only for real runs before Codex; never merge it. To run again: start a JobHunterEnv session (`env_01M9moVSWZBGvWAZYrqTm49s`,
+`source_revision` `claude/combined-live-run`) with the prompt in `docs/LIVE_RUN_PROMPT.md` (for a daily-style run use `--mode daily`).
+Each social source spends one attempt per New York day; never retry a spent day; never print a cookie value.
 
-**Do next, in order:**
-1. No scheduled sweep exists. Codex answered a request on #42 at 20:11 UTC on October 19 (its limit has reset, at least for now): it
-   reviewed `62fc1be`, found one real issue (fixed in `afedfb2`, then tightened in `b90c1d2` after an independent review), and #42 now needs a review of that head. The user asked Claude not to
-   try Codex while it was thought unavailable, so ask the user for a "go", then comment `@codex review <full head SHA>` on one PR at a
-   time (heads move: re-read them). Fix real findings in NEW commits, never rewrite history. Merge only with a Codex approval at the
-   exact head plus green CI.
-2. Merge order: #42, #44, #45 (the second of #44/#45 conflicts in `jobhunter/postings.py` and `sources/v0_sources.yaml`; keep both sides, see the Merge plan below), #46, #49,
-   then #40, and after it retarget #41, #43, #47 to `main` (merge `main` into each first), then #48 after #43. #48 carries #42's older commits, so merge `main` into it after #42 lands to pick up `b90c1d2`.
-3. First live X and LinkedIn test: `docs/FIRST_LIVE_TEST.md`. The user said yes (A2) for after Codex approves #40 and #43. It
-   runs in the JobHunterEnv environment (the cookies live there: `X_AUTH_TOKEN`, `X_CT0`, `LINKEDIN_LI_AT`, also
-   `WAAS_SESSION_COOKIE`, `JSEARCH_API_KEY`, `JOOBLE_API_KEY`; names verified, values never printed). Use
-   `mcp__claude-code-remote__create_session` with `environment_id` for JobHunterEnv (`env_01M9moVSWZBGvWAZYrqTm49s`). The user must
-   copy the spreadsheet first. Each source spends one allowance per New York day; never retry a spent day.
-4. The Haiku eval (`docs/evals/HAIKU_READING_EVAL.md`) RAN once on October 19 (Hacker News only): 100 of 100 posts agree and both
-   models found the same 15 jobs (`docs/evals/results/haiku_reading_2026-10-19.md`, PR #49). The user's rule 3 (read the posts and the
-   4 wording differences) is open, so the reading stays on Sonnet. Repeat on X and LinkedIn posts after the live test.
-5. Then a first manual run (`run_window --mode manual`), then the user decides A3 (create the daily routine).
+**Do next, in order, once the user answers:** (1) A12 "go": request Codex on one PR at a time (`docs/CODEX_REVIEW_QUEUE.md`), fix
+findings in new commits, merge in the order below. (2) A3: create the routine with the agreed sources (LinkedIn off unless A18 says
+otherwise) and name Haiku for the reading step in `docs/ROUTINE_PROMPT.md`. (3) One small PR per decided rule fix (A13, A16, A17, A19)
+and per tracing item (A20). Commits omit the `Claude-Session:` line (PENDING section 6).
 
 ### Merge plan, checked by a trial replay (October 19, about 22:00 UTC)
 
@@ -102,8 +83,9 @@ preinstalled Chromium 141 and closes cleanly (no network); the searches are 10 f
 every collector builds its browser/library BEFORE reserving the allowance (a local failure must not spend the day); never
 print cookie values; the user wants plain, non-technical reports; CI's Windows job runs the tests (no POSIX file modes).
 
-**Open user tasks:** see `docs/PENDING.md` section B (Next Play address B9, Gmail forwarding B1, other alerts B2, school/MBA/Cosign
-URLs B3, Gmail connector permissions B4). The old "Claude-Session" commit lines were deliberately left (explained in PENDING).
+**Open user tasks:** see `docs/PENDING.md` section 0.2. The old "Claude-Session" commit lines were deliberately left (PENDING section 6).
+
+## History below this line (older handoff notes, kept for reference; section 0 of PENDING.md wins where they differ)
 
 ## Latest clarification — full source scope and decisions still pending
 
