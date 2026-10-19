@@ -44,11 +44,13 @@ def test_one_missed_day_with_scheduler_drift_gets_a_window_that_still_covers_the
     assert code == 0 and 'window_days=3' in out
 
 
-@pytest.mark.parametrize('hours,expected', [(1, 2), (24, 2), (47.9, 2), (48, 2), (48.01, 3), (48.99, 3)])
-def test_the_window_always_reaches_back_to_the_start_of_the_previous_run(hours, expected):
+@pytest.mark.parametrize('hours,expected', [(1, 2), (24, 2), (41.9, 2), (42.1, 3), (48, 3), (48.99, 3)])
+def test_the_window_always_reaches_back_past_the_previous_run_even_allowing_for_run_time(hours, expected):
     gap = timedelta(hours=hours)
     days, _ = rw.window_days('daily', [HEADERS, row('r1', NOW - gap)], NOW)
-    assert days == expected and timedelta(days=days) >= gap  # no posting can fall between two runs
+    assert days == expected
+    # the collectors cut off later than the guard measures; the window must still reach the previous run's start
+    assert timedelta(days=days) >= gap + rw.EXECUTION_MARGIN
 
 
 def test_a_gap_beyond_the_tolerance_is_refused_not_stretched(capsys):

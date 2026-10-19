@@ -1,5 +1,5 @@
-"""How far back a run looks: 28 days for a manual first run or catch-up, 2 days for the daily routine (3 only when
-the previous run is a few minutes older than 2 days, so windows always overlap).
+"""How far back a run looks: 28 days for a manual first run or catch-up, 2 days for the daily routine (3 after a missed
+day: when the previous run is more than 42 hours old, so windows always overlap even allowing for run time).
 
 The daily window only works if the run before it was recent: each run must overlap the last one, or postings from
 the gap are never collected. So the daily mode READS the Run Log and refuses (needs a manual catch-up) when the last
@@ -13,9 +13,12 @@ from jobhunter.sheet_records import table_index
 MANUAL_DAYS = 28
 DAILY_DAYS = 2
 # A daily schedule drifts by minutes; one missed day is two days between starts, plus or minus the drift. A gap of up
-# to one hour beyond two days is still accepted, but then the window is widened to 3 days so that it ALWAYS reaches
-# back to the start of the previous run: no posting can fall between two runs.
+# to one hour beyond two days is still accepted (a longer one needs a manual catch-up).
 GAP_TOLERANCE = timedelta(hours=1)
+# The collectors compute their own cutoff later than this guard does (Hacker News is processed before the probe, and
+# reading takes time), so the window must reach back past the previous run's start by more than the gap: it also
+# has to cover this much run time. With it, a window never leaves a posting between two runs.
+EXECUTION_MARGIN = timedelta(hours=6)
 CLOCK_SKEW = timedelta(minutes=5)  # a recorded time further in the future than this cannot be real
 RUN_LOG_HEADERS = ('Run ID', 'Started', 'Completed', 'Status')
 COMPLETE = {'complete', 'complete-with-source-failure'}
@@ -71,6 +74,7 @@ def window_days(mode, rows, now):
     gap = now - last
     if gap > timedelta(days=DAILY_DAYS) + GAP_TOLERANCE:
         raise CatchUpNeeded('last_run_too_old')
-    days = DAILY_DAYS if gap <= timedelta(days=DAILY_DAYS) else DAILY_DAYS + 1
+    # 2 days only when the previous run is recent enough that gap + run time still fits inside it; otherwise 3.
+    days = DAILY_DAYS if gap + EXECUTION_MARGIN <= timedelta(days=DAILY_DAYS) else DAILY_DAYS + 1
     note = f'daily run: {days}-day window; last complete run started {last.isoformat()}'
-    return days, note + (' (gap just over 2 days, so one extra day keeps the windows overlapping)' if days > DAILY_DAYS else '')
+    return days, note + (' (previous run is over 42 hours old: one extra day keeps the windows overlapping)' if days > DAILY_DAYS else '')

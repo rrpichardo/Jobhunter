@@ -60,7 +60,7 @@ routine's first scheduled run, which needs A3 and the code on `main` (A4: your g
 | Catch-up | `--lookback-days 28` | by hand, whenever the last complete Run Log row is more than 2 days old |
 
 `scripts/run_window.py` enforces this: `--mode daily` prints the 2-day window, or exits 3 (`catch_up_needed`) when
-the last complete run started more than 2 days ago (a gap up to one hour past 2 days is tolerated by widening that run to 3 days, so the windows always overlap) or there has never
+the last complete run started more than 2 days ago (the daily window is 2 days when the previous run is under 42 hours old and 3 days after a missed day, so the windows always overlap even allowing 6 hours of run time; a gap over 49 hours is refused) or there has never
 been one; `--mode manual` prints 28. Read-only, offline-tested. Overlap never duplicates jobs.
 
 ## How the first run and the daily runs work (user direction, October 18)

@@ -35,8 +35,8 @@ keys or tokens. Do not call any paid service.
    It prints `window_days=N`; use that N as `$WINDOW` below. The user decided on October 19: the first manual run
    and any catch-up look back **28** days; the scheduled daily routine looks back **2** days (one missed day plus a
    day to fix it). The daily mode reads the Run Log (read-only) and REFUSES, exit 3 `catch_up_needed`, when there has
-   never been a complete run or the last complete run started more than two days (plus one hour of drift) ago. A gap just over two days gets a
-   3-day window instead of 2, so the windows always overlap. On exit 3 do nothing else:
+   never been a complete run or the last complete run started more than two days (plus one hour of drift) ago. The window is 2 days after a normal
+   day and 3 days after a missed day (previous run over 42 hours old), so the windows always overlap. On exit 3 do nothing else:
    report that a manual 28-day catch-up run is needed first, otherwise postings from the gap would never be
    collected. Repeats are harmless: jobs already in the Sheet keep their Status, Notes and My rating.
 4. Set a NEW run label for every collection, for example
