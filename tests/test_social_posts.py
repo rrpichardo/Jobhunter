@@ -204,3 +204,16 @@ def test_a_post_with_a_rejected_fact_is_not_marked_read(tmp_path, capsys):
     assert payload['postings'] == [] and payload['rejected_item_ids'] == ['1850000000000000001']
     assert payload['processed_ids'] == ['1850000000000000002']  # the bad post stays queued for tomorrow
     assert 'held_for_retry=1' in capsys.readouterr().out
+
+
+def test_numeric_or_missing_ids_in_rejected_social_facts_still_hold_posts(tmp_path, capsys):
+    both = ['1850000000000000001', '1850000000000000002']
+    for number, (bad, held) in enumerate([(fact(item_id=1850000000000000001), ['1850000000000000001']),
+                                          ({'title': 'no id'}, both), ('junk', both)]):
+        path, digest = candidates_file(tmp_path, name=f'_cn{number}.json')
+        facts = tmp_path.parent / (tmp_path.name + f'_fn{number}.json')
+        facts.write_text(json.dumps({'processed': both, 'facts': [bad]}))
+        result = tmp_path.parent / (tmp_path.name + f'_rn{number}.json')
+        assert cli.main(['validate', '--source', X, '--candidates', str(path), '--candidates-sha256', digest,
+                         '--extractions', str(facts), '--output', str(result)]) == 0
+        assert sorted(set(both) - set(json.loads(result.read_text())['processed_ids'])) == held

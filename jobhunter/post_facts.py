@@ -44,6 +44,14 @@ def _posting(fact, by_id, captured_at, *, source_id, id_field, id_prefix, permal
                    salary=fact['salary'], posted_at=candidate['created_at'])
 
 
+def _claimed_id(fact, id_field):
+    """The item id a fact names, whether written as text or as a JSON number; None if it names none."""
+    value = fact.get(id_field) if isinstance(fact, dict) else None
+    if isinstance(value, bool) or not isinstance(value, (str, int)):
+        return None
+    return str(value)
+
+
 def build_result(source_id, candidates, facts, captured_at, *, id_field, id_prefix, permalink, listed, stats,
                  attempts, error=''):
     """Validate proposed facts; returns {'source': record, 'postings': [dict]} for source_probe."""
@@ -54,16 +62,18 @@ def build_result(source_id, candidates, facts, captured_at, *, id_field, id_pref
               'jobs_fetched': listed, 'valid_jobs': 0, 'rejected_items': stats.get('unreadable', 0),
               'pm_candidates': 0, 'selected_for_m0': 0, 'attempts': attempts, 'http_status': 200,
               'retry_after_seconds': None, 'coverage': 'partial-response', 'error': error}
-    postings, seen, rejected_ids = [], set(), set()
+    postings, seen, rejected_ids, unattributed = [], set(), set(), False
     for fact in facts:
         try:
             posting = _posting(fact, by_id, captured_at, source_id=source_id, id_field=id_field,
                                id_prefix=id_prefix, permalink=permalink)
         except (ValueError, TypeError, AttributeError):
             source['rejected_items'] += 1
-            item_id = fact.get(id_field) if isinstance(fact, dict) else None
-            if isinstance(item_id, str) and item_id in by_id:
-                rejected_ids.add(item_id)  # an item with a rejected fact was not read successfully
+            claimed = _claimed_id(fact, id_field)
+            if claimed is None:
+                unattributed = True  # cannot tell which item this fact was about
+            elif claimed in by_id:
+                rejected_ids.add(claimed)  # an item with a rejected fact was not read successfully
             continue
         if posting.job_id in seen:
             continue
@@ -79,7 +89,7 @@ def build_result(source_id, candidates, facts, captured_at, *, id_field, id_pref
     elif postings:
         source['status'] = 'OK'
     return {'source': source, 'postings': [asdict(posting) for posting in postings],
-            'rejected_item_ids': sorted(rejected_ids)}
+            'rejected_item_ids': sorted(by_id if unattributed else rejected_ids)}
 
 
 def postings_from_result(result):
