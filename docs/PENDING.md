@@ -51,7 +51,7 @@ the writer lock is released, and the 28 Hacker News comments are marked read. Th
 quota and left a lock; the fix is PR #28 and the lock was removed with the user's approval. Still true:
 `getro-accel` shows `failed` until its fix (#29) runs; LinkedIn, X, Gmail, Work at a Startup, school sites and
 the scheduled routine have NOT been run; nothing is merged. The next gate is the next-morning check of the
-routine's first scheduled run, which needs A3 and the code on `main` (Codex review of each PR first, A4).
+routine's first scheduled run, which needs A3 and the code on `main` (A4: your go-ahead to merge; Codex has reviewed the fix PRs).
 
 ## How the first run and the daily runs work (user direction, October 18)
 
@@ -126,7 +126,8 @@ routine's first scheduled run, which needs A3 and the code on `main` (Codex revi
 - STILL TO BUILD, one PR each: the LinkedIn collector and the X collector that fetch
   the posts (they need the approved method A1 and the pinned library or browser
   setup, and a live run needs A2). No live access before then.
-- Retry Codex reviews when the limit resets, fix real findings, then merge in order.
+- Keep requesting a Codex review of every new exact head and fix real findings. Merging is NOT part of
+  this list: it stays blocked on A4 (the user's explicit go-ahead), however many reviews are clean.
 
 ## E. Pending deliverables the user asked for (not built)
 
