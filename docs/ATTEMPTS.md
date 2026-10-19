@@ -1,5 +1,22 @@
 # Implementation attempt log
 
+## October 19 Codex review rounds on the Claude-written stack (#19 to #30)
+
+- Round 1: Codex reviewed every Claude-written PR at its exact head and found seven problems (R1 to R7) in #19,
+  #21, #24, #25 and #26, plus the same lost-post bug in #27. Fixes were made as separate PRs on the reviewed
+  heads (#32 to #37), not on the original branches.
+- Round 2: Codex reviewed those fix PRs. #37 was clean; it found eight further problems in #32 to #36 (hard
+  cases the first fixes missed, such as numeric ids, the clock-change edge of the New York day, and a wrong
+  claim in the docs). All were fixed.
+- Round 3: #34, #35, #36 and #37 were approved. #33 had one new serious finding (a mistyped or invented id)
+  and #32 two small ones (the runbook did not pass the digest; a test was slow). Fixed.
+- Round 4: #33 and #32 approved. The shared validator change was carried into #37 and approved again.
+- The usual cap is three repair/review cycles per milestone. The user explicitly asked for as many rounds as
+  needed until Codex approves, so the cap was exceeded on #32 and #33 on purpose. Several Codex runs ended with
+  "unknown error" and were repeated; those are failed runs, not review cycles.
+- Everything above is offline test evidence. Nothing ran against the real workbook or in JobHunterEnv, and
+  none of these PRs is merged.
+
 ## October 18 social continuation handoff — no live social attempt
 
 - User prioritized LinkedIn profile hiring-post search alongside job listings,
