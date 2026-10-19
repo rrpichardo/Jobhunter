@@ -126,6 +126,21 @@ def test_a_doomed_output_path_spends_no_allowance(tmp_path):
     assert '_State' not in store.tables and out.read_text() == 'keep'
 
 
+def test_one_busy_search_cannot_use_the_whole_post_limit(tmp_path):
+    fetcher = FakeFetcher()
+    run(tmp_path, fetcher)
+    assert max(limit for _, limit in fetcher.calls) == sc.LIMITS['x-twscrape']['per_query'] == 40
+
+
+def test_a_missing_library_asks_for_setup_and_spends_nothing(tmp_path, monkeypatch, capsys):
+    monkeypatch.delitem(sys.modules, 'twscrape', raising=False)
+    monkeypatch.setattr(x.importlib.util, 'find_spec', lambda name: None)
+    store = MemoryStore()
+    out = tmp_path.parent / (tmp_path.name + '_x.json')
+    code = x.main(['--run-id', 'r1', '--output', str(out)], store=store, environ=COOKIES, now=lambda: NOW)
+    assert code == 4 and 'social extra' in capsys.readouterr().out and '_State' not in store.tables
+
+
 def test_the_post_limit_stops_the_run_and_later_queries_are_not_sent(tmp_path, monkeypatch):
     monkeypatch.setitem(sc.LIMITS['x-twscrape'], 'posts', 3)
     fetcher = FakeFetcher({1: [post(1), post(2)], 2: [post(3), post(4)], 3: [post(5)]})
@@ -190,7 +205,7 @@ class FakeTweet:
 
 
 def install_fake_twscrape(monkeypatch, tweets=(), search_error=None, init_error=None, no_response=False, account='active',
-                          aborted=False, account_error=None):
+                          aborted=False, account_error=None, cursor=True, fail_after_pages=None):
     """A stand-in for twscrape 0.20.1. Like the real library: a search that X really answered adds to the account's
     per-queue request counter even when the answer holds no tweets (and then yields nothing); a request dropped by an
     HTML/Cloudflare block yields nothing and adds nothing, wherever in the pagination it happens (`aborted` drops the
@@ -238,10 +253,13 @@ def install_fake_twscrape(monkeypatch, tweets=(), search_error=None, init_error=
             try:
                 if no_response:
                     return  # dropped silently: nothing yielded, nothing counted
-                for tweet in tweets:
+                for number, tweet in enumerate(tweets):
+                    if fail_after_pages is not None and number == fail_after_pages:
+                        raise sys.modules['twscrape'].NoAccountError('x')
                     log.yielded += 1
                     counted += 1
-                    yield types.SimpleNamespace(json=lambda tweet=tweet: [tweet])
+                    page = {'tweets': [tweet], 'entries': [{'content': {'cursorType': 'Bottom', 'value': 'c'}}] if cursor else []}
+                    yield types.SimpleNamespace(json=lambda page=page: page)
                 if not aborted:
                     counted += 1  # the last answer, with no posts and no cursor, is counted but not yielded
             finally:
@@ -250,7 +268,7 @@ def install_fake_twscrape(monkeypatch, tweets=(), search_error=None, init_error=
                     current.stats['SearchTimeline'] = current.stats.get('SearchTimeline', 0) + counted
 
     def parse_tweets(obj, limit=-1):
-        return iter(obj if limit < 0 else obj[:limit])
+        return iter(obj['tweets'] if limit < 0 else obj['tweets'][:limit])
 
     class Logger:
         """The few loguru calls the adapter uses: sinks receive every message at or above their level."""
@@ -273,7 +291,7 @@ def install_fake_twscrape(monkeypatch, tweets=(), search_error=None, init_error=
     log.logger = Logger()
     module = types.SimpleNamespace(API=API, HttpStatusError=HttpStatusError, NoAccountError=NoAccountError,
                                    models=types.SimpleNamespace(parse_tweets=parse_tweets),
-                                   logger=types.SimpleNamespace(logger=log.logger),
+                                   logger=log.logger,  # like the real package, the logger object itself
                                    set_log_level=lambda level: setattr(log, 'level', level))
     monkeypatch.setitem(sys.modules, 'twscrape', module)
     return log, module
@@ -350,6 +368,27 @@ def test_a_run_with_a_block_after_some_pages_keeps_those_posts_and_records_the_r
     payload = json.loads(out.read_text())
     assert code == 0 and payload['error'] == 'social_login_failed' and len(payload['candidates']) == 2
     assert rows(store)['allowance/x-twscrape/2026-10-19']['state'] == 'blocked'
+
+
+def test_a_last_page_that_says_there_is_no_next_page_is_a_normal_end(monkeypatch):
+    install_fake_twscrape(monkeypatch, [FakeTweet(1)], aborted=True, cursor=False)  # no cursor: no further request exists
+    fetcher = x.TwscrapeFetcher('tok', 'ct')
+    try:
+        assert len(fetcher.search('q', 5)) == 1
+    finally:
+        fetcher.close()
+
+
+def test_a_rate_limit_after_some_pages_keeps_what_was_read(monkeypatch):
+    install_fake_twscrape(monkeypatch, [FakeTweet(1), FakeTweet(2), FakeTweet(3)], fail_after_pages=2, account='cooling')
+    fetcher = x.TwscrapeFetcher('tok', 'ct')
+    fetcher._rate_limit_seen = True
+    try:
+        with pytest.raises(sc.FetchRateLimited) as caught:
+            fetcher.search('q', 5)
+    finally:
+        fetcher.close()
+    assert len(caught.value.found) == 2
 
 
 def test_stopping_at_the_limit_is_not_mistaken_for_a_block(monkeypatch):
@@ -500,3 +539,20 @@ def test_a_startup_failure_after_the_day_is_reserved_is_still_written_down(monke
     assert code == 0 and payload['error'] == 'social_collector_error' and payload['candidates'] == []
     assert 'sqlite' not in out.read_text() and rows(store)['allowance/x-twscrape/2026-10-19']['state'] == 'failed'
     assert not __import__('pathlib').Path(log.api_args[0]).parent.exists()  # and the cookie file is gone
+
+
+def test_the_adapter_starts_against_the_real_library_when_it_is_installed(monkeypatch):
+    # The stand-in above can only be as right as our reading of twscrape; this checks the names and the startup
+    # against the real pinned package (skipped when the optional `social` extra is not installed).
+    monkeypatch.delitem(sys.modules, 'twscrape', raising=False)
+    twscrape = pytest.importorskip('twscrape')
+    for name in ('API', 'HttpStatusError', 'NoAccountError', 'set_log_level', 'models', 'logger'):
+        assert hasattr(twscrape, name), name
+    assert callable(twscrape.models.parse_tweets) and callable(twscrape.logger.add) and callable(twscrape.logger.remove)
+    fetcher = x.TwscrapeFetcher('tok', 'ct')
+    folder = fetcher._dir
+    try:
+        assert folder.exists() and fetcher._successful_requests() == 0
+    finally:
+        fetcher.close()
+    assert not folder.exists()

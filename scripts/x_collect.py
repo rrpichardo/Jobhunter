@@ -14,12 +14,14 @@ printed, logged, written to the candidate file or kept after the run.
 import argparse
 import asyncio
 import contextlib
+import importlib.util
 from datetime import datetime, timezone
 import os
 from pathlib import Path
 import random
 import shutil
 import stat
+import sys
 import tempfile
 import time
 
@@ -39,7 +41,27 @@ ACCOUNT = 'jobhunter-x'  # a label for twscrape's private account table; not a r
 
 
 class CollectorFailure(Exception):
-    """The collector, not X, failed (recorded with the fixed word social_collector_error)."""
+    """The collector, not X, failed (recorded with the fixed word social_collector_error). `found` holds any posts
+    read from this search before it failed."""
+
+    def __init__(self, found=()):
+        super().__init__()
+        self.found = list(found)
+
+
+def _has_next_page(body, depth=0):
+    """True if the page carries a Bottom cursor (what twscrape follows to the next page)."""
+    if depth > 12:
+        return False
+    if isinstance(body, dict):
+        if body.get('cursorType') == 'Bottom' and isinstance(body.get('value'), str):
+            return True
+        if isinstance(body.get('next_cursor'), str):
+            return True
+        return any(_has_next_page(value, depth + 1) for value in body.values())
+    if isinstance(body, list):
+        return any(_has_next_page(value, depth + 1) for value in body)
+    return False
 
 
 class TwscrapeFetcher:
@@ -57,10 +79,11 @@ class TwscrapeFetcher:
         self._loop = None
         self._sink = None
         self._rate_limit_seen = False
+        self._partial = []  # posts read by the search in progress, kept if it ends in a refusal
         try:
             # twscrape logs "Rate limited: ..." only when X really sent a rate limit (its account locks are also set
             # after network and unknown errors, so a lock alone proves nothing). Keep a yes/no flag, never the text.
-            self._log = twscrape.logger.logger
+            self._log = twscrape.logger  # twscrape exports its loguru logger object under this name
             self._sink = self._log.add(self._watch_log, level='DEBUG', format='{message}')
             self._dir.chmod(stat.S_IRWXU)
             self._loop = asyncio.new_event_loop()
@@ -77,24 +100,27 @@ class TwscrapeFetcher:
 
     def search(self, query, limit):
         before = self._successful_requests()
+        self._partial = []
         try:
             found, pages, stopped = self._loop.run_until_complete(self._search(query, limit))
         except self._twscrape.NoAccountError:
             # twscrape raises this both when the session was rejected/banned (account inactive) and when the only
             # account is cooling down after a rate limit (account active but locked): tell them apart.
-            raise self._why_no_account() from None
+            raise self._why_no_account(self._partial) from None
         except self._twscrape.HttpStatusError as exc:
             code = getattr(getattr(exc, 'response', None), 'status_code', None)
             if code in (401, 403):
-                raise FetchBlocked from None
+                raise FetchBlocked(self._partial) from None
             if code == 429:
-                raise FetchRateLimited from None
-            raise
+                raise FetchRateLimited(self._partial) from None
+            raise CollectorFailure(self._partial) from None
+        except Exception:  # noqa: BLE001 - keep only what was read; the text could carry a URL
+            raise CollectorFailure(self._partial) from None
         if not stopped and self._successful_requests() - before <= pages:
             # The stream ran out by itself, so twscrape must have counted one last answer that held no new posts
-            # (a genuine empty search is counted too). Without it, a request was dropped silently (an HTML or
-            # Cloudflare block ends the stream with no response), whether or not earlier pages came back: keep
-            # what was read, but report the refusal.
+            # (a genuine empty search is counted too), unless the last page said there was no next page. Without
+            # it, a request was dropped silently (an HTML or Cloudflare block ends the stream with no response),
+            # whether or not earlier pages came back: keep what was read, but report the refusal.
             raise FetchBlocked(found)
         return found
 
@@ -106,33 +132,36 @@ class TwscrapeFetcher:
         except Exception:  # noqa: BLE001 - unknown state counts as "no success seen", the safe direction
             return 0
 
-    def _why_no_account(self):
+    def _why_no_account(self, found):
         try:
             account = self._loop.run_until_complete(self._api.pool.get_account(ACCOUNT))
         except Exception:  # noqa: BLE001 - the account could not be inspected: a collector defect, not a refusal
-            return CollectorFailure()
+            return CollectorFailure(found)
         if account is None or not account.active:
-            return FetchBlocked()  # logged out, banned or checkpointed
+            return FetchBlocked(found)  # logged out, banned or checkpointed
         if self._rate_limit_seen:
-            return FetchRateLimited()  # X itself said so, and the account is cooling down
-        return CollectorFailure()  # locked after a network or unknown error: a defect, not a rate limit
+            return FetchRateLimited(found)  # X itself said so, and the account is cooling down
+        return CollectorFailure(found)  # locked after a network or unknown error: a defect, not a rate limit
 
     async def _search(self, query, limit):
-        """(posts, pages read, stopped by us). twscrape's own `limit` is a target it can overshoot and it stops
-        counting differently from us, so it is left off: this loop enforces the post limit and a page cap, and
-        closes the stream (closing it also lets twscrape record the request count that search() relies on)."""
-        found, pages = [], 0
+        """(posts, pages read, ended without needing a final answer). twscrape's own `limit` is a target it can
+        overshoot and it stops counting differently from us, so it is left off: this loop enforces the post limit
+        and a page cap, and closes the stream (closing it also lets twscrape record the request count that
+        search() relies on). A page with no next-page cursor ends the stream without a further answer."""
+        found = self._partial
+        pages = 0
         async with contextlib.aclosing(self._api.search_raw(query)) as stream:
             async for page in stream:
                 pages += 1
-                for tweet in self._twscrape.models.parse_tweets(page.json(), limit - len(found)):
+                body = page.json()
+                for tweet in self._twscrape.models.parse_tweets(body, limit - len(found)):
                     if tweet.retweetedTweet is not None:
                         continue  # a repost repeats someone else's post
                     found.append({'url': tweet.url, 'created_at': tweet.date.isoformat(), 'text': tweet.rawContent,
                                   'links': [link.url for link in tweet.links], 'author': tweet.user.username})
                     if len(found) >= limit:
                         break
-                if len(found) >= limit or pages >= MAX_PAGES:
+                if len(found) >= limit or pages >= MAX_PAGES or not _has_next_page(body):
                     return found, pages, True
         return found, pages, False
 
@@ -167,6 +196,10 @@ def main(argv=None, *, store=None, fetcher=None, environ=None, now=None, sleep=t
             print(f"x_needs_setup: set {' and '.join(missing)} in the environment settings (names only; "
                   'values are never printed). Nothing was collected and no allowance was spent.')
             return EXIT_NEEDS_SETUP
+        if fetcher is None and 'twscrape' not in sys.modules and importlib.util.find_spec('twscrape') is None:
+            print('x_needs_setup: the social extra is not installed (run uv sync --locked --extra social). '
+                  'Nothing was collected and no allowance was spent.')
+            return EXIT_NEEDS_SETUP
         if store is None:
             from jobhunter.google_auth import open_workbook
             from jobhunter.sheet_io import GspreadStore
@@ -185,7 +218,7 @@ def main(argv=None, *, store=None, fetcher=None, environ=None, now=None, sleep=t
                 since = since_date(captured, args.lookback_days)
                 items, ran, error = collect_posts(
                     fetcher.search, [build_query(q, since) for q in queries],
-                    max_posts=LIMITS[SOURCE]['posts'], sleep=sleep, rng=rng)
+                    max_posts=LIMITS[SOURCE]['posts'], per_query=LIMITS[SOURCE]['per_query'], sleep=sleep, rng=rng)
             except Exception:  # noqa: BLE001 - e.g. the library could not start; keep only a fixed word
                 items, ran, error = [], 0, COLLECTOR_ERROR
             # Written even when the collection failed, so the failed attempt reaches Sources and Run Log
