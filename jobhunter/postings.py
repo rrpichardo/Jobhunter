@@ -644,6 +644,30 @@ def stubs_yc(text, ctx):
     return stubs, rejected
 
 
+def stubs_waas(text, ctx):
+    """Work at a Startup public listing (no login): the page data holds the first jobs of one role page."""
+    stubs, rejected = [], 0
+    for job in _page_json(text)["props"]["jobs"]:
+        try:
+            stubs.append({"job_id": f"{ctx['source_id']}:{int(job['id'])}", "company": _stub_text(job.get("companyName")),
+                          "title": _stub_text(job.get("title")), "location": _stub_text(job.get("location")),
+                          "url": f"https://www.workatastartup.com/jobs/{int(job['id'])}",
+                          "salary": _stub_text(job.get("salary")), "posted_at": ""})  # the site shows no posting date
+        except (KeyError, TypeError, ValueError, AttributeError):
+            rejected += 1
+    return stubs, rejected
+
+
+def detail_waas(text):
+    props = _page_json(text)["props"]
+    job, company = props["job"], props.get("company") or {}
+    description = clean_html(job.get("descriptionHtml"))
+    if not description:
+        raise ValueError("invalid_board_response")
+    return {"text": description, "company": _stub_text(company.get("name")), "location": _stub_text(job.get("location")),
+            "salary": _stub_text(job.get("salaryRange"))}
+
+
 LD_JSON = re.compile(r'<script type="application/ld(?:\+|&#x2B;)json">(.*?)</script>', re.S)
 
 
@@ -758,11 +782,11 @@ PARSERS = {"greenhouse": parse_greenhouse, "lever": parse_lever, "ashby": parse_
            "jsearch": parse_jsearch, "jooble": parse_jooble}
 LISTING_ONLY = {"a16z": count_a16z, "hn": count_hn}
 DETAIL_SOURCES = {"yc": (stubs_yc, detail_yc), "getro": (stubs_getro, detail_getro),
-                  "builtin": (stubs_builtin, detail_builtin)}
+                  "builtin": (stubs_builtin, detail_builtin), "waas": (stubs_waas, detail_waas)}
 
 
 SOURCE_PRIORITY = {"greenhouse": 0, "lever": 0, "ashby": 0, "yc-product": 1, "getro-accel": 1, "getro-primary": 1,
-                   "builtin-product": 1}
+                   "builtin-product": 1, "waas-product": 1, "waas-operations": 1}
 
 
 def _similar(posting: Posting) -> str:
