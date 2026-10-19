@@ -1,16 +1,32 @@
 # Pending items: what only the user can do, what is blocked, what Claude continues
 
-Created October 18, 2026 from the working session. This is the list to come back to.
-When something is done, change its status here and in the PR that did it. Nothing
-below is a claim that the work exists; `Status` says what is true. The PRs form one
-stack, each on top of the one before it, and NONE is merged. Codex was at its usage
-limit when last tried (October 19, 00:30 UTC), so no Claude-written PR has an
-opposite-agent review yet:
+Created October 18, 2026 from the working session; review status updated October 19. When something is
+done, change its status here and in the PR that did it. Nothing below is a claim that the work exists;
+`Status` says what is true. The PRs form one stack, each on top of the one before it, and NONE is merged.
 
-| PR | What | Tests at its head |
+**Codex reviews now work** (GitHub app, `@codex review` on a PR; it sometimes answers "unknown error", which
+is a failed run and not a verdict, so the request is simply repeated). On October 19 Codex reviewed every
+Claude-written PR and found seven real problems in five of them. Each fix is its own PR on the exact head
+Codex reviewed, and Codex has approved all six at the heads below:
+
+| Original PR | Codex finding (short) | Fix PR | Approved head |
+| --- | --- | --- | --- |
+| #19 | Large first pull rejected by the 5 MiB input limit | #32 | `d2b961e` |
+| #21 | A misread Hacker News comment was marked read and lost; run labels could collide | #33 | `6ce257f` |
+| #24 | A broken Jobicy item aborted the run; later-page failures were not recorded | #34 | `dd7a0ac` |
+| #25 | Pages opened but not delivered starved the rest of a big source | #35 | `e40aba2` |
+| #26 | The daily social allowance could not be closed after midnight (New York) | #36 | `042dedc` |
+| #27 | Same lost-post bug in the X/LinkedIn validator | #37 | `b63a9f5` |
+
+The earlier "Codex at its usage limit" note no longer applies. Merge order is still the stack order, each
+fix PR first into the PR it repairs. #22, #23, #28, #29 and #30 had no findings of their own, but Codex said
+their review does not cover the fixes beneath them, so each still needs a fresh exact-head Codex review after
+the fixes are merged into the stack.
+
+| PR | What | Tests at its head (before the fix PRs) |
 | --- | --- | --- |
 | #18 | Docs handoff (Codex wrote it, Claude reviewed `4177f4e`; Claude's two commits need Codex) | docs only |
-| #19 | Keep every match, writer batches, 4-week window, `posted_at` (Codex found one P1, fixed) | 615 |
+| #19 | Keep every match, writer batches, 4-week window, `posted_at` | 615 |
 | #20 | Hacker News comments with code-validated facts | 636 |
 | #21 | AI read-queue in `_State` and the draft routine prompt | 661 |
 | #22 | This register, LIMITS.md, README and front-end plan items | docs only |
@@ -21,8 +37,11 @@ opposite-agent review yet:
 | #27 | Shared validator for X and LinkedIn posts | 760 |
 | #28 | Wait out Sheets quota errors, pace batches 45 s, retry lock reads (found by the first real pull) | 768 |
 | #29 | A source whose good jobs are all already delivered is not marked failed (found by the rerun) | 770 |
+| #30 | Docs: how each source is read | 770 |
 
-Merge order is the table order, each only after a Codex review of its exact head.
+**One follow-up that waits for the merges:** once #32 is in the stack, step 3 of `docs/ROUTINE_PROMPT.md`
+must pass `--input-sha256 <probe_sha256>` (the digest `source_probe` prints) to `sheets_sync`; without it a
+collection above 5 MiB is refused. The runbook already says so.
 
 ## First manual pull: status (October 19, 2026)
 
@@ -52,7 +71,7 @@ routine's first scheduled run, which needs A3 and the code on `main` (Codex revi
 | A1 | Cloud collection method for Work at a Startup (headless browser, saved cookies, visible job cards only), LinkedIn (headless browser, `li_at`) and X (`twscrape`, `auth_token`/`ct0`). All read-only with random pauses. | The plan says to settle this in plain language first. Reading private requests from the logged-in tab was blocked earlier and must not be retried. | open |
 | A2 | Go-ahead for the first real social test (LinkedIn posts, then X). It spends that day's allowance for each source. | Live access to accounts that can be restricted. | open |
 | A3 | Create the `JobHunter Daily` routine (06:07 New York, repository `rrpichardo/Jobhunter`, environment `JobHunterEnv`). Claude can do the clicking. | Creating a standing scheduled job. `docs/ROUTINE_PROMPT.md` is a draft and is not installed. | open |
-| A4 | How to get Codex reviews while Codex is at its usage limit: wait for the reset, or try the local Codex CLI. | Claude-written PRs cannot merge without an opposite-agent review of the exact head. | open |
+| A4 | Codex reviews: answered. They work through the GitHub app (see the top of this file). What is still open is your go-ahead to merge, in stack order. | Claude-written PRs merge only on your explicit direction. | go-ahead needed |
 | A5 | Whether company boards should get a window wider than 28 days. Greenhouse dates can be years old for a role that is still open, so old-but-open roles are currently dropped. | Follows the "last 4 weeks" decision; widening is a user choice. | open |
 | A6 | JSearch paging. The free plan allows about 200 requests a month and one page holds about 10 jobs. More pages for the first pull need approval. No new spending. | Quota, possible cost. | open |
 | A7 | Which limits to tune and to what (LIMITS.md), for example "50 a day". | Includes the LinkedIn account-restriction risk. 50 searches a day was declined for now. | open |
@@ -81,7 +100,7 @@ routine's first scheduled run, which needs A3 and the code on `main` (Codex revi
 | Work at a Startup (logged in) | A1 | Approval of the browser route. |
 | School/MBA sites, Cosign | B3 | URLs and any logins. |
 | Installing and running the daily routine | A3 and a proven first pull | Approval, then a first manual pull and a next-morning check. |
-| Merging #18 to #21 | A4 | A Codex review of each exact head, in order. |
+| Merging #18 and the stack | A4 (your go-ahead) | Codex has approved the fix PRs #32 to #37; #18 and #20 to #30 still need a fresh exact-head review after the fixes land. |
 | Hacker News and the AI queue running in the cloud | A3 | The routine prompt installed; nothing has run in JobHunterEnv yet. |
 
 ## D. Claude continues without waiting
