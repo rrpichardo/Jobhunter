@@ -34,10 +34,12 @@ Until then the reading step stays on Sonnet.
 | Facts proposed by each model | 19 (15 delivered, 4 filtered out by the collection filter) |
 | Facts rejected because a value was not in the post | 0 for Sonnet, 0 for Haiku |
 
-Recorded in the run session and **not reproducible from the saved inputs**: the pool figures (266 comments, the date range),
-the helpers' tokens (Sonnet 115,457, Haiku 135,630, as reported; they include re-reading the input), their times (122 s and
-138 s), and the check that Haiku's activity log never opened Sonnet's file. The rest of this page can be re-derived from the
-saved files.
+Recorded in [`haiku_reading_2026-10-19_inputs/run_record.md`](haiku_reading_2026-10-19_inputs/run_record.md), and **not
+something the saved inputs let you recompute**: the pool figures (266 comments, all from the October thread, 2026-10-01 to
+2026-10-15; the pool file itself is not saved because it holds third-party email addresses, but its SHA-256 is recorded), the
+helpers' tokens (Sonnet 115,457, Haiku 135,630, as reported; they include re-reading the input), their times (122 s and 138 s),
+and a scan of both helpers' saved activity logs: neither opened the other's facts file, and both wrote their 19 facts by hand
+with no pattern-matching code. Everything else on this page can be re-derived from the saved files.
 
 ## The four filtered-out facts (the same for both models)
 
