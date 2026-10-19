@@ -39,16 +39,14 @@ the fixes are merged into the stack.
 | #29 | A source whose good jobs are all already delivered is not marked failed (found by the rerun) | 770 |
 | #30 | Docs: how each source is read | 770 |
 
-**One follow-up that waits for the merges:** once #32 is in the stack, step 3 of `docs/ROUTINE_PROMPT.md`
-must pass `--input-sha256 <probe_sha256>` (the digest `source_probe` prints) to `sheets_sync`; without it a
-collection above 5 MiB is refused. The runbook already says so.
-
 ## First manual pull: status (October 19, 2026)
 
-Done once, in JobHunterEnv, for the public sources only (details in V0_VERIFICATION.md): 322 jobs from 46
-sources reached the real Sheet in three paced batches, the Sheet now has 478 job rows with no duplicate IDs,
-the writer lock is released, and the 28 Hacker News comments are marked read. The first attempt hit Google's
-quota and left a lock; the fix is PR #28 and the lock was removed with the user's approval. Still true:
+An earlier cloud session recorded one manual pull of the public sources in JobHunterEnv (details and its
+limits in V0_VERIFICATION.md): 322 jobs from 46 sources in three paced batches, 478 job rows with no duplicate
+IDs, the writer lock released, and the 28 Hacker News comments marked read. The first attempt hit Google's
+quota and left a lock; the fix is PR #28 and the lock was removed with the user's approval. This is
+historical evidence recorded by that session. It was not re-run or independently verified during the Codex
+reviews, and it is not proof that the current code or environment works. Still true:
 `getro-accel` shows `failed` until its fix (#29) runs; LinkedIn, X, Gmail, Work at a Startup, school sites and
 the scheduled routine have NOT been run; nothing is merged. The next gate is the next-morning check of the
 routine's first scheduled run, which needs A3 and the code on `main` (A4: your go-ahead to merge; Codex has reviewed the fix PRs).

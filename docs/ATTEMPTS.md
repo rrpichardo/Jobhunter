@@ -155,7 +155,7 @@
   exact assertions to the approved broader query, retaining request-count/key
   placement checks. `git diff --check` passed.
 - Actual cloud Gmail check used the existing connector in session
-  `session_01Kydab84oh1GMjzuFahVswG`. Expanded `mcp__Gmail__list_labels` output
+  `(session id not kept in Git)`. Expanded `mcp__Gmail__list_labels` output
   confirms exact `JobHunter` label, zero messages and threads. No message reads
   or inbox fallback. Local dedicated-account alert metadata search had no matches.
 - Gmail forwarding-checkbox blocker remains 3/3. Next: receive a real alert,

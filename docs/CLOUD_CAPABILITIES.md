@@ -35,7 +35,7 @@ Observed on October 17, 2026. This records readiness, not deployment success.
 
 ## Bounded live cloud probe
 
-[Cloud session](https://claude.ai/code/session_015wZ8bZKVEjazvzsqciHokQ)
+Cloud session (session link not kept in Git)
 ran in **JobHunterEnv** with Sonnet on October 17, 2026. It was read-only with
 respect to the repository and accounts: no Gmail calls, social fetches, writes,
 commits, schedules, or account setup. The public-request tool output was inspected.

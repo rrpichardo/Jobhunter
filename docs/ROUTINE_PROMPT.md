@@ -106,11 +106,15 @@ account are recorded `needs setup` by the tool; do not try to work around that.
 ## 3. Deliver to the Sheet
 
 ```
-uv run --locked python -m scripts.sheets_sync --input $DIR/probe.json --run-id $RUN
+uv run --locked python -m scripts.sheets_sync --input $DIR/probe.json \
+    --input-sha256 <probe_sha256> --run-id $RUN
 ```
 
+`<probe_sha256>` is the digest that `source_probe` printed in step 2 (`probe_sha256=...`). Without it the
+writer refuses a collection above 5 MiB (`artifact_too_large`), which a backfill can produce.
+
 Large runs are delivered in numbered batches. To retry after a failed delivery, rerun
-this exact command with the same `--run-id` and the same retained `$DIR/probe.json`;
+this exact command (same digest) with the same `--run-id` and the same retained `$DIR/probe.json`;
 do not regenerate the files for that retry (keep `$DIR` until the delivery succeeds).
 If the files were regenerated, use a new `RUN` instead. Exit 0 means the readback
 verified. Any other exit: do not retry more than once, do not touch the writer lock,

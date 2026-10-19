@@ -10,7 +10,7 @@ Reviewed-head JobHunterEnv tests and post-merge local tests each passed
 577 tests / 10 subtests. Earlier counts/checkpoints below are historical.
 
 Actual JobHunterEnv session:
-https://claude.ai/code/session_01Kydab84oh1GMjzuFahVswG . Codex expanded and
+(cloud session link not kept in Git) . Codex expanded and
 inspected command outputs, not just Claude's summary. The cloud checkout was
 clean, detached at the exact merge SHA, and contained the reviewed ancestor;
 `uv sync --locked` exited 0.
@@ -55,7 +55,7 @@ Exact-SHA evidence is in PR16 comments. Fresh current-head Claude review and CI
 remain required; no production Gmail adapter or scheduled delivery is verified.
 
 Actual Claude cloud session:
-https://claude.ai/code/session_01Kydab84oh1GMjzuFahVswG . A bounded read-only
+(cloud session link not kept in Git) . A bounded read-only
 check used the existing Gmail connector. Codex expanded the actual
 `mcp__Gmail__list_labels` result and confirmed `JobHunter` exists, type USER,
 with messagesTotal=0 and threadsTotal=0. No message-content tools or inbox
@@ -130,7 +130,7 @@ At implementation revision `e7c9c750e2f59f3e87e277fc0a39569337bcf873`:
   found no actionable findings. It inspected the diff; it did not reproduce tests
   or cloud UI checks. This review does not cover subsequent documentation changes.
 
-Live cloud evidence: the [bounded cloud session](https://claude.ai/code/session_015wZ8bZKVEjazvzsqciHokQ)
+Live cloud evidence: the bounded cloud session (session link not kept in Git)
 made one real Greenhouse request (HTTP 200, 655 jobs, one PM posting inspected).
 The underlying command/output was expanded in the UI and verified. See
 `CLOUD_CAPABILITIES.md` for the precise scope, runtime versions and unknowns.
@@ -159,7 +159,7 @@ Creation is setup evidence only; no application Sheet write has occurred.
 ### Actual cloud code-path test
 
 Tested revision `f913601f36b329fcc81f3e84f31542277cfcffe6` in the existing
-JobHunterEnv [cloud session](https://claude.ai/code/session_015wZ8bZKVEjazvzsqciHokQ).
+JobHunterEnv cloud session (session link not kept in Git).
 This was a manual test of the proposed revision, not a deployed/scheduled run.
 
 - Cloud installation used official uv 0.13.1 and Python 3.12.3. `uv sync --locked`
@@ -230,7 +230,7 @@ using only fresh hidden `_M0Test_` fixture tabs and the shared lock tab. This is
 **not** the real-posting write, not a scheduled run and not V0 deployment.
 
 Actual Claude cloud session
-https://claude.ai/code/session_01DsCkZnt2X9EtuQRVq6Gq5u (JobHunterEnv, branch
+(cloud session link not kept in Git) (JobHunterEnv, branch
 `claude/m0-sheet-sync`, HEAD `c5e2398`, clean tree). The container's uv was 0.11.32 and
 the repo pins 0.13.1; with the user's approval uv 0.13.1 was installed with pip into a
 scratch virtualenv outside the checkout. No tracked file or setting changed.
@@ -270,7 +270,7 @@ scratch virtualenv outside the checkout. No tracked file or setting changed.
 Scope: first application-level write to the real workbook tabs from the actual Claude
 cloud environment, plus an identical repeat. **Not** a scheduled run, the full V0
 source set, or a merge approval. Same cloud session as the harness run above
-(https://claude.ai/code/session_01DsCkZnt2X9EtuQRVq6Gq5u, code `c5e2398`).
+((cloud session link not kept in Git), code `c5e2398`).
 
 The earlier session's saved posting data was gone, so with the user's approval one new
 bounded public harvest was run (single Greenhouse board request, no social source).
@@ -315,7 +315,7 @@ Scope: one polite request to every non-login V0 source from the actual Claude cl
 environment, then delivery of the AI-PM matches and every source's status to the real
 workbook. This is a **source feasibility and first delivery**, not the scheduled daily run,
 not the 14-day trial, and not approval to merge. Same cloud session as above
-(https://claude.ai/code/session_01DsCkZnt2X9EtuQRVq6Gq5u), code `473d7d0` on
+((cloud session link not kept in Git)), code `473d7d0` on
 `claude/m1-source-coverage`, tree clean, `uv sync --locked` and **188 tests passed**.
 
 - `scripts.source_probe` (one GET each, no retries, no social, no login, no Google access):
@@ -407,7 +407,9 @@ the old adzuna row); a transient Sheets read-quota 429 during readback.
 
 ## First manual non-social pull in JobHunterEnv — October 18 to 19, 2026 (PARTIAL, not a pass)
 
-Cloud session `session_01KuVxYnAppMwqn66vKEgfS1`, detached at `4b9860e` (top of the PR #19 to #27 stack),
+_Recorded by an earlier cloud session as historical evidence. It was not re-run during the Codex reviews of the later changes and is not proof the current code or environment works._
+
+Cloud session `(session id not kept in Git)`, detached at `4b9860e` (top of the PR #19 to #27 stack),
 uv 0.13.1, clean tree: **760 tests passed, 10 subtests**. Four-week window, safety stops raised
 (`--detail-safety-stop 1000 --page-safety-stop 200`).
 
@@ -431,6 +433,8 @@ lock reads retry through a quota error (creates and deletes still never repeat).
 operator decision before removal (runbook rule); see PENDING.md.
 
 ## First manual non-social pull, rerun with the quota fix — October 19, 2026 (PASSED for the sources it covered)
+
+_Recorded by an earlier cloud session as historical evidence. It was not re-run during the Codex reviews of the later changes and is not proof the current code or environment works._
 
 Same cloud session, detached at `b03dcd4` (PR #28, CI green on Linux and Windows): **768 tests passed, 10
 subtests**. The user approved removing the leftover lock. The session first read the lock owner, started

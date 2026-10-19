@@ -19,7 +19,7 @@ choose it. The plan's idea of using Haiku for this step has not been built or te
 
 ## Every source
 
-| Source | Way | Reader in the code | State on October 19 |
+| Source | Way | Reader in the code | State recorded after the first manual pull (October 19; historical evidence from an earlier session, see V0_VERIFICATION.md) |
 | --- | --- | --- | --- |
 | Greenhouse boards (Anthropic, Stripe, Pinterest and the others in the registry) | A | `parse_greenhouse` | Ran in the first pull |
 | Lever boards | A | `parse_lever` | Ran |

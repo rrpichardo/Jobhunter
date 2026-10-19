@@ -139,7 +139,7 @@ was running short. Resume this order; do not interpret the handoff as cancellati
 ### Read-only research and preflight
 
 Cloud validation session (same JobHunterEnv):
-https://claude.ai/code/session_01Kydab84oh1GMjzuFahVswG . Latest prompt begins
+(cloud session link not kept in Git) . Latest prompt begins
 `Social-cloud preflight only`; it asks for a clean detached checkout at the
 baseline above, pinned uv/Python/package versions, boolean cookie presence,
 empty headless-browser launch, and read-only lock/pending/allowance readiness.
@@ -204,10 +204,12 @@ those entries preserve chronology, not current status.
   exact-label scope and security exclusions. End-to-end Gmail testing depends
   on a genuine alert plus precise forwarding/label filters. Do not retry the
   exhausted filter UI blocker without manual completion or a relevant change.
-- User input still needed: correct Cosign and desired school/MBA URLs; settle
-  the saved-cookie collector approach and proposed collection-cap change (answered October 18, see top of file).
-  Current caps remain eight per source / 150 per batch. Do not ask for account
-  credentials in chat. PR16's extra repair authorization did not lift Gmail's cap.
+- User input still needed: correct Cosign and desired school/MBA URLs; approval of the saved-cookie collector
+  approach (A1 in PENDING.md). The collection-cap change is NOT open: the user decided it on October 18 (keep every
+  matching job, deliver in recoverable batches; see top of file), so it is implementation work and needs no
+  further answer. At this checkpoint the old caps (eight per source / 150 per batch) were still in the code; the
+  PRs from #19 onward replace them. Do not ask for account credentials in chat. PR16's extra repair
+  authorization did not lift Gmail's cap.
 
 ## Latest continuation — broader alerts and salary preferences
 
@@ -314,9 +316,10 @@ reset counters or replace cloud execution with local Gmail collection.
   no forwarding/filter enabled yet. See SETUP.md. Preserve all label-only rules.
 - User questioned the eight-jobs-per-source / 150-jobs-total collection caps.
   Proposed retaining all matching jobs found with safe batch delivery and a
-  separate AI-processing budget; answered October 18 (see top of file); implementation still pending. Existing
-  caps remain unchanged. Explain browser/social setup in plain language before
-  relying on the user's tentative preference as a final scope decision.
+  separate AI-processing budget. The user answered on October 18: keep every matching job, in recoverable
+  batches (final decision, see top of file). Implementation was still pending at this checkpoint and the caps
+  were unchanged then. Explain browser/social setup in plain language before relying on the user's preference
+  for the collector method (that approval, A1, is still open).
 - No new social access, source harvest, Sheet write or deployment evidence.
 
 ## Handover from Claude (Opus) — October 18, 2026, evening
@@ -538,7 +541,7 @@ Repairs included in this checkpoint, still needing fresh independent review:
 ## Actual Claude cloud evidence, not Codex cloud
 
 Codex controlled Chrome Richard to select the repo and **JobHunterEnv** at
-https://claude.ai/code/session_015wZ8bZKVEjazvzsqciHokQ . That is a manual Claude
+(cloud session link not kept in Git) . That is a manual Claude
 cloud session, not a scheduled routine. Ubuntu24.04, Python3.12.3, uv0.13.1.
 Local authenticated Claude Sonnet CLI reviews were separate development checks.
 
