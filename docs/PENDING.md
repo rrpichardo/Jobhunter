@@ -14,7 +14,7 @@ this section if it is out of date.
 
 | What | Where it stands |
 | --- | --- |
-| A2 First live X and LinkedIn test | You said yes (October 19): run it after Codex's limit resets and #40 and #43 are approved and merged. Cookie names assumed: `X_AUTH_TOKEN`, `X_CT0`, `LINKEDIN_LI_AT`. Runbook: `docs/FIRST_LIVE_TEST.md`. You do not need to do anything for it except copy the spreadsheet first. |
+| A2 First live X and LinkedIn test | You said yes (October 19): run it after Codex's limit resets and #40 and #43 are approved and merged. Cookie names CHECKED in JobHunterEnv (names only, October 19): `X_AUTH_TOKEN`, `X_CT0` and `LINKEDIN_LI_AT` are set; `WAAS_SESSION_COOKIE`, `JSEARCH_API_KEY`, `JOOBLE_API_KEY` and the spreadsheet id are set too. The collector tests (91) pass in that environment with the social extra. Runbook: `docs/FIRST_LIVE_TEST.md`. You do not need to do anything for it except copy the spreadsheet first. |
 | A3 Create the daily routine | Only after a manual run is checked. |
 | A4 Merging | You said (October 19) to merge what Codex approves and to use the `engineering:code-review` check in the meantime. |
 | A7 Limits | 5 LinkedIn post searches, 5 LinkedIn job searches, 10 X searches a day. Say so if you want them changed. |
@@ -55,6 +55,8 @@ items (harness: `scripts/eval_reading.py`, PR #49; real items come from the firs
 100 examples, both models' outputs and the agreement percentage. Switch to Haiku ONLY if agreement is over 90% (and Haiku
 finds at least 90% of Sonnet's jobs and the user has read the disagreements). Until then the reading stays on Sonnet. The
 eval file is saved so the user can learn how it was done.
+
+**E. Possible later add-on:** `WAAS_SESSION_COOKIE` is already saved, so the logged-in Work at a Startup lists (about 240 product and 1,400 operations jobs instead of the first ~25) can be built when you want them.
 
 **D. Claude's next steps:** when Codex is back: review, fix, merge in order (#42, #44, #45, #46, then #40 and the PRs
 stacked on it). Then the live X and LinkedIn test, then a first manual run, then A3.
