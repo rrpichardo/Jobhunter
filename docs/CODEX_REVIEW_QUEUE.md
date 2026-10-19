@@ -16,6 +16,8 @@ stretch from about 16:30. Check or raise the limit at https://chatgpt.com/codex/
    `scripts/wait_codex_review.sh <pr> <full-head-sha> [minutes]` (exit 0 clean, 1 findings, 2 usage limit, 3 timeout or changed head).
 3. Post the request comment on the PR: `@codex review <full head SHA>`, the criteria from the block for that PR below, and
    "Review only: do not implement fixes." End the comment with the Claude Code footer.
+   Add one line to every request: "Known and decided, do not re-raise: some commits end with a `Claude-Session:` link that
+   opens only for the account owner (see the note in `docs/PENDING.md`)."
 4. If Codex reports findings, fix them in NEW commits (never rewrite history), reply on each thread with the commit,
    resolve the thread, push, and request a fresh review of the new head.
 5. Merge only when the review covers the exact current head and CI is green. Then follow the merge order and conflict

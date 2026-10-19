@@ -81,6 +81,11 @@ of its exact head and green CI**; old commits keep their "Claude-Session" line (
 that wrote them. They were left in on purpose: removing them would mean re-creating those commits, which voids every
 Codex approval tied to them and forces all reviews again. The link only opens for the account owner and carries no
 secret. Newer commits omit it. This note is the explanation; nothing is hidden.
+A slip on October 19: 21 of Claude's commits that day (the haiku eval, docs and run-branch work) also carry the line
+(`session_01BLQ4Yve4ZCKG4cPmidzTSc`), against that convention. They are treated like the older ones: left as they are, and
+new commits omit it from now on. Codex flagged the same thing on #39 (its thread is the one left open on purpose); when
+asking Codex to review, tell it this is known and decided so it is not raised again. If you ever want these lines scrubbed
+too, say "rewrite" (same cost as A14: new commit IDs, reviews tied to them void).
 
 **Codex reviews work** (history of the earlier round) (GitHub app, `@codex review` on a PR; it sometimes answers "unknown error", which
 is a failed run and not a verdict, so the request is simply repeated). On October 19 Codex reviewed every
