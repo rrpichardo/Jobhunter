@@ -31,7 +31,7 @@ Steps (stop and report at the first failure in A):
 A. Check the setup
 1. Print `git rev-parse HEAD` and the branch name.
 2. `python3 -m venv ~/uvvenv && ~/uvvenv/bin/pip install uv==0.13.1`, then `~/uvvenv/bin/uv sync --locked --extra social`.
-3. `~/uvvenv/bin/uv run --locked --extra social python -m pytest -q`: all tests must pass (1,056 expected on this branch). If not, stop.
+3. `~/uvvenv/bin/uv run --locked --extra social python -m pytest -q`: all tests must pass (1,071 expected on this branch). If not, stop.
 4. Print which of these settings exist, by name only: `X_AUTH_TOKEN`, `X_CT0`, `LINKEDIN_LI_AT`, `JOBHUNTER_SPREADSHEET_ID`, `JSEARCH_API_KEY`,
    `JOOBLE_API_KEY`. Missing X or LinkedIn names mean skip that source; a missing `JOBHUNTER_SPREADSHEET_ID` means stop.
 5. `uv run --locked python -m scripts.run_window --mode manual` must print `window_days=28`; use 28 as `$WINDOW`.
@@ -46,7 +46,7 @@ C. Read the free text with Haiku subagents, then validate. For each source that 
 `linkedin-login` (posts), `linkedin-jobs` (job cards) as in runbook step 2, and also Hacker News (`hn_hiring candidates --lookback-days
 $WINDOW`, section 1) and the Ali Rohde newsletter (section 1b). Use `ai_queue pull` (with `--id-field item_id` for the
 social and newsletter sources), a Haiku subagent to write the facts file, and `social_posts validate` or `hn_hiring validate`.
-Report for each source: items pulled, items read, facts delivered, facts rejected, held for retry.
+Report for each source: items pulled, items read, facts delivered, facts rejected, held for retry, and copy the `trace:` and `trace_rejected:` lines that validation prints unchanged (they say why each fact was rejected or dropped; no post text).
 
 D. Everything else, then deliver (follow `docs/ROUTINE_PROMPT.md` sections 2 to 4 and section 5 for the social results):
 `known_ids`, then `source_probe --lookback-days $WINDOW` with `--known-ids`, `--hn-result`, and one `--social-result`/`--social-result-sha256`
