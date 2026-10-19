@@ -65,8 +65,9 @@ numbers: #18 docs, #19 keep-every-match and 4-week window, #20 Hacker News,
   page; Remotive and Remote OK checked and already complete for 28 days. Himalayas
   cannot be fixed by paging (20 per page, dates look refreshed daily). Jooble paging
   and JSearch paging still wait on A6 and a quota decision.
-- Skip Job IDs already in the Sheet so a source that hits its detail-page stop does
-  not starve its tail.
+- DONE on branch `claude/known-ids`: `scripts.known_ids` + `source_probe --known-ids` skip
+  job pages for jobs already in the Sheet, so a big source is not reopened daily and
+  its detail-page stop no longer starves the tail.
 - A Run Log column for the AI queue counts (a Sheet schema change, done carefully).
 - LinkedIn and X collector code with offline tests, and the daily allowance
   reservation in `_State`, both PRs of their own. No live access before A1 and A2.

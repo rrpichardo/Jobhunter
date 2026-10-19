@@ -194,7 +194,7 @@ def fetch_details(client, entry, stubs, stamp, *, delay, sleep):
 
 
 def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=None, lookback_days=None,
-                 detail_stop=None, page_stop=None):
+                 detail_stop=None, page_stop=None, known_ids=frozenset()):
     """Returns (source record or None for an unresponsive candidate, postings, note).
 
     lookback_days keeps postings whose source date is inside the window; a posting with no usable date is
@@ -225,7 +225,7 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
         data = json.loads(body) if kind in JSON_KINDS else body
     except (ValueError, RecursionError):
         return record(source_id, "failed", stamp, error="invalid_json", http=200), [], "invalid_json"
-    problem, attempts, detail_skipped, outside = None, 1, 0, 0
+    problem, attempts, detail_skipped, outside, delivered_before = None, 1, 0, 0, []
     cutoff = None if lookback_days is None else datetime.fromisoformat(stamp) - timedelta(days=lookback_days)
     paging_note = ''
     if kind in PAGED_KINDS and isinstance(data, dict):
@@ -242,6 +242,8 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
         if kind in DETAIL_SOURCES:
             stubs, rejected = DETAIL_SOURCES[kind][0](data, {**ctx, "url": url})
             shortlist = [s for s in stubs if collection_stub_match(s["title"], s["location"], s["salary"])]
+            delivered_before = [s for s in shortlist if s["job_id"] in known_ids]  # already in the Sheet: skip the page
+            shortlist = [s for s in shortlist if s["job_id"] not in known_ids]
             # No listing-date prefilter: listing dates are unverified, and a wrong one would silently drop a job.
             # The window is applied after each page's own posting date is read.
             shortlist.sort(key=lambda stub: collection_title_priority(stub['title'], entry.get('tag', 'other')))
@@ -271,7 +273,8 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
         candidates = shortlist
     if rejected:
         coverage += "-with-rejections"
-    skipped_note = (f'; details_skipped={detail_skipped}' if detail_skipped else '') + paging_note
+    skipped_note = ((f'; details_skipped={detail_skipped}' if detail_skipped else '') + paging_note
+                    + (f'; already_delivered={len(delivered_before)}' if kind in DETAIL_SOURCES and known_ids else ''))
     if cutoff is not None:
         skipped_note += f'; outside_window={outside}; date_unknown={undated}'
     if problem is not None:
@@ -316,7 +319,7 @@ def entries(registry):
 
 def run(registry, client, *, delay=1.0, sleep=time.sleep, environ=None, gmail_result=None, hn_result=None,
         now=lambda: datetime.now(timezone.utc).isoformat(), lookback_days=LOOKBACK_DAYS, detail_stop=None,
-        page_stop=None):
+        page_stop=None, known_ids=frozenset()):
     environ = os.environ if environ is None else environ
     stamp = now()
     sources, jobs, notes = [], [], {}
@@ -325,7 +328,7 @@ def run(registry, client, *, delay=1.0, sleep=time.sleep, environ=None, gmail_re
             continue  # the validated comment extraction replaces the listing-only count
         record_, selected, note = probe_source(client, entry, stamp, delay=delay, sleep=sleep,
                                                     environ=environ, lookback_days=lookback_days, detail_stop=detail_stop,
-                                                    page_stop=page_stop)
+                                                    page_stop=page_stop, known_ids=known_ids)
         notes[entry["id"]] = note
         if record_ is not None:
             sources.append(record_)
@@ -385,6 +388,8 @@ def main(argv=None, *, client=None, sleep=time.sleep) -> int:
                              "raise it for the one-off first pull")
     parser.add_argument("--page-safety-stop", type=int, default=PAGE_SAFETY_STOP,
                         help="pages fetched from one paged public API (The Muse, Jobicy); a guard reported in the note")
+    parser.add_argument("--known-ids", help="Job IDs already in the Sheet (scripts.known_ids); detail sources skip them")
+    parser.add_argument("--known-ids-sha256", help="digest printed when that file was written")
     parser.add_argument("--hn-result", help="validated Hacker News result from scripts.hn_hiring validate")
     parser.add_argument("--hn-result-sha256", help="digest printed when that result was written")
     args = parser.parse_args(argv)
@@ -400,12 +405,19 @@ def main(argv=None, *, client=None, sleep=time.sleep) -> int:
             raise ValueError('invalid_safety_stop')
         print(f'limits: lookback_days={args.lookback_days} detail_safety_stop={args.detail_safety_stop} '
               f'page_safety_stop={args.page_safety_stop} delay={args.delay}')
+        known = frozenset()
+        if args.known_ids:
+            listed = read_artifact(args.known_ids, expected_sha256=args.known_ids_sha256)
+            if (not isinstance(listed, dict) or not isinstance(listed.get('job_ids'), list)
+                    or any(not isinstance(i, str) for i in listed['job_ids'])):
+                raise ValueError('invalid_known_ids')
+            known = frozenset(listed['job_ids'])
         hn_result = None
         if args.hn_result:
             source, found = postings_from_result(read_artifact(args.hn_result, expected_sha256=args.hn_result_sha256))
             hn_result = {'source': source, 'postings': found}
         payload = run(registry, client, delay=args.delay, sleep=sleep, lookback_days=args.lookback_days,
-                      hn_result=hn_result, detail_stop=args.detail_safety_stop, page_stop=args.page_safety_stop)
+                      hn_result=hn_result, detail_stop=args.detail_safety_stop, page_stop=args.page_safety_stop, known_ids=known)
         print(summary(payload))
         failed = sum(s["status"] in {"failed", "blocked"} for s in payload["sources"])
         digest = write_artifact(args.output, payload)

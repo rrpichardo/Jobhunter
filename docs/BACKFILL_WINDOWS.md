@@ -40,7 +40,8 @@ Safety stops, not targets (all reported, never silent):
 - `DETAIL_SAFETY_STOP = 300` job pages per detail source per run. Candidates past
   it appear as `details_skipped=N` in the source note. Because the same candidates
   sort first on every run, a source that regularly hits the stop would starve its
-  tail; the planned fix is to skip Job IDs already in the Sheet.
+  tail. `scripts.known_ids` plus `source_probe --known-ids` skip Job IDs already in
+  the Sheet, so that no longer happens; an already-delivered job is not refreshed later.
 - `EXTRACTION_SAFETY_STOP = 1000` Gmail AI extractions per run.
 - One writer batch holds at most `JOB_BATCH_SIZE = 150` jobs (its recovery journal
   must fit in `_State`). Larger runs are split into `<run id>-b001`, `-b002`, ...

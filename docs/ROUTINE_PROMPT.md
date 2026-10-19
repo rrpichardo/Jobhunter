@@ -74,12 +74,21 @@ say so in the final report, and do NOT run the commit step for it.
 
 ## 2. Everything that code can fetch
 
+First list the jobs already in the Sheet, so job-page sources do not reopen pages they delivered:
+
+```
+uv run --locked python -m scripts.known_ids --output $DIR/known.json
+```
+
+Then:
+
 ```
 uv run --locked python -m scripts.source_probe --output $DIR/probe.json \
+    --known-ids $DIR/known.json --known-ids-sha256 <known_ids_sha256> \
     --hn-result $DIR/hn_result.json --hn-result-sha256 <hn_result_sha256>
 ```
 
-(Omit the two `--hn-` options if step 1 was skipped.) The default window is the last
+(Omit the two `--hn-` options if step 1 was skipped. If `known_ids` fails, run without `--known-ids`: it only saves requests.) The default window is the last
 28 days, which is also the first-run backfill. Boards, public job sites, YC and
 Built In, Getro, JSearch and Jooble are fetched here. Sources without a key or an
 account are recorded `needs setup` by the tool; do not try to work around that.
