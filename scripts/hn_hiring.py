@@ -72,13 +72,24 @@ def main(argv=None, *, client=None, sleep=time.sleep, now=lambda: datetime.now(t
             print(f'candidates_sha256={digest}')
             return 0
         data = read_artifact(args.candidates, expected_sha256=args.candidates_sha256)
-        facts = read_artifact(args.extractions)
+        extractions = read_artifact(args.extractions)
+        if (not isinstance(extractions, dict) or set(extractions) != {'processed', 'facts'}
+                or not isinstance(extractions['processed'], list) or not isinstance(extractions['facts'], list)):
+            raise ValueError('invalid_extractions')
+        known = {c.get('comment_id') for c in data.get('candidates', []) if isinstance(c, dict)}
+        processed = extractions['processed']
+        if (any(not isinstance(i, str) or i not in known for i in processed)
+                or len(set(processed)) != len(processed)):
+            raise ValueError('invalid_extractions')
         if (not isinstance(data, dict) or data.get('schema_version') != 1 or data.get('source_id') != SOURCE_ID
                 or not isinstance(data.get('candidates'), list) or not isinstance(data.get('stats'), dict)
                 or not isinstance(data.get('threads'), list) or not isinstance(data.get('captured_at'), str)):
             raise ValueError('invalid_candidates')
-        result = build_result(data['candidates'], facts, data['captured_at'], listed=data['stats'].get('in_window', 0),
+        # Only candidates the AI says it read can yield a job; a fact for any other comment is rejected.
+        read = [c for c in data['candidates'] if c['comment_id'] in set(processed)]
+        result = build_result(read, extractions['facts'], data['captured_at'], listed=data['stats'].get('in_window', 0),
                               stats=data['stats'], threads=data['threads'])
+        result['processed_ids'] = sorted(processed)
         digest = write_artifact(args.output, result)
         source = result['source']
         print(f"status={source['status']} valid={source['valid_jobs']} delivered={source['selected_for_m0']} "

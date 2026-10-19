@@ -86,7 +86,8 @@ resources already provisioned. Pending choices do not silently change current li
   batches, adds `posted_at` and `--lookback-days`, and leaves the Gmail AI
   extraction budget as a generous safety stop. Open: pagination gaps and
   skip-already-delivered, both listed in docs/BACKFILL_WINDOWS.md. The saved AI
-  backlog in `_State` is not built yet. LinkedIn starts at 5 job + 5 post searches per run.
+  read-queue in `_State` (`jobhunter/ai_queue.py`, `scripts/ai_queue.py`) is on branch
+  `claude/ai-queue`; its counts are printed, not yet a Run Log column. LinkedIn starts at 5 job + 5 post searches per run.
 - [ ] Current user priority: implement LinkedIn hiring-post search in addition
   to job listings, then X hiring-post search, then the real cloud test. Both
   social sources were already in V0; this confirms execution order. See the

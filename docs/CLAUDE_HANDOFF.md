@@ -21,8 +21,11 @@ Read the full PLAN.md and registry, not only this shortened inventory:
 - Hacker News Who Is Hiring; main's registry only retrieves thread listings. Branch
   `claude/hn-hiring-comments` adds `scripts.hn_hiring candidates` (public fetch and
   filter), a Claude extraction step, `validate`, and `source_probe --hn-result`.
-  The routine prompt that runs the extraction step does not exist yet, so HN is
-  built but not scheduled or proven in the cloud.
+  The routine prompt is now drafted in docs/ROUTINE_PROMPT.md (branch
+  `claude/ai-queue`), but no routine exists and nothing is proven in the cloud.
+  `scripts.ai_queue` (pull/commit) remembers which comments the AI already read in
+  `_State` under `queue/<source>/...`, so each run reads only new ones; leftovers
+  are counted in its printed summary (not yet a Run Log column).
 - a16z is also listing-only in the current registry; do not claim it delivers jobs.
 - Approved newsletters/RSS and forwarded job alerts: Next Play, Ali Rohde,
   LinkedIn/TrueUp/Indeed/Glassdoor and other plan-approved senders; current Gmail

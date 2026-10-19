@@ -161,13 +161,14 @@ def test_cli_candidates_then_validate_then_probe_delivers_a_row(tmp_path, capsys
     assert 'candidates=1' in out and 'truncated=False' in out
     digest = out.split('candidates_sha256=')[1].split()[0]
     extractions = tmp_path.parent / (tmp_path.name + '_facts.json')
-    extractions.write_text(json.dumps([fact()]))
+    extractions.write_text(json.dumps({'processed': ['2001'], 'facts': [fact()]}))
     validated = tmp_path.parent / (tmp_path.name + '_hn.json')
     assert cli.main(['validate', '--candidates', str(candidates), '--candidates-sha256', digest,
                      '--extractions', str(extractions), '--output', str(validated)]) == 0
     out = capsys.readouterr().out
     result_digest = out.split('hn_result_sha256=')[1].split()[0]
     assert 'delivered=1' in out
+    assert json.loads(validated.read_text())['processed_ids'] == ['2001']
     # the probe replaces the listing-only count with the validated comments
     config = tmp_path / 'registry.yaml'
     import yaml
@@ -190,7 +191,7 @@ def test_cli_rejects_a_candidates_file_that_does_not_match_its_digest(tmp_path, 
              sleep=lambda s: None, now=lambda: NOW)
     capsys.readouterr()
     extractions = tmp_path.parent / (tmp_path.name + '_facts2.json')
-    extractions.write_text('[]')
+    extractions.write_text(json.dumps({'processed': [], 'facts': []}))
     assert cli.main(['validate', '--candidates', str(candidates), '--candidates-sha256', '0' * 64,
                      '--extractions', str(extractions), '--output', str(tmp_path.parent / 'never.json')]) == 2
     assert 'artifact_digest_mismatch' in capsys.readouterr().out
@@ -210,3 +211,36 @@ def test_candidate_safety_stop_is_reported_as_truncated(tmp_path, monkeypatch, c
     assert cli.main(['candidates', '--output', str(out)], client=hn_client(story), sleep=lambda s: None,
                     now=lambda: NOW) == 0
     assert 'candidates=2' in capsys.readouterr().out and json.loads(out.read_text())['truncated'] is True
+
+
+def validate_with(tmp_path, capsys, extractions):
+    story = item(1000, [comment(2001, PM_TEXT), comment(2003, 'Delta | Chief of Staff | Remote US', 5)])
+    candidates = tmp_path.parent / (tmp_path.name + '_c.json')
+    cli.main(['candidates', '--output', str(candidates)], client=hn_client(story), sleep=lambda s: None, now=lambda: NOW)
+    digest = capsys.readouterr().out.split('candidates_sha256=')[1].split()[0]
+    facts = tmp_path.parent / (tmp_path.name + '_f.json')
+    facts.write_text(json.dumps(extractions))
+    out = tmp_path.parent / (tmp_path.name + '_o.json')
+    code = cli.main(['validate', '--candidates', str(candidates), '--candidates-sha256', digest,
+                     '--extractions', str(facts), '--output', str(out)])
+    return code, out
+
+
+def test_a_fact_for_a_comment_the_ai_did_not_report_reading_is_rejected(tmp_path, capsys):
+    code, out = validate_with(tmp_path, capsys, {'processed': ['2003'], 'facts': [fact()]})  # reads 2003, cites 2001
+    result = json.loads(out.read_text())
+    assert code == 0 and result['postings'] == [] and result['source']['rejected_items'] == 1
+    assert result['processed_ids'] == ['2003']  # 2001 stays unread, so it stays queued
+
+
+@pytest.mark.parametrize('extractions', [
+    [fact()],                                              # the old bare list is no longer accepted
+    {'processed': ['9999'], 'facts': []},                  # not a candidate
+    {'processed': ['2001', '2001'], 'facts': []},          # repeated
+    {'processed': [2001], 'facts': []},
+    {'processed': [], 'facts': [], 'extra': 1},
+])
+def test_malformed_extractions_fail_closed_and_write_nothing(tmp_path, capsys, extractions):
+    code, out = validate_with(tmp_path, capsys, extractions)
+    assert code == 2 and not out.exists()
+    assert 'hn_failed: invalid_extractions' in capsys.readouterr().out
