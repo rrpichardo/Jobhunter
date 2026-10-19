@@ -260,3 +260,19 @@ def test_a_run_id_too_long_for_batch_suffixes_is_rejected_before_any_write(tmp_p
     out, backend = artifact(tmp_path, 320), MemoryStore()
     assert sheets_sync.main(['--input', str(out), '--run-id', 'x' * 76], store=backend) == 2
     assert backend.tables == {}
+
+
+def test_a_backfill_larger_than_the_default_artifact_limit_still_reaches_batching(tmp_path, capsys):
+    out, backend = artifact(tmp_path, 8500), MemoryStore()
+    assert out.stat().st_size > 5 * 1024 * 1024  # the old shared limit rejected this before any Sheet access
+    assert sheets_sync.main(['--input', str(out), '--run-id', 'huge'], store=backend) == 0
+    assert 'batches=57' in capsys.readouterr().out
+    assert len({row[0] for row in backend.tables['Jobs'][1:]}) == 8500
+
+
+def test_the_producer_refuses_a_file_the_writer_could_not_read(tmp_path):
+    from jobhunter.artifacts import SYNC_MAX_BYTES, write_artifact
+    target = tmp_path.parent / (tmp_path.name + '_toobig.json')
+    with pytest.raises(ValueError, match='artifact_too_large'):
+        write_artifact(target, {'text': 'x' * (SYNC_MAX_BYTES + 1)}, max_bytes=SYNC_MAX_BYTES)
+    assert not target.exists()  # nothing half-published

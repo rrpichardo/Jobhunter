@@ -5,7 +5,7 @@ import re
 import time
 import uuid
 
-from jobhunter.artifacts import read_artifact
+from jobhunter.artifacts import SYNC_MAX_BYTES, read_artifact
 from jobhunter.google_auth import open_workbook
 from jobhunter.sheet_io import GspreadStore
 from jobhunter.sheet_records import JOB_BATCH_SIZE
@@ -97,7 +97,7 @@ def main(argv=None, *, store=None):
                   'data kept under m0/quarantined/ in _State')
             return 0
         try:
-            payload = read_artifact(args.input)
+            payload = read_artifact(args.input, max_bytes=SYNC_MAX_BYTES)
         except (OSError, ValueError, RuntimeError) as exc:
             if isinstance(exc, ValueError) and str(exc) in SAFE_ERRORS:
                 raise  # retain specific JSON, size and checkout-path diagnostics
