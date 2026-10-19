@@ -112,6 +112,13 @@ proposed fact the code rejected is NOT marked read: validation prints
 `held_for_retry=N` and leaves those comments out of `processed_ids`, so they are read
 again on the next run. Report N in the final report.
 
+Validation also prints a `trace:` line (and a `trace_rejected:` line with up to ten examples) that says what happened to
+every fact: how many were valid, duplicates, or rejected with a fixed reason code (for example `not_in_post:title`,
+`link_not_in_post_links`, `too_long:description_quote`), how many posts were unreadable, how many valid facts the
+collection filter dropped and why (`role_not_in_scope`, `place_excluded`, `pay_below_floor`), how many were delivered and
+how many posts are held. **Copy the `trace:` lines into the final report unchanged** for every validated source. They hold
+only numbers, reason codes and post ids; never paste post text, a name or an email into the report.
+
 ### 1b. Newsletter editions (Ali Rohde Jobs, weekly)
 
 ```
@@ -212,7 +219,8 @@ is harmless because jobs collapse by Job ID.
 
 Reply with plain text only: the run ID; for each source its status and counts (read
 them from the tool output, do not estimate); batches delivered; the AI queue numbers
-from `pull` (new, already read, held, expired, oldest unread age); every non-zero
+from `pull` (new, already read, held, expired, oldest unread age); the `trace:` lines from each
+validation; every non-zero
 exit with its printed code; and the sources left `needs setup`. Say "unknown" for
 anything you could not read. A green routine status does not prove success: the
 Sheet readback line from step 3 does.
