@@ -82,6 +82,24 @@ proposed fact the code rejected is NOT marked read: validation prints
 `held_for_retry=N` and leaves those comments out of `processed_ids`, so they are read
 again on the next run. Report N in the final report.
 
+### 1b. Newsletter editions (Ali Rohde Jobs, weekly)
+
+```
+uv run --locked python -m scripts.newsletter_collect --source alirohde-rss --output $DIR/ali_cand.json --lookback-days $WINDOW
+uv run --locked python -m scripts.ai_queue pull --source alirohde-rss --candidates $DIR/ali_cand.json \
+    --candidates-sha256 <newsletter_candidates_sha256> --id-field item_id --output $DIR/ali_work.json
+```
+
+Each candidate is one edition: `text` lists roles as `Title [application link] , Company (sector, stage), Place`. Write
+`$DIR/ali_facts.json` exactly as in section 1 but with `item_id` (the edition's id) instead of `comment_id`, one fact per
+role that matches the roles we collect; copy every value word for word, `description_quote` is an exact excerpt of at most
+300 characters, and `apply_url` is the role's own link from the `[...]` beside its title (it must be one of the edition's
+`links`). Then `scripts.social_posts validate --source alirohde-rss --candidates $DIR/ali_work.json --candidates-sha256
+<work digest> --extractions $DIR/ali_facts.json --output $DIR/ali_result.json`, pass it to `source_probe` as
+`--social-result $DIR/ali_result.json --social-result-sha256 <digest>`, and run `ai_queue commit --source alirohde-rss
+--result $DIR/ali_result.json --result-sha256 <digest>` only after step 3 exited 0. If a step prints a failure, skip this
+source today and say so in the report. The feed is public: no login and no allowance.
+
 ## 2. Everything that code can fetch
 
 First list the jobs already in the Sheet, so job-page sources do not reopen pages they delivered:

@@ -38,7 +38,8 @@ choose it. The plan's idea of using Haiku for this step has not been built or te
 | Hacker News "Who is hiring?" | C | `jobhunter/hn_hiring.py` plus the shared checker in `jobhunter/post_facts.py` | Ran: 28 comments read, 14 jobs delivered |
 | a16z portfolio jobs | none yet | `count_a16z` counts links only | Listing-only: delivers no jobs |
 | Gmail job alerts | C | `jobhunter/gmail_alerts.py` | Not live: no forwarded alert yet and the connector adapter is not built |
-| Newsletters: Next Play, Ali Rohde | C (planned) | not built | Needs verified feed URLs |
+| Newsletter: Ali Rohde Jobs (weekly, chief of staff roles with a direct application link on each title) | C | `jobhunter/newsletter.py` plus the shared checker in `post_facts.py` | Feed verified October 19 (`alirohdejobs.substack.com/feed`, edition 275 on October 16); 4 editions in a 28-day window; the collector ran live, the AI read step has not. The standard-library HTTP client is used because the site's bot filter blocks `httpx` |
+| Newsletter: Next Play | C (planned) | not built | `nextplay.substack.com` is a 2021 publication, not the current newsletter; the right feed URL is still needed (your task B3/B2) |
 | LinkedIn job listings | none yet | not built | Needs your approval (A1) and a first run (A2) |
 | LinkedIn hiring posts | C | checker built (`post_facts.py`); the collector that fetches posts is not | Not run |
 | X hiring posts | C | checker built; the collector is not | Not run |

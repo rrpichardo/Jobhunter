@@ -118,6 +118,10 @@ SOCIAL = {
                        'prefix': 'linkedin-post', 'registry_id': 'linkedin-logged-in',
                        'path': re.compile(r'/(?:feed/update/urn:li:(?:activity|ugcPost|share):(\d{5,25})/?'
                                           r'|posts/[A-Za-z0-9_%.\-]+-(?:activity|ugcPost|share)-(\d{5,25})-[A-Za-z0-9_]{1,10}/?)')},
+    # Ali Rohde Jobs (weekly Substack edition listing chief of staff, BizOps and VC roles): one "post" per edition,
+    # read like a social post. Public feed, no login, no allowance.
+    'alirohde-rss': {'hosts': {'alirohdejobs.substack.com'}, 'prefix': 'alirohde', 'registry_id': 'alirohde-rss',
+                     'path': re.compile(r'/p/([a-z0-9][a-z0-9-]{2,120})/?'), 'max_chars': 24000},
 }
 MAX_POST_CHARS = 10000
 # Collector errors that mean the site refused us (logged out, restricted, rate limited), as opposed to a defect
@@ -156,7 +160,8 @@ def clean_social_candidates(source_id, items):
             links = [link for link in item.get('links', []) if https_url(link)]
             author = item.get('author')
             author = author.strip() if isinstance(author, str) and AUTHOR.fullmatch(author.strip()) else ''
-            if (not created or not isinstance(text, str) or not text.strip() or len(text) > MAX_POST_CHARS
+            if (not created or not isinstance(text, str) or not text.strip()
+                    or len(text) > SOCIAL[source_id].get('max_chars', MAX_POST_CHARS)
                     or post_id in seen):
                 raise ValueError
         except (KeyError, TypeError, ValueError):
