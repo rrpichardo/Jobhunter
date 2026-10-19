@@ -68,7 +68,7 @@ needs_setup:
   - {id: x-hiring-posts, env: [], action: "Create the dedicated X account and supply auth_token/ct0 cookies in environment settings."}
   - {id: gmail-job-alerts, env: [], action: "Forward alerts to the connected Gmail and add the JobHunter label filter; then verify the label."}
   - {id: nextplay-rss, env: [], action: "Record the verified Next Play feed URL, then enable RSS plus extraction."}
-  - {id: alirohde-rss, env: [], action: "Record the verified Ali Rohde Jobs feed URL, then enable RSS plus extraction."}
+  - {id: alirohde-rss, env: [], action: "Public feed https://alirohdejobs.substack.com/feed (verified October 19). Run scripts.newsletter_collect, then the AI read step; recorded as needs setup until a validated result is passed to source_probe."}
   - {id: cosign, env: [], action: "cosign.com now redirects to a domain-parking page; the user supplies the correct Cosign URL and creates the account, then supplies session cookies in environment settings."}
   - {id: work-at-a-startup-logged-in, env: [], action: "OPTIONAL. The public pages (waas-product, waas-operations) are collected without a login but show only the first ~25 jobs of each role page; the full lists (about 240 product, 1,400 operations) need a logged-in session. To add them the user supplies session cookies in environment settings; not built."}
   - {id: mba-and-school-job-sites, env: [], action: "The user names each school or MBA site and its URL, creates or uses the logins, and supplies session cookies in environment settings; Claude never creates accounts or types passwords."}
