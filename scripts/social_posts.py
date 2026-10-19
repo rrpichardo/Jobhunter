@@ -43,7 +43,8 @@ def main(argv=None) -> int:
         read = [c for c in candidates if c['item_id'] in set(processed)]  # a fact for an unread post is rejected
         stats = {**data['stats'], 'unreadable': data['stats'].get('unreadable', 0) + unreadable}
         result = social_result(args.source, read, extractions['facts'], data['captured_at'],
-                               listed=len(candidates), stats=stats, error=str(data.get('error') or ''))
+                               listed=len(candidates), stats=stats, error=str(data.get('error') or ''),
+                               known_ids=known)
         # A post whose proposed fact was rejected stays queued, so one extraction error cannot lose a job.
         held = set(result['rejected_item_ids'])
         result['processed_ids'] = sorted(set(processed) - held)
