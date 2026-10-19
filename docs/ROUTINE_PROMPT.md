@@ -37,14 +37,13 @@ keys or tokens. Do not call any paid service.
 
 ## 1. Free-text sources you read yourself (Hacker News)
 
-> **Which model reads (user decision, October 19: use the cheap model).** Every "Claude reads" step (Hacker News
-> comments, X and LinkedIn posts, LinkedIn job cards, newsletter editions) is mechanical copying, so hand it to a
-> subagent started with `model: haiku` (Agent tool): give it the work file path, the exact fact format and rules below,
-> and tell it to write the facts file and nothing else. Then run the validation yourself. Code accepts a value only when
-> it appears word for word in the item, so a weaker model can at worst miss a role (the item stays in the queue
-> unless it was listed as processed), never put a wrong value in the Sheet. NOT YET TESTED: if the Haiku run fails or
-> its file is rejected as invalid, read the items yourself and say so in the report. Compare Haiku's yield with a
-> sample of items on the first live run before relying on it.
+> **Which model reads.** The reading steps (Hacker News comments, X and LinkedIn posts, LinkedIn job cards, newsletter
+> editions) run on the routine session's own model (Sonnet). The user wants the cheaper Haiku used ONLY if an eval shows
+> it agrees with Sonnet on more than 90% of 100 real items (plan and harness: `docs/evals/HAIKU_READING_EVAL.md`,
+> `scripts/eval_reading.py`; NOT RUN YET). Until that is done and the user has read the results, do not hand the reading to
+> a Haiku subagent. If the eval passes, this note changes to: give the work file path, the exact fact format and the rules
+> below to a subagent started with `model: haiku`, run the validation yourself, and fall back to reading the items yourself
+> if its file is rejected.
 
 Run, saving each printed digest:
 
@@ -159,8 +158,8 @@ is harmless because jobs collapse by Job ID.
   them into the report. Exit 3 = allowance spent, exit 4 = not set up. Never print or ask for the cookie value.
 - LinkedIn job listings: built into the same collector run (`linkedin_collect ... --jobs-output $DIR/li_jobs.json`: up
   to 5 job searches in the SAME session and under the SAME single daily allowance), and not run until A2. The job
-  cards go through the same read step as posts: `ai_queue pull --source linkedin-jobs --id-field item_id`, Claude (a
-  Haiku subagent, see the note at the top of section 1) copies title, company, place and pay word for word from each card's text,
+  cards go through the same read step as posts: `ai_queue pull --source linkedin-jobs --id-field item_id`, Claude (the
+  session model; see the note at the top of section 1) copies title, company, place and pay word for word from each card's text,
   `social_posts validate --source linkedin-jobs`, `source_probe --social-result`, delivery, `ai_queue commit`. A job
   card shows an age ("3 days ago"), not a date, so its posted date is the capture day minus that age (day precision).
   Never log in or open this site in this routine except through the collector.
