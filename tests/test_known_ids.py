@@ -102,3 +102,28 @@ def test_a_malformed_known_list_is_refused(tmp_path, capsys, payload):
     digest = write_artifact(listing, payload)
     code, _, text = run_cli(tmp_path, capsys, ['--known-ids', str(listing), '--known-ids-sha256', digest])
     assert code == 2 and 'invalid_known_ids' in text
+
+
+def test_a_source_whose_listed_jobs_are_all_already_delivered_is_not_marked_failed_by_a_malformed_stub():
+    """Found by the first real pull: getro-accel turned 'failed (invalid_items)' once every good job was known."""
+    bad = {'id': 99, 'title': 'Product Manager', 'location': 'United States', 'companyName': 'Acme'}  # no url: rejected
+    listing = '<div data-page="' + escape(json.dumps({'props': {'jobPostings': [*JOBS[:2], bad]}}), quote=True) + '"></div>'
+    seen = []
+
+    def serve(request):
+        seen.append(str(request.url))
+        return httpx.Response(200, text=listing if 'jobs/role' in str(request.url) else PAGE)
+    with httpx.Client(transport=httpx.MockTransport(serve)) as client:
+        record, jobs, note = probe.probe_source(client, YC, '2026-10-18T12:00:00+00:00',
+                                                known_ids=frozenset({'yc-product:1', 'yc-product:2'}))
+        failed, _, _ = probe.probe_source(client, YC, '2026-10-18T12:00:00+00:00')  # nothing known: pages open normally
+    assert jobs == [] and len(seen) == 1 + 3  # the listing, then the second call's three pages; none for the known pair
+    assert record['status'] == 'OK-zero-jobs' and record['error'] == '' and 'already_delivered=2' in note
+    assert failed['status'] == 'OK'
+
+
+def test_a_listing_that_is_entirely_malformed_still_fails_even_with_a_known_list():
+    listing = '<div data-page="' + escape(json.dumps({'props': {'jobPostings': [{'id': 1, 'title': 'Product Manager'}]}}), quote=True) + '"></div>'
+    with httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200, text=listing))) as client:
+        record, jobs, _ = probe.probe_source(client, YC, '2026-10-18T12:00:00+00:00', known_ids=frozenset({'yc-product:7'}))
+    assert jobs == [] and record['status'] == 'failed' and record['error'] == 'invalid_items_quarantined'

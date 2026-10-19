@@ -282,7 +282,9 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
         return record(source_id, status, stamp, error=error, http=http, listed=total,
                       valid=len(postings), rejected=rejected, candidates=len(candidates),
                       selected=len(selected), coverage=coverage, attempts=attempts), selected, error + skipped_note
-    if not postings and rejected:
+    # Jobs skipped because they are already in the Sheet prove the listing was readable, so a stray malformed
+    # stub beside them is not an invalid source (found by the first real pull: getro-accel).
+    if not postings and rejected and not delivered_before:
         return record(source_id, "failed", stamp, error="invalid_items_quarantined", http=200, listed=total,
                       valid=0, rejected=rejected, candidates=0, coverage=coverage), [], "invalid_items" + skipped_note
     status = "OK" if selected else "OK-zero-jobs"

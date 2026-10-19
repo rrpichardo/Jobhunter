@@ -429,3 +429,33 @@ Not proven: a complete first pull, idempotent rerun of a batched run, the AI que
 quota error. Fix on branch `claude/writer-quota-pacing`: 45 s between batches, a 429 now waits 20 s then 40 s, and
 lock reads retry through a quota error (creates and deletes still never repeat). The stuck lock needs an explicit
 operator decision before removal (runbook rule); see PENDING.md.
+
+## First manual non-social pull, rerun with the quota fix — October 19, 2026 (PASSED for the sources it covered)
+
+Same cloud session, detached at `b03dcd4` (PR #28, CI green on Linux and Windows): **768 tests passed, 10
+subtests**. The user approved removing the leftover lock. The session first read the lock owner, started
+time and the Jobs/Sources/Run Log/_State row counts twice, 90 seconds apart; they matched exactly, so no writer
+was active. It then made one `drop_lock()` call and confirmed the lock was gone. A new run ID,
+`first-pull-20261019-r2`, was used because the old payload no longer existed and a changed payload under an old
+run ID is refused by design (`run_id_payload_conflict`).
+
+- Hacker News: the same 28 candidate comments, all read, 18 facts, `valid=18 delivered=14 rejected=0`;
+  `ai_queue commit` printed `marked_read=28`.
+- Collect: 322 jobs from 46 sources; one source failed (`getro-accel`, see below); 8 sources `needs setup`.
+- Sync: `sync_verified: run_id=first-pull-20261019-r2 batches=3 unique_jobs=322 sources=46 recovered_runs=1`
+  (exit 0). The recovered run was the earlier `first-pull-20261018` third batch (44 jobs), now `-b003`.
+  The identical repeat printed `recovered_runs=0` and exit 0.
+- Readback (read-only): Jobs 478 rows, 0 duplicate IDs, 0 blank IDs (themuse 178, jooble 29, jsearch 24,
+  getro-primary 17, stripe 16, jobicy 16, hacker news 14); Sources 47 rows (36 OK, 1 failed, 10 needs setup);
+  Run Log 12 rows, all complete or complete-with-source-failure; writer lock released; `_State` 118 data rows.
+- Not captured: the Jobs count immediately before the repeat sync, so "the repeat added nothing" rests on the
+  Run Log and the idempotent design, not a before/after count.
+
+**Defect found by this run, fixed on branch `claude/known-ids-all-delivered`:** `getro-accel` was recorded as
+failed (`invalid_items_quarantined`) because every good job was already in the Sheet (so none were fetched) and
+one malformed stub remained. A listing whose good jobs are all already delivered is now `OK-zero-jobs`.
+The Sources row stays `failed` in the workbook until the next run corrects it.
+
+Scope: this proves collection, paced batched delivery, recovery of an interrupted batch, the AI queue commit and
+the lock handling for the public sources. It does NOT prove LinkedIn, X, Gmail, Work at a Startup, school sites,
+the scheduled routine, or a second day's run that finds mostly known jobs.

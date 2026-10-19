@@ -19,8 +19,20 @@ opposite-agent review yet:
 | #25 | Skip job pages for jobs already in the Sheet | 689 |
 | #26 | Daily social allowance guard | 722 |
 | #27 | Shared validator for X and LinkedIn posts | 760 |
+| #28 | Wait out Sheets quota errors, pace batches 45 s, retry lock reads (found by the first real pull) | 768 |
+| #29 | A source whose good jobs are all already delivered is not marked failed (found by the rerun) | 770 |
 
 Merge order is the table order, each only after a Codex review of its exact head.
+
+## First manual pull: status (October 19, 2026)
+
+Done once, in JobHunterEnv, for the public sources only (details in V0_VERIFICATION.md): 322 jobs from 46
+sources reached the real Sheet in three paced batches, the Sheet now has 478 job rows with no duplicate IDs,
+the writer lock is released, and the 28 Hacker News comments are marked read. The first attempt hit Google's
+quota and left a lock; the fix is PR #28 and the lock was removed with the user's approval. Still true:
+`getro-accel` shows `failed` until its fix (#29) runs; LinkedIn, X, Gmail, Work at a Startup, school sites and
+the scheduled routine have NOT been run; nothing is merged. The next gate is the next-morning check of the
+routine's first scheduled run, which needs A3 and the code on `main` (Codex review of each PR first, A4).
 
 ## How the first run and the daily runs work (user direction, October 18)
 
