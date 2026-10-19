@@ -54,10 +54,14 @@ detail_sources:  # listing page, then each shortlisted PM job's own page for its
   - {id: builtin-product, kind: builtin, url: "https://builtin.com/jobs/product-management"}
   - {id: waas-product, kind: waas, url: "https://www.workatastartup.com/jobs/l/product-manager"}  # public page, first ~24 jobs; needs an Accept: text/html header
   - {id: waas-operations, kind: waas, url: "https://www.workatastartup.com/jobs/l/operations"}  # chief of staff, founder in residence, strategy
+  # a16z portfolio board: one search page (about 25 jobs) per entry, then each shortlisted job's own page
+  - {id: a16z-product, kind: a16z, url: "https://jobs.a16z.com/jobs?q=product%20manager"}
+  - {id: a16z-chief-of-staff, kind: a16z, url: "https://jobs.a16z.com/jobs?q=chief%20of%20staff"}
+  - {id: a16z-strategy, kind: a16z, url: "https://jobs.a16z.com/jobs?q=strategy"}
+  - {id: a16z-founder-in-residence, kind: a16z, url: "https://jobs.a16z.com/jobs?q=founder%20in%20residence"}
   - {id: getro-accel, kind: getro, url: "https://jobs.accel.com/jobs?q=product%20manager"}
   - {id: getro-primary, kind: getro, url: "https://jobs.primary.vc/jobs?q=product%20manager"}
 listing_only:  # reachable and counted, but no description text yet, so nothing is delivered
-  - {id: a16z-ai-pm, kind: a16z, url: "https://jobs.a16z.com/jobs?q=product%20manager"}
   - {id: hn-who-is-hiring, kind: hn, url: "https://hn.algolia.com/api/v1/search_by_date?tags=story,author_whoishiring&hitsPerPage=3"}
 needs_setup:
   - {id: linkedin-logged-in, env: [], action: "Create the dedicated LinkedIn account, log in locally, and supply its cookie in environment settings; Claude does not log in."}
