@@ -7,8 +7,8 @@ that work exists unless its status says so.
 
 ## 0. At a glance
 
-**Fill-out form:** every question in 0.1 and every task in 0.2 is also on a fill-out page (link in `docs/CLAUDE_HANDOFF.md`,
-"START HERE"). Answers saved there can be read back by Claude; you can also just answer in chat. The IDs are the same.
+**Fill-out form:** every question in 0.1 and every task in 0.2 is also in `docs/DECISIONS_FORM.md`, with an empty "Your answer"
+column. Fill it in (or answer in chat); Claude copies each answer back here. The IDs are the same.
 
 ### 0.1 Decisions only you can make
 

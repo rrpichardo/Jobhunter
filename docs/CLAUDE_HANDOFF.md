@@ -7,8 +7,8 @@ says which sources are read by code and which by Claude.
 ## START HERE: state at the end of October 19, 2026 (about 23:30 UTC), for the next Claude or Codex session
 
 Read `docs/PENDING.md` section 0 first: the decisions only the user can make (0.1), the user's tasks (0.2), the Codex queue (0.3)
-and what to do once they answer (0.4). The user's answers may be on the fill-out page **FORM_URL_PLACEHOLDER** (read its shared
-database with `ArtifactData` on that URL, collection `answers`, one document per question ID) or in chat.
+and what to do once they answer (0.4). The user's answers go in the last column of `docs/DECISIONS_FORM.md` (same IDs) or arrive in chat;
+copy each answer into PENDING section 0 and act on it (0.4).
 
 **Landed on `main`:** the earlier stack through PR #39. **Ran for real:** on October 19, 22:17 to 22:36 UTC, the first live test and
 first manual run (28 days) from `claude/combined-live-run` (commit `846f3be`) in session `session_015VLCYtHCKyG9e468TSVkUg`:
