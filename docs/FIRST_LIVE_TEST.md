@@ -17,7 +17,8 @@ routine, and never twice in a day.
 
 ```
 uv run --locked --extra social python -m scripts.x_collect --run-id $RUN-x --output $DIR/x_cand.json --lookback-days 28
-uv run --locked --extra social python -m scripts.linkedin_collect --run-id $RUN-li --output $DIR/li_cand.json --lookback-days 28
+uv run --locked --extra social python -m scripts.linkedin_collect --run-id $RUN-li --output $DIR/li_cand.json \
+    --jobs-output $DIR/li_jobs.json --lookback-days 28
 ```
 
 Read the printed lines (they hold numbers and fixed words only):
@@ -26,14 +27,15 @@ Read the printed lines (they hold numbers and fixed words only):
 | --- | --- | --- |
 | `x_collected: queries_run=10 posts=N error=none` | posts above 0 | `social_login_failed`: the X cookies are wrong or expired; `social_rate_limited`: stop for the day; `social_collector_error`: a defect, report it |
 | `linkedin_collected: queries_run=5 posts=N error=none` | posts above 0 | same words |
-| `search_N: status=200 wall=False post_ids=A cards=B undated=0 ...` | `cards` close to `post_ids` | `wall=True` or status 999/403: LinkedIn sent the session to a login or check page (log in yourself, refresh `li_at`); `post_ids=0` with `no_results=False`: the page layout was not recognised (the day is spent, report the `search_N` lines so the reader can be adjusted); `undated` above 0: ids without a believable date |
+| `search_N: status=200 wall=False kind=posts post_ids=A cards=B undated=0 ...` (and `kind=jobs job_ids=A cards=B ...` for job searches) | `cards` close to `post_ids` | `wall=True` or status 999/403: LinkedIn sent the session to a login or check page (log in yourself, refresh `li_at`); `post_ids=0` with `no_results=False`: the page layout was not recognised (the day is spent, report the `search_N` lines so the reader can be adjusted); `undated` above 0: ids without a believable date |
 
 Exit codes: 0 candidates written, 3 allowance already spent today (nothing collected), 4 cookies or library missing
 (nothing spent), 2 anything else (nothing collected). Do NOT retry a spent day.
 
 ## Step 2: read and deliver (only if step 1 gave posts)
 
-For each source (`x-twscrape` with `$DIR/x_cand.json`, `linkedin-login` with `$DIR/li_cand.json`):
+For each source (`x-twscrape` with `$DIR/x_cand.json`, `linkedin-login` with `$DIR/li_cand.json`, `linkedin-jobs` with
+`$DIR/li_jobs.json`; the last two come from ONE LinkedIn session and ONE allowance):
 
 ```
 uv run --locked python -m scripts.ai_queue pull --source <source> --candidates <file> --candidates-sha256 <digest> \

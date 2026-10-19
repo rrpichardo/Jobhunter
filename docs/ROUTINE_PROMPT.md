@@ -148,8 +148,13 @@ is harmless because jobs collapse by Job ID.
   linkedin-login --id-field item_id`, Claude reads, `social_posts validate --source linkedin-login`, `source_probe
   --social-result`, delivery, then `ai_queue commit`. It prints one `search_N:` line per search (numbers only); paste
   them into the report. Exit 3 = allowance spent, exit 4 = not set up. Never print or ask for the cookie value.
-- LinkedIn job listings: not built. The daily allowance command (`scripts.allowance`) is shared with the post collector
-  (one live LinkedIn session per day). Never log in or open this site in this routine except through the collector.
+- LinkedIn job listings: built into the same collector run (`linkedin_collect ... --jobs-output $DIR/li_jobs.json`: up
+  to 5 job searches in the SAME session and under the SAME single daily allowance), and not run until A2. The job
+  cards go through the same read step as posts: `ai_queue pull --source linkedin-jobs --id-field item_id`, Claude (a
+  Haiku subagent, see section 1c) copies title, company, place and pay word for word from each card's text,
+  `social_posts validate --source linkedin-jobs`, `source_probe --social-result`, delivery, `ai_queue commit`. A job
+  card shows an age ("3 days ago"), not a date, so its posted date is the capture day minus that age (day precision).
+  Never log in or open this site in this routine except through the collector.
 - Work at a Startup (logged in), Cosign, school and MBA sites, Next Play and Ali
   Rohde feeds: not set up.
 - a16z: listing-only, delivers no jobs.

@@ -39,7 +39,7 @@ choose it. The plan's idea of using Haiku for this step has not been built or te
 | a16z portfolio jobs | none yet | `count_a16z` counts links only | Listing-only: delivers no jobs |
 | Gmail job alerts | C | `jobhunter/gmail_alerts.py` | Not live: no forwarded alert yet and the connector adapter is not built |
 | Newsletters: Next Play, Ali Rohde | C (planned) | not built | Needs verified feed URLs |
-| LinkedIn job listings | none yet | not built | Needs your approval (A1) and a first run (A2) |
+| LinkedIn job listings | C | `jobhunter/linkedin_cards.py` (job cards) plus the shared checker | Built, not run: needs the first live run (A2). The card text goes to the AI read step, so no markup guessing decides a field |
 | LinkedIn hiring posts | C | checker built (`post_facts.py`); the collector that fetches posts is not | Not run |
 | X hiring posts | C | checker built; the collector is not | Not run |
 | Work at a Startup (logged in) | B or A (to be decided) | not built | Needs your approval (A1) |
