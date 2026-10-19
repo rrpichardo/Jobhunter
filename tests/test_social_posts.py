@@ -249,6 +249,13 @@ def test_every_rejected_fact_names_a_fixed_reason_and_the_post_it_was_about(chan
     assert result['rejections'] == [{'item_id': changes.get('item_id', '1850000000000000001'), 'reason': reason}]
 
 
+def test_a_fact_with_no_company_is_rejected_as_empty_company_and_holds_its_post():
+    # What the first live run hit: a post that names no company, so the reader left the field blank.
+    result = build([fact(company='')])
+    assert result['trace']['rejected_facts'] == {'empty:company': 1} and result['rejected_item_ids'] == ['1850000000000000001']
+    assert result['postings'] == [] and result['trace']['held_items'] == 1
+
+
 def test_malformed_facts_are_counted_without_echoing_anything_from_them():
     broken = fact()
     del broken['company']
