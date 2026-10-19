@@ -103,6 +103,14 @@ def _posting(fact, candidates_by_id, captured_at):
                    salary=fact['salary'], posted_at=candidate['created_at'])
 
 
+def _claimed_id(fact):
+    """The comment id a fact names, whether written as text or as a JSON number; None if it names none."""
+    value = fact.get('comment_id') if isinstance(fact, dict) else None
+    if isinstance(value, bool) or not isinstance(value, (str, int)):
+        return None
+    return str(value)
+
+
 def build_result(candidates, facts, captured_at, *, listed, stats, threads, error=''):
     """Validate proposed facts and return {'source': record, 'postings': [dict]} for source_probe."""
     if not isinstance(facts, list):
@@ -112,15 +120,17 @@ def build_result(candidates, facts, captured_at, *, listed, stats, threads, erro
               'jobs_fetched': listed, 'valid_jobs': 0, 'rejected_items': stats.get('unreadable', 0),
               'pm_candidates': 0, 'selected_for_m0': 0, 'attempts': 1 + len(threads), 'http_status': 200,
               'retry_after_seconds': None, 'coverage': 'partial-response', 'error': error}
-    postings, seen, rejected_ids = [], set(), set()
+    postings, seen, rejected_ids, unattributed = [], set(), set(), False
     for fact in facts:
         try:
             posting = _posting(fact, by_id, captured_at)
         except (ValueError, TypeError, AttributeError):
             source['rejected_items'] += 1
-            comment_id = fact.get('comment_id') if isinstance(fact, dict) else None
-            if isinstance(comment_id, str) and comment_id in by_id:
-                rejected_ids.add(comment_id)  # a comment with a rejected fact was not read successfully
+            claimed = _claimed_id(fact)
+            if claimed is None:
+                unattributed = True  # cannot tell which comment this fact was about
+            elif claimed in by_id:
+                rejected_ids.add(claimed)  # a comment with a rejected fact was not read successfully
             continue
         if posting.job_id in seen:
             continue
@@ -136,7 +146,7 @@ def build_result(candidates, facts, captured_at, *, listed, stats, threads, erro
     elif postings:
         source['status'] = 'OK'
     return {'source': source, 'postings': [asdict(posting) for posting in postings],
-            'rejected_comment_ids': sorted(rejected_ids)}
+            'rejected_comment_ids': sorted(by_id if unattributed else rejected_ids)}
 
 
 def postings_from_result(result):

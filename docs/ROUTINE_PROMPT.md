@@ -25,13 +25,15 @@ keys or tokens. Do not call any paid service.
    `mktemp -d`. Every artifact below is written there as a NEW file (the tools
    refuse to overwrite). Delete the directory when the run ends, but only after
    step 3 has exited 0 or you have reported its failure.
-3. Set `RUN=daily-<YYYYMMDD>-<HHMM>` from the current America/New_York time. The writer
-   binds a run ID to the exact bytes of the file it was given, so an ID may be reused
-   ONLY with the identical retained `$DIR/probe.json` (step 3 retry, below). If you
-   collect again (new `$DIR`, new files), choose a NEW `RUN`: even one changed
-   `captured_at` makes the old ID fail with `run_id_payload_conflict`. A rerun with a
-   new ID still finishes an interrupted earlier run, because the writer recovers every
-   pending journaled run first, and jobs already delivered collapse by Job ID.
+3. Set a NEW run label for every collection, for example
+   `RUN=daily-$(TZ=America/New_York date +%Y%m%d-%H%M%S)-$(openssl rand -hex 3)`
+   (the random part keeps two collections started in the same second apart). The writer
+   binds a run label to the jobs and source records it was first given, so a label may be
+   reused ONLY to retry the same retained `$DIR/probe.json` (step 3 retry, below). If you
+   collect again (new `$DIR`, new files), always make a new label: even one changed
+   `captured_at` makes the old label fail with `run_id_payload_conflict`. A new label still
+   finishes an interrupted earlier run, because the writer recovers every pending journaled
+   run first, and jobs already delivered collapse by Job ID.
 
 ## 1. Free-text sources you read yourself (Hacker News)
 
