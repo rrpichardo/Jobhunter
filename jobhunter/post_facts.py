@@ -128,6 +128,10 @@ SOCIAL = {
     # read like a social post. Public feed, no login, no allowance.
     'alirohde-rss': {'hosts': {'alirohdejobs.substack.com'}, 'prefix': 'alirohde', 'registry_id': 'alirohde-rss',
                      'path': re.compile(r'/p/([a-z0-9][a-z0-9-]{2,119})/?'), 'max_chars': 24000, 'link_ids': True},
+    # LinkedIn job listings: one candidate per job card, read by the AI like a post (the card's own text is the only
+    # source of title, company and place), so code never guesses at LinkedIn's markup.
+    'linkedin-jobs': {'hosts': {'www.linkedin.com', 'linkedin.com'}, 'prefix': 'linkedin-job',
+                      'registry_id': 'linkedin-jobs', 'path': re.compile(r'/jobs/view/(\d{6,13})/?')},
 }
 MAX_POST_CHARS = 10000
 # Collector errors that mean the site refused us (logged out, restricted, rate limited), as opposed to a defect

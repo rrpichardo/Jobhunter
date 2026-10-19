@@ -15,7 +15,8 @@ from jobhunter.post_facts import clean_social_candidates
 # Starting limits from docs/PLAN.md (user-confirmed October 18); tune after the first live run.
 LIMITS = {
     'x-twscrape': {'queries': 10, 'posts': 200, 'per_query': 40},  # one busy search cannot starve the other nine
-    'linkedin-login': {'job_searches': 5, 'post_searches': 5, 'detail_views': 50, 'posts': 100, 'per_query': 30},
+    'linkedin-login': {'job_searches': 5, 'post_searches': 5, 'detail_views': 50, 'posts': 100, 'per_query': 30,
+                       'jobs': 125, 'job_per_query': 30},
 }
 DELAY_SECONDS = (3.0, 9.0)  # randomized pause between live requests
 
@@ -45,11 +46,12 @@ class FetchRateLimited(Exception):
         self.found = list(found)
 
 
-def load_queries(path, source_id):
-    """The query list for one source from a YAML file, checked and cut to the source's query limit."""
+def load_queries(path, source_id, *, limit=None):
+    """The query list for one source from a YAML file, checked and cut to the source's query limit (or `limit`)."""
     data = yaml.safe_load(open(path, encoding='utf-8').read())
     queries = data.get(source_id) if isinstance(data, dict) else None
-    limit = LIMITS[source_id].get('queries', LIMITS[source_id].get('post_searches'))
+    if limit is None:
+        limit = LIMITS[source_id].get('queries', LIMITS[source_id].get('post_searches'))
     if (not isinstance(queries, list) or not queries
             or any(not isinstance(q, str) or not QUERY.fullmatch(q) for q in queries)):
         raise ValueError('invalid_social_queries')

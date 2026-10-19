@@ -40,7 +40,7 @@ choose it. The plan's idea of using Haiku for this step has not been built or te
 | Gmail job alerts | C | `jobhunter/gmail_alerts.py` | Not live: no forwarded alert yet and the connector adapter is not built |
 | Newsletter: Ali Rohde Jobs (weekly, chief of staff roles with a direct application link on each title) | C | `jobhunter/newsletter.py` plus the shared checker in `post_facts.py` | Feed verified October 19 (`alirohdejobs.substack.com/feed`, edition 275 on October 16); 4 editions in a 28-day window; the collector ran live, the AI read step has not. The standard-library HTTP client is used because the site's bot filter blocks `httpx` |
 | Newsletter: Next Play | C (planned) | not built | `nextplay.substack.com` is a 2021 publication, not the current newsletter; the right feed URL is still needed (your task B3/B2) |
-| LinkedIn job listings | none yet | not built | Needs your approval (A1) and a first run (A2) |
+| LinkedIn job listings | C | `jobhunter/linkedin_cards.py` (job cards) plus the shared checker | Built, not run: needs the first live run (A2). The card text goes to the AI read step, so no markup guessing decides a field |
 | LinkedIn hiring posts | C | checker built (`post_facts.py`); the collector that fetches posts is not | Not run |
 | X hiring posts | C | checker built; the collector is not | Not run |
 | Work at a Startup, public pages (product and operations role pages) | B | `stubs_waas`, `detail_waas` | Read live without a login on October 19: 24 product listings (15 matched the rules) and 29 operations listings (1 matched). The site answers HTTP 406 unless the request says it accepts HTML. Shows no posting date, and only the first ~25 jobs of each role page |
