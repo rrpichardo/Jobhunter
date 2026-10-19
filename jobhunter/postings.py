@@ -739,7 +739,7 @@ def detail_getro(text):
     return {"text": clean_html(job.get("description")), "posted_at": ""}  # no verified Getro date field yet
 
 
-A16Z_JOB = re.compile(r"^/jobs/([a-z0-9-]+)/([0-9a-z][0-9a-z-]*?)--[a-z0-9-]*$")
+A16Z_JOB = re.compile(r"^/jobs/([a-z0-9-]+)/([0-9A-Za-z_-]+?--[0-9A-Za-z_-]*)$")
 
 
 def stubs_a16z(text, ctx):
@@ -749,28 +749,36 @@ def stubs_a16z(text, ctx):
     for anchor in BeautifulSoup(text, "html.parser").find_all("a", href=A16Z_JOB):
         match = A16Z_JOB.match(anchor["href"])
         title = _stub_text(anchor.get_text(" "))
-        if match[2] in seen:
+        # The job's identity is the company plus the whole last part of its link: on some boards the part before "--" is
+        # only a title slug, so two different jobs of one title (two places) differ by what follows it.
+        key = f"{match[1]}/{match[2]}"
+        if key in seen:
             continue
-        seen.add(match[2])
         if not title:
-            rejected += 1
+            rejected += 1  # an image link with no text: the same job's text link may follow, so it is not marked seen
             continue
-        stubs.append({"job_id": f"a16z:{match[2]}", "company": match[1].replace("-", " ").title(),
+        seen.add(key)
+        job_id = f"a16z:{match[1]}:{match[2]}" if len(key) <= 100 else f"a16z:{hashlib.sha256(key.encode()).hexdigest()[:24]}"
+        stubs.append({"job_id": job_id, "company": match[1].replace("-", " ").title(),
                       "title": title, "location": "", "url": absolute("https://jobs.a16z.com", anchor["href"]),
                       "salary": "", "posted_at": ""})
     if not stubs and not rejected:
+        if re.search(r"\b0 jobs\b|no roles match|no jobs found", BeautifulSoup(text, "html.parser").get_text(" "), re.I):
+            return [], 0  # the board itself says the search has no results
         raise ValueError("invalid_board_response")  # a search page always lists jobs or says so; silence means a new layout
     return stubs, rejected
 
 
 def _term(soup, label):
-    """The text of the <dd> that follows a <dt> with this label (semantic tags, not class names)."""
+    """The text of the <dd> that follows a <dt> with this label (semantic tags, not class names). A page can show the
+    same label twice, once cut short ("London, United Kingdom…") and once in full: the longest value wins."""
+    values = []
     for term in soup.find_all("dt"):
         if _stub_text(term.get_text(" ")).casefold() == label:
             value = term.find_next_sibling("dd")
             if value is not None:
-                return _stub_text(value.get_text(" "))
-    return ""
+                values.append(_stub_text(value.get_text(" ")))
+    return max(values, key=len, default="")
 
 
 def detail_a16z(text):
@@ -781,6 +789,8 @@ def detail_a16z(text):
         raise ValueError("invalid_board_response")
     body = next((a for a in about.parents if heading in a.descendants), None)  # smallest block holding both
     description = clean_html(str(body)) if body is not None else ""
+    marker = description.find("About the role")
+    description = description[marker + len("About the role"):].strip() if marker >= 0 else description  # drop the page header
     if not description:
         raise ValueError("invalid_board_response")
     company = ""
