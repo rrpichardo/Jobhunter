@@ -19,7 +19,8 @@ this section if it is out of date.
 | A4 Merging | You said (October 19) to merge what Codex approves and to use the `engineering:code-review` check in the meantime. |
 | A10 NEW: close the old stack PRs #21 to #30 | Their content already landed on `main` through #39, so they are stale duplicates (they still show as open). Closing them is housekeeping; Claude will not close anything without your OK. |
 | A7 Limits | 5 LinkedIn post searches, 5 LinkedIn job searches, 10 X searches a day. Say so if you want them changed. |
-| A11 NEW: Haiku decision (rule 3) | The first Haiku-vs-Sonnet run is done (Hacker News only): 100 of 100 posts agree and both models found the same 15 jobs, so the 90% rules pass. The reading stays on Sonnet until YOU read the posts and the 4 wording differences (two location texts, one salary text, one company name) and say whether Haiku is acceptable. Claude gave you an interactive page and an Excel workbook in chat; the saved result is `docs/evals/results/haiku_reading_2026-10-19.md` (PR #49). |
+| A11 NEW: Haiku decision (rule 3) | The first Haiku-vs-Sonnet run is done (Hacker News only): 100 of 100 posts agree and both models found the same 15 jobs, so the 90% rules pass. Note that 85 of the 100 posts name no role, so the real test is the 15 role posts (all agreed). The reading stays on Sonnet until YOU read the posts and the 4 wording differences and say whether Haiku is acceptable: on post 3 Sonnet's location is right (Haiku added New York from a company-wide header), on post 12 Haiku's is right (the PM line says UTC-3 to UTC+3; Sonnet copied a header the checker reads as US), the other two are harmless. Claude gave you an interactive page and an Excel workbook in chat; the saved result is `docs/evals/results/haiku_reading_2026-10-19.md` (PR #49). An independent review found errors in the first write-up (fixed). |
+| A13 NEW: plural job titles | The title filter drops a post titled "Product Managers" (plural; the singular "Product Manager" is collected). The Haiku test found it: PlantingSpace's "Product Managers and Business Development" opening was proposed by both models and dropped by the filter. Should plural titles count? It changes what every source delivers, so Claude has not touched it. |
 | A12 NEW: Codex is answering again | Claude sent ONE request (#42, 20:09 UTC) before you said not to try. Codex reviewed the exact head at 20:11 UTC and found one real problem (an engineer title that mentions "strategy" matched the new role family). Claude fixed it in `afedfb2`, replied and resolved the thread; a second independent review then tightened it further in `b90c1d2`. #42 now needs a Codex review of that new head. Claude has NOT sent it, because you asked it not to try Codex. Say "go" and Claude re-requests exact-head reviews one PR at a time, #42 first. |
 
 **B. Your tasks** (only you can do them; details in section B below)
@@ -50,14 +51,15 @@ comment that says Codex still has to review it.
 | #45 | a16z portfolio jobs | Codex review |
 | #46 | This status document | Codex review |
 | #47 | Ali Rohde Jobs weekly newsletter | Codex review (after #40) |
-| #49 | Haiku-vs-Sonnet eval harness, a bug fix and the first result (head `6cbc3ec`) | Codex review |
+| #49 | Haiku-vs-Sonnet eval harness, a bug fix, the first result and the fixes from an independent review (head `c5535dc`) | Codex review |
 | #48 | LinkedIn job listings (same session as the posts) | Codex review (after #43) |
 
 **Haiku vs Sonnet eval: RUN once on October 19, 2026 (Hacker News only). Verdict: not yet (your rule 3 is open, A11).**
 On 100 real posts (15 name a collected role, 85 do not) both models gave the same answer on all 100 and found the same 15 jobs; neither
 had a value rejected for not being in the post. The score looks only at title and company, so four facts that differ in location, salary or
-company wording are listed separately. The run also exposed a bug in the test tool (fixed, with a test, in PR #49). Not yet tested: X,
-LinkedIn and newsletter posts. Details: `docs/evals/results/haiku_reading_2026-10-19.md`; the plan is `docs/evals/HAIKU_READING_EVAL.md`.
+company wording are listed separately. The run also exposed a bug in the test tool (fixed, with tests, in PR #49) and the plural-title gap
+(A13). An independent review corrected the first write-up: 14 of the 15 role posts delivered a job, all 100 posts came from one thread, and
+the two location differences favour different models. Not yet tested: X, LinkedIn and newsletter posts. Details: `docs/evals/results/haiku_reading_2026-10-19.md`; the plan is `docs/evals/HAIKU_READING_EVAL.md`.
 Until you answer A11 the reading stays on Sonnet.
 
 **E. Possible later add-on (Work at a Startup logged-in lists).** A read-only probe on October 19 found that the public product page shows 24 of 241 jobs and has no paging. It could not test the logged-in lists, because the saved `WAAS_SESSION_COOKIE` has no cookie name (B10). Once that is fixed, Claude retests and, if the logged-in lists show more, builds them (A1 is approved, read-only).

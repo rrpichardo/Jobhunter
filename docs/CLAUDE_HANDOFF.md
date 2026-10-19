@@ -26,7 +26,7 @@ NOT replace Codex.** Heads at the time of writing:
 | #46 | claude/handoff-oct19 | main | see PR | this status/handoff text, CLAUDE.md "what is pending" rule |
 | #47 | claude/newsletter-alirohde | #40 | 9400d18 | Ali Rohde Jobs weekly newsletter (jobs keyed by application link) |
 | #48 | claude/linkedin-jobs | #43 | 4e86e41 | LinkedIn job cards in the same session/allowance (contains #42's commit) |
-| #49 | claude/haiku-eval | main | 6cbc3ec | Haiku-vs-Sonnet eval harness, bug fix and first result (100 of 100 agree; user's rule 3 open) |
+| #49 | claude/haiku-eval | main | c5535dc | Haiku-vs-Sonnet eval harness, bug fix and first result (100 of 100 agree; user's rule 3 open) |
 
 **Do next, in order:**
 1. No scheduled sweep exists. Codex answered a request on #42 at 20:11 UTC on October 19 (its limit has reset, at least for now): it
@@ -34,7 +34,7 @@ NOT replace Codex.** Heads at the time of writing:
    try Codex while it was thought unavailable, so ask the user for a "go", then comment `@codex review <full head SHA>` on one PR at a
    time (heads move: re-read them). Fix real findings in NEW commits, never rewrite history. Merge only with a Codex approval at the
    exact head plus green CI.
-2. Merge order: #42, #44, #45 (the second of #44/#45 needs a trivial conflict fix in `dedupe`/the registry), #46, #49,
+2. Merge order: #42, #44, #45 (the second of #44/#45 conflicts in `jobhunter/postings.py` and `sources/v0_sources.yaml`; keep both sides, see the Merge plan below), #46, #49,
    then #40, and after it retarget #41, #43, #47 to `main` (merge `main` into each first), then #48 after #43. #48 carries #42's older commits, so merge `main` into it after #42 lands to pick up `b90c1d2`.
 3. First live X and LinkedIn test: `docs/FIRST_LIVE_TEST.md`. The user said yes (A2) for after Codex approves #40 and #43. It
    runs in the JobHunterEnv environment (the cookies live there: `X_AUTH_TOKEN`, `X_CT0`, `LINKEDIN_LI_AT`, also
@@ -49,7 +49,7 @@ NOT replace Codex.** Heads at the time of writing:
 ### Merge plan, checked by a trial replay (October 19, about 22:00 UTC)
 
 Claude replayed every planned merge, in order, on a throwaway local branch that was never pushed, starting from `main` at `f71464f`.
-Heads used: #42 `b90c1d2`, #44 `209efbc`, #45 `e9d29ec`, #46 (this PR), #49 `6cbc3ec`, #40 `5ceb6cc`, #41 `4c0fe90`, #43 `0303164`,
+Heads used: #42 `b90c1d2`, #44 `209efbc`, #45 `e9d29ec`, #46 (this PR), #49 `c5535dc`, #40 `5ceb6cc`, #41 `4c0fe90`, #43 `0303164`,
 #47 `9400d18`, #48 `4e86e41`. Result: every conflict is additive (both sides add entries) and the fully combined result passes
 **1,055 tests** with the social extra. Heads move, so re-check before acting. Exact steps and resolutions:
 
