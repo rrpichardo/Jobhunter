@@ -24,11 +24,14 @@ THREAD_TITLE = re.compile(r'^Ask HN: Who is hiring\? \((?:January|February|March
                           r'September|October|November|December) \d{4}\)$')
 ROLE_WORDS = re.compile(r'\b(?:product (?:manager|management|lead|owner|director|leader)|head of product|'
                         r'director of product|vp(?: of)?,? product|chief of staff|strategy|'
-                        r'(?:entrepreneur|founder)s? in residence|project manager|business operations|'
-                        r'bizops|leadership (?:development )?program)\b', re.I)
+                        r'(?:entrepreneur|founder)s? in residence|project manager|'
+                        r'leadership (?:development )?program)\b', re.I)
 MAX_COMMENT_CHARS = 20000
 # Safety stop on candidate comments handed to the AI in one run (a thread has a few hundred; two are read).
 CANDIDATE_SAFETY_STOP = 1500
+# The candidate file must stay under the 5 MiB artifact limit (a comment can be 20,000 characters), so a byte
+# stop applies as well and is reported as truncated.
+CANDIDATE_BYTE_STOP = 3 * 1024 * 1024
 
 
 def select_threads(search, now, lookback_days):

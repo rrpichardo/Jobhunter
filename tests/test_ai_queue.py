@@ -157,3 +157,22 @@ def test_cli_rejects_a_changed_candidates_file(tmp_path, capsys):
     assert cli.main(['pull', '--source', SRC, '--candidates', str(path), '--candidates-sha256', '0' * 64,
                      '--output', str(tmp_path.parent / 'nope.json')], store=store) == 2
     assert 'artifact_digest_mismatch' in capsys.readouterr().out and store.writes == []
+
+
+def test_the_work_file_stays_under_the_size_limit_and_the_rest_waits_for_the_next_run(monkeypatch):
+    monkeypatch.setattr(q, 'WORK_BYTE_STOP', 5000)
+    store = MemoryStore()
+    items = [{**cand(n), 'text': 'x' * 1500} for n in range(1, 8)]  # about 1.6 KB each
+    work, summary = pull(store, items, T0)
+    assert 1 <= len(work) < 7 and len(json.dumps(work)) <= 5000 + 1700
+    assert summary['held_by_safety_stop'] == 7 - len(work)
+    commit(store, [c['comment_id'] for c in work], T0)
+    work2, summary2 = pull(store, items, T1)
+    assert not {c['comment_id'] for c in work} & {c['comment_id'] for c in work2}  # nothing repeated, nothing lost
+    assert summary2['already_read'] == len(work)
+
+
+def test_one_oversized_item_is_still_handed_over_so_the_queue_cannot_stall(monkeypatch):
+    monkeypatch.setattr(q, 'WORK_BYTE_STOP', 100)
+    work, summary = pull(MemoryStore(), [{**cand(1), 'text': 'x' * 5000}, cand(2)], T0)
+    assert [c['comment_id'] for c in work] == ['1'] and summary['held_by_safety_stop'] == 1

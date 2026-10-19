@@ -35,6 +35,7 @@ ITEM = re.compile(r'[A-Za-z0-9][A-Za-z0-9_.:-]{0,119}')
 # Generous safety stop on items handed to the AI in one run: our own guess, not an Anthropic limit.
 # Items past it stay pending (oldest first) and are counted in the summary; tune after measuring volume.
 WORK_SAFETY_STOP = 1000
+WORK_BYTE_STOP = 3 * 1024 * 1024  # size of the work file handed to Claude; the rest stays pending
 
 
 def _check(source, items):
@@ -88,7 +89,14 @@ def plan_pull(rows, source, candidates, now, *, id_field='comment_id', limit=WOR
     pending, done = _read(rows, source)
     unread = [c for c in candidates if c[id_field] not in done]
     unread.sort(key=lambda c: (pending.get(c[id_field], now), c.get('created_at', ''), c[id_field]))  # oldest waiting first
-    work, held = unread[:limit], unread[limit:]
+    work, used = [], 0
+    for item in unread:  # oldest first; the work file must stay under the 5 MiB artifact limit
+        size = len(json.dumps(item, ensure_ascii=True))
+        if len(work) >= limit or (work and used + size > WORK_BYTE_STOP):
+            break
+        work.append(item)
+        used += size
+    held = unread[len(work):]
     today = set(ids)
     records = [_row(source, 'pending', c[id_field], now) for c in unread if c[id_field] not in pending]
     expired = [i for i in pending if i not in today and i not in done]

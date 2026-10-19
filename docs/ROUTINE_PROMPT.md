@@ -49,7 +49,7 @@ uv run --locked python -m scripts.ai_queue pull --source hn-who-is-hiring \
 `$DIR/hn_work.json`. For EVERY comment under `candidates`, read its `text` and decide
 which job posts in it match the roles we collect (product management, chief of staff,
 strategy, entrepreneur or founder in residence, project management, leadership
-programs, business operations). Write `$DIR/hn_facts.json` as:
+programs). Write `$DIR/hn_facts.json` as:
 
 ```
 {"processed": ["<comment_id>", ...],

@@ -21,7 +21,7 @@ from jobhunter.sheet_io import GspreadStore
 from scripts.sheets_sync import SAFE_ERRORS
 
 ALLOWANCE_ERRORS = frozenset('''invalid_allowance_source invalid_allowance_outcome invalid_allowance_state
-invalid_allowance_time invalid_allowance_day allowance_not_reserved invalid_run_id'''.split())
+invalid_allowance_time invalid_allowance_day allowance_not_reserved allowance_already_closed invalid_run_id'''.split())
 EXIT_SPENT = 3
 
 
