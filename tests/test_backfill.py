@@ -1,6 +1,7 @@
 """Keep every match: posted dates, the 4-week window, and recoverable delivery batches."""
 
 from datetime import datetime, timezone
+import hashlib
 import json
 
 import httpx
@@ -260,3 +261,39 @@ def test_a_run_id_too_long_for_batch_suffixes_is_rejected_before_any_write(tmp_p
     out, backend = artifact(tmp_path, 320), MemoryStore()
     assert sheets_sync.main(['--input', str(out), '--run-id', 'x' * 76], store=backend) == 2
     assert backend.tables == {}
+
+
+def test_a_backfill_larger_than_the_default_artifact_limit_still_reaches_batching(tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr(sheets_sync, 'DEFAULT_MAX_BYTES', 100 * 1024)  # a small stand-in for the real 5 MiB limit
+    out, backend = artifact(tmp_path, 400), MemoryStore()
+    assert out.stat().st_size > sheets_sync.DEFAULT_MAX_BYTES  # the default limit alone would reject this
+    digest = hashlib.sha256(out.read_bytes()).hexdigest()  # what source_probe prints as probe_sha256
+    assert sheets_sync.main(['--input', str(out), '--input-sha256', digest, '--run-id', 'huge'], store=backend) == 0
+    assert 'batches=3' in capsys.readouterr().out
+    assert len({row[0] for row in backend.tables['Jobs'][1:]}) == 400
+
+
+def test_the_producer_refuses_a_file_the_writer_could_not_read(tmp_path):
+    from jobhunter.artifacts import SYNC_MAX_BYTES, write_artifact
+    target = tmp_path.parent / (tmp_path.name + '_toobig.json')
+    with pytest.raises(ValueError, match='artifact_too_large'):
+        write_artifact(target, {'text': 'x' * (SYNC_MAX_BYTES + 1)}, max_bytes=SYNC_MAX_BYTES)
+    assert not target.exists()  # nothing half-published
+
+
+def test_the_larger_limit_is_only_for_an_input_proven_by_its_digest(tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr(sheets_sync, 'DEFAULT_MAX_BYTES', 100 * 1024)
+    out, backend = artifact(tmp_path, 400), MemoryStore()
+    assert sheets_sync.main(['--input', str(out), '--run-id', 'nodigest'], store=backend) == 2
+    assert 'artifact_too_large' in capsys.readouterr().out and backend.tables == {}
+    assert sheets_sync.main(['--input', str(out), '--input-sha256', '0' * 64, '--run-id', 'wrong'], store=backend) == 2
+    assert 'artifact_digest_mismatch' in capsys.readouterr().out and backend.tables == {}
+
+
+def test_an_oversized_schema_one_extraction_file_stays_capped_even_with_a_digest(tmp_path, capsys):
+    big = tmp_path.parent / (tmp_path.name + '_ext.json')
+    big.write_text(json.dumps({'schema_version': 1, 'source': {}, 'jobs': [], 'pad': 'x' * (6 * 1024 * 1024)}))
+    backend = MemoryStore()
+    # no digest supplied: the default limit applies and nothing past 5 MiB is read or parsed
+    assert sheets_sync.main(['--input', str(big), '--run-id', 'ext'], store=backend) == 2
+    assert 'artifact_too_large' in capsys.readouterr().out and backend.tables == {}

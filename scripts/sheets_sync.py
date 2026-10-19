@@ -5,7 +5,7 @@ import re
 import time
 import uuid
 
-from jobhunter.artifacts import read_artifact
+from jobhunter.artifacts import DEFAULT_MAX_BYTES, SYNC_MAX_BYTES, read_artifact
 from jobhunter.google_auth import open_workbook
 from jobhunter.sheet_io import GspreadStore
 from jobhunter.sheet_records import JOB_BATCH_SIZE
@@ -29,7 +29,7 @@ sheet_mutation_unconfirmed writer_lock_required writes_verified_lock_release_unc
 sheet_request_failed sheet_tls_error sheet_transport_error invalid_sheet_response unapproved_tab
 invalid_google_configuration google_workbook_unavailable google_proxy_auth_missing google_workbook_not_found
 google_workbook_forbidden google_tls_error google_timeout google_transport_error invalid_json
-artifact_too_large artifact_must_be_outside_checkout invalid_extraction_delivery run_id_quarantined run_not_pending'''.split())
+artifact_too_large artifact_digest_mismatch artifact_must_be_outside_checkout invalid_extraction_delivery run_id_quarantined run_not_pending'''.split())
 
 
 def _deliver_many(args, payload, store):
@@ -82,6 +82,8 @@ def _deliver_many(args, payload, store):
 def main(argv=None, *, store=None):
     parser = argparse.ArgumentParser(description='M0 Python Sheet writer; no source collection.')
     parser.add_argument('--input')
+    parser.add_argument('--input-sha256', help='digest printed by source_probe (probe_sha256); only an input that '
+                        'matches it may be larger than the default artifact limit')
     parser.add_argument('--quarantine-run', metavar='RUN_ID',
                         help='operator only: move a poisoned pending run out of recovery, keeping its data')
     parser.add_argument('--run-id')
@@ -97,7 +99,10 @@ def main(argv=None, *, store=None):
                   'data kept under m0/quarantined/ in _State')
             return 0
         try:
-            payload = read_artifact(args.input)
+            # Only the producer's own collection artifact, proven by its digest, gets the larger limit; any other
+            # input (extraction files, unproven files) keeps the default and is never read past it.
+            limit = SYNC_MAX_BYTES if args.input_sha256 else DEFAULT_MAX_BYTES
+            payload = read_artifact(args.input, expected_sha256=args.input_sha256, max_bytes=limit)
         except (OSError, ValueError, RuntimeError) as exc:
             if isinstance(exc, ValueError) and str(exc) in SAFE_ERRORS:
                 raise  # retain specific JSON, size and checkout-path diagnostics

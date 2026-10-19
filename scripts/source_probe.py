@@ -20,7 +20,7 @@ from urllib.parse import quote
 import httpx
 import yaml
 
-from jobhunter.artifacts import safe_error_code, write_artifact
+from jobhunter.artifacts import SYNC_MAX_BYTES, safe_error_code, write_artifact
 from jobhunter.postings import (AI_TERMS, DETAIL_SOURCES, LISTING_ONLY, PARSERS, Posting, collection_match,
                                 collection_stub_match, collection_priority, collection_title_priority,
                                 dedupe, role_family, to_row, within_lookback)
@@ -321,7 +321,7 @@ def main(argv=None, *, client=None, sleep=time.sleep) -> int:
         payload = run(registry, client, delay=args.delay, sleep=sleep, lookback_days=args.lookback_days)
         print(summary(payload))
         failed = sum(s["status"] in {"failed", "blocked"} for s in payload["sources"])
-        digest = write_artifact(args.output, payload)
+        digest = write_artifact(args.output, payload, max_bytes=SYNC_MAX_BYTES)
         print(f"sources={len(payload['sources'])} delivered_jobs={len(payload['jobs'])} failed_or_blocked={failed}")
         print(f"probe_sha256={digest}")
         return 0

@@ -185,9 +185,15 @@ it adds a "Possible duplicate ... needs review" note and keeps both rows. A sour
 its own postings.
 
 ```sh
-uv run --locked python -m scripts.source_probe --output /private/run/probe.json
-uv run --locked python -m scripts.sheets_sync --input /private/run/probe.json --run-id m1-probe-001
+uv run --locked python -m scripts.source_probe --output /private/run/probe.json   # prints probe_sha256=<digest>
+uv run --locked python -m scripts.sheets_sync --input /private/run/probe.json \
+    --input-sha256 <probe_sha256> --run-id m1-probe-001
 ```
+
+Pass the `probe_sha256` that `source_probe` printed as `--input-sha256`. A collection can be larger than the
+5 MiB default input limit (a backfill keeps every matching job); the writer accepts up to 64 MiB only for a file
+whose digest matches the one given, and rejects a larger file without it (`artifact_too_large`). A retry of the
+same delivery reuses the same retained file, the same digest and the same `--run-id`.
 
 The artifact uses `schema_version: 2` (`sources` list plus `jobs`); `sheets_sync` writes every
 source's evidence and all jobs in one locked run. For schema 2 exit 0 means the readback was
