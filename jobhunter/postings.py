@@ -235,10 +235,18 @@ ROLE_TEXT = re.compile("|".join(
     for family, pattern in ROLE_FAMILIES), re.I)
 
 
+# A title that names an engineer or developer is an engineering role, even when "strategy" sits within 40 characters of
+# "forward deployed" ("Forward-Deployed Engineer - AI Strategy"), so it never counts as the strategist family.
+FORWARD_DEPLOYED_ENGINEER = re.compile(r'\b(?:engineer(?:s|ing)?|developer|SWE)\b', re.I)
+
+
 def role_family(title: str) -> str | None:
     if ROLE_EXCLUSIONS.search(title):
         return None
-    return next((family for family, pattern in ROLE_FAMILIES if pattern.search(title)), None)
+    for family, pattern in ROLE_FAMILIES:
+        if pattern.search(title) and not (family == 'Forward-deployed strategy' and FORWARD_DEPLOYED_ENGINEER.search(title)):
+            return family
+    return None
 
 
 def collection_region(location: str, *, remote: bool = False) -> str | None:

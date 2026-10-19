@@ -29,7 +29,9 @@ def test_non_ai_role_families_are_collection_candidates(title):
 @pytest.mark.parametrize('title', ['Software Engineer', 'Product Marketing Manager', 'Program Manager',
     'Project Manager Intern', 'Summer Associate, Strategy', 'Product Designer', 'Strategy Analyst',
     'Forward Deployed Engineer', 'Forward-Deployed Software Engineer, Strategy Platform', 'Implementation Strategist',
-    'AI Deployment Engineer'])
+    'AI Deployment Engineer', 'Forward-Deployed Engineer - AI Strategy', 'Strategy & Operations - Forward Deployed Engineer',
+    'Strategy, Forward Deployed Engineer', 'Forward Deployed Engineering Lead (AI Strategy)', 'FDE Engineer (AI Strategy)',
+    'Forward Deployed Developer - Strategy'])
 def test_unapproved_or_intern_titles_are_not_candidates(title):
     assert not p.collection_match(job(title=title))
 
