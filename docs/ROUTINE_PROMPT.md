@@ -138,7 +138,9 @@ is harmless because jobs collapse by Job ID.
   but is NOT run by this routine until the user gives the go-ahead for the first live test (A2) and sets
   `X_AUTH_TOKEN` and `X_CT0` in the environment settings. When approved, the steps are: `x_collect` (reserves
   today's allowance first, searches, writes a candidate file), `ai_queue pull --id-field item_id`, Claude reads,
-  `social_posts validate`, then `source_probe --social-result`. Exit 3 means today's allowance is spent: collect
+  `social_posts validate`, then `source_probe --social-result`, step 3 (delivery) and, only after step 3 exited 0,
+  `ai_queue commit --source x-twscrape --result <validated file> --result-sha256 <digest>` so the same posts are not
+  read again tomorrow. Exit 3 means today's allowance is spent: collect
   nothing. Exit 4 means the cookies are not set up. Never print or ask for cookie values.
 - LinkedIn jobs and hiring posts: the collector that fetches posts is not built. The validation side and the
   daily allowance command (`scripts.allowance`, which must succeed before any live request) exist. Never log in

@@ -174,10 +174,11 @@ class FakeTweet:
         self.rawContent = f'post {number}'
         self.links = [types.SimpleNamespace(url='https://acme.example/jobs')]
         self.retweetedTweet = object() if retweet else None
+        self.user = types.SimpleNamespace(username='acme_hiring')
 
 
-def install_fake_twscrape(monkeypatch, tweets=(), search_error=None):
-    log = types.SimpleNamespace(api_args=None, cookies=None, level=None)
+def install_fake_twscrape(monkeypatch, tweets=(), search_error=None, init_error=None):
+    log = types.SimpleNamespace(api_args=None, cookies=None, level=None, yielded=0, closed=False)
 
     class HttpStatusError(Exception):
         def __init__(self, status):
@@ -188,6 +189,8 @@ def install_fake_twscrape(monkeypatch, tweets=(), search_error=None):
 
     class Pool:
         async def add_account_cookies(self, username, cookies):
+            if init_error:
+                raise init_error
             log.cookies = (username, cookies)
 
     class API:
@@ -198,8 +201,12 @@ def install_fake_twscrape(monkeypatch, tweets=(), search_error=None):
         async def search(self, query, limit=-1):
             if search_error:
                 raise search_error(log) if callable(search_error) else search_error
-            for tweet in tweets:
-                yield tweet
+            try:
+                for tweet in tweets:
+                    log.yielded += 1
+                    yield tweet
+            finally:
+                log.closed = True
 
     module = types.SimpleNamespace(API=API, HttpStatusError=HttpStatusError, NoAccountError=NoAccountError,
                                    set_log_level=lambda level: setattr(log, 'level', level))
@@ -240,3 +247,56 @@ def test_the_adapter_maps_site_refusals_to_fixed_failures(monkeypatch, error, ex
             fetcher.search('q', 5)
     finally:
         fetcher.close()
+
+
+def test_the_adapter_stops_at_the_limit_even_when_the_library_would_yield_more_and_closes_the_stream(monkeypatch):
+    log, _ = install_fake_twscrape(monkeypatch, [FakeTweet(n) for n in range(1, 11)])
+    fetcher = x.TwscrapeFetcher('tok', 'ct')
+    try:
+        found = fetcher.search('q', 3)
+    finally:
+        fetcher.close()
+    assert len(found) == 3 and log.yielded == 3 and log.closed  # it never read the other seven
+
+
+def test_the_adapter_keeps_the_public_author_as_evidence(monkeypatch):
+    install_fake_twscrape(monkeypatch, [FakeTweet(1)])
+    fetcher = x.TwscrapeFetcher('tok', 'ct')
+    try:
+        found = fetcher.search('q', 5)
+    finally:
+        fetcher.close()
+    assert found[0]['author'] == 'acme_hiring'
+
+
+def test_a_failed_start_removes_the_temporary_cookie_database(monkeypatch):
+    log, _ = install_fake_twscrape(monkeypatch, init_error=RuntimeError('sqlite i/o error'))
+    with pytest.raises(RuntimeError):
+        x.TwscrapeFetcher('tok', 'ct')
+    assert not __import__('pathlib').Path(log.api_args[0]).parent.exists()
+
+
+def test_authors_reach_the_candidate_file_and_unsafe_ones_are_dropped(tmp_path):
+    good = {**post(1), 'author': 'acme_hiring'}
+    bad = {**post(2), 'author': '<script>alert(1)</script>'}
+    code, out, _ = run(tmp_path, FakeFetcher({1: [good, bad]}))
+    candidates = json.loads(out.read_text())['candidates']
+    assert candidates[0]['author'] == 'acme_hiring' and 'author' not in candidates[1]
+
+
+@pytest.mark.parametrize('failure,status', [(sc.FetchBlocked(), 'blocked'), (sc.FetchRateLimited(), 'blocked'),
+                                            (RuntimeError('boom'), 'failed')])
+def test_a_refusal_stays_blocked_through_the_validated_source_record(tmp_path, capsys, failure, status):
+    from jobhunter.sheets import prepare_payload
+    from jobhunter import post_facts as pf
+    code, out, _ = run(tmp_path, FakeFetcher({1: [post(1)]}, fail=(2, failure)))
+    digest = __import__('hashlib').sha256(out.read_bytes()).hexdigest()
+    facts = tmp_path.parent / (tmp_path.name + '_nf.json')
+    facts.write_text(json.dumps({'processed': [], 'facts': []}))
+    result = tmp_path.parent / (tmp_path.name + '_nr.json')
+    assert social_posts.main(['validate', '--source', 'x-twscrape', '--candidates', str(out), '--candidates-sha256', digest,
+                              '--extractions', str(facts), '--output', str(result)]) == 0
+    source = json.loads(result.read_text())['source']
+    assert source['status'] == status and source['error'] in {sc.LOGIN_FAILED, sc.RATE_LIMITED, sc.COLLECTOR_ERROR}
+    prepare_payload([], [source])  # the Sheet writer accepts the record
+    assert {sc.LOGIN_FAILED, sc.RATE_LIMITED} == set(pf.BLOCKED_ERRORS)

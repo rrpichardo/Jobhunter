@@ -13,6 +13,7 @@ printed, logged, written to the candidate file or kept after the run.
 
 import argparse
 import asyncio
+import contextlib
 from datetime import datetime, timezone
 import os
 from pathlib import Path
@@ -47,11 +48,16 @@ class TwscrapeFetcher:
         self._twscrape = twscrape
         twscrape.set_log_level('ERROR')
         self._dir = Path(tempfile.mkdtemp(prefix='.jobhunter-x-'))
-        self._dir.chmod(stat.S_IRWXU)
-        self._loop = asyncio.new_event_loop()
-        self._api = twscrape.API(str(self._dir / 'accounts.db'), raise_when_no_account=True)
-        self._loop.run_until_complete(
-            self._api.pool.add_account_cookies(ACCOUNT, f'auth_token={auth_token}; ct0={ct0}'))
+        self._loop = None
+        try:
+            self._dir.chmod(stat.S_IRWXU)
+            self._loop = asyncio.new_event_loop()
+            self._api = twscrape.API(str(self._dir / 'accounts.db'), raise_when_no_account=True)
+            self._loop.run_until_complete(
+                self._api.pool.add_account_cookies(ACCOUNT, f'auth_token={auth_token}; ct0={ct0}'))
+        except BaseException:
+            self.close()  # the constructor never returns, so the caller cannot clean up: remove the cookie file here
+            raise
 
     def search(self, query, limit):
         try:
@@ -68,15 +74,20 @@ class TwscrapeFetcher:
 
     async def _search(self, query, limit):
         found = []
-        async for tweet in self._api.search(query, limit=limit):
-            if tweet.retweetedTweet is not None:
-                continue  # a repost repeats someone else's post
-            found.append({'url': tweet.url, 'created_at': tweet.date.isoformat(), 'text': tweet.rawContent,
-                          'links': [link.url for link in tweet.links]})
+        # twscrape treats `limit` as a target and can yield more, so stop here and close the stream ourselves.
+        async with contextlib.aclosing(self._api.search(query, limit=limit)) as results:
+            async for tweet in results:
+                if tweet.retweetedTweet is not None:
+                    continue  # a repost repeats someone else's post
+                found.append({'url': tweet.url, 'created_at': tweet.date.isoformat(), 'text': tweet.rawContent,
+                              'links': [link.url for link in tweet.links], 'author': tweet.user.username})
+                if len(found) >= limit:
+                    break
         return found
 
     def close(self):
-        self._loop.close()
+        if self._loop is not None:
+            self._loop.close()
         shutil.rmtree(self._dir, ignore_errors=True)
 
 
