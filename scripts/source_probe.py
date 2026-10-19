@@ -139,7 +139,10 @@ def page_through(client, kind, url, first, cutoff, *, delay, sleep, page_stop):
             if error or status != 200:
                 return first, pages, error or f"http_{status}"
             try:
-                first[key].extend(json.loads(body)[key])
+                more = json.loads(body)[key]
+                if not isinstance(more, list) or not isinstance(first[key], list):
+                    raise ValueError("invalid_page")
+                first[key].extend(more)
             except (ValueError, TypeError, KeyError, AttributeError, RecursionError):
                 return first, pages, "invalid_json"
             pages += 1
@@ -149,7 +152,11 @@ def page_through(client, kind, url, first, cutoff, *, delay, sleep, page_stop):
         cursor = first.get("nextCursor")
         if not isinstance(cursor, str) or not re.fullmatch(r"[A-Za-z0-9_=+/-]{1,500}", cursor):
             return first, pages, "invalid_cursor"
-        last = first["jobs"][-1].get("pubDate") if first.get("jobs") else None
+        jobs = first.get("jobs")
+        if not isinstance(jobs, list):
+            return first, pages, "invalid_page"
+        newest_stub = jobs[-1] if jobs else None  # a malformed item is the parser's to quarantine, not ours to trip on
+        last = newest_stub.get("pubDate") if isinstance(newest_stub, dict) else None
         if cutoff is not None and parse_posted(last) and datetime.fromisoformat(parse_posted(last)) < cutoff:
             return first, pages, ""  # the window edge is behind us
         sleep(delay)
@@ -158,6 +165,8 @@ def page_through(client, kind, url, first, cutoff, *, delay, sleep, page_stop):
             return first, pages, error or f"http_{status}"
         try:
             more = json.loads(body)
+            if not isinstance(more["jobs"], list):
+                raise ValueError("invalid_page")
             first["jobs"].extend(more["jobs"])
             first["hasMore"], first["nextCursor"] = more.get("hasMore"), more.get("nextCursor")
         except (ValueError, TypeError, KeyError, AttributeError, RecursionError):
@@ -229,10 +238,21 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
     cutoff = None if lookback_days is None else datetime.fromisoformat(stamp) - timedelta(days=lookback_days)
     paging_note = ''
     if kind in PAGED_KINDS and isinstance(data, dict):
-        data, pages, stopped = page_through(client, kind, url, data, cutoff, delay=delay, sleep=sleep,
-                                            page_stop=PAGE_SAFETY_STOP if page_stop is None else page_stop)
+        try:
+            data, pages, stopped = page_through(client, kind, url, data, cutoff, delay=delay, sleep=sleep,
+                                                page_stop=PAGE_SAFETY_STOP if page_stop is None else page_stop)
+        except (ValueError, TypeError, KeyError, AttributeError, RecursionError):
+            pages, stopped = 1, "invalid_page"  # contained per source; what was read so far is kept
         attempts += pages - 1
         paging_note = f'; pages_fetched={pages}' + (f'; paging_stopped={stopped}' if stopped else '')
+        if stopped not in ("", "page_safety_stop"):
+            # A real later-page failure is durable evidence in Sources and Run Log, not only a probe note.
+            # Jobs from the pages already read are still delivered (a failed source may carry partial jobs).
+            code = stopped if re.fullmatch(r"http_[1-5][0-9]{2}|timeout|transport_error|invalid_json", stopped) \
+                else "invalid_board_response"
+            http = int(code[5:]) if code.startswith("http_") else None
+            attempts += stopped not in ("invalid_cursor", "invalid_page")  # the failed request was an attempt too
+            problem = ("blocked" if http in BLOCKED else "failed", code, http if http is not None else 200)
     try:
         if kind in LISTING_ONLY:
             counts = LISTING_ONLY[kind](data, ctx)
