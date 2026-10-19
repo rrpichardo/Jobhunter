@@ -32,8 +32,9 @@ this section if it is out of date.
 **C. Waiting on Codex (usage limit reached about 16:31 UTC on October 19)**
 
 Check or raise the limit at https://chatgpt.com/codex/cloud/settings/usage. Claude re-requests every review when it
-resets (a scheduled sweep does it) and fixes what Codex finds. Until then each open PR carries an interim review by the
-`engineering:code-review` skill, posted as a PR comment that says Codex still has to review it.
+resets (a scheduled sweep does it) and fixes what Codex finds. Until then each open PR carries an interim review in the style of the
+`engineering:code-review` skill (done by independent reviewers, October 19; their findings were fixed), posted as a PR
+comment that says Codex still has to review it.
 
 | PR | Plain name | Needs |
 | --- | --- | --- |
@@ -45,7 +46,15 @@ resets (a scheduled sweep does it) and fixes what Codex finds. Until then each o
 | #45 | a16z portfolio jobs | Codex review |
 | #46 | This status document | Codex review |
 | #47 | Ali Rohde Jobs weekly newsletter | Codex review (after #40) |
+| #49 | Haiku-vs-Sonnet eval harness and plan (not run) | Codex review |
 | #48 | LinkedIn job listings (same session as the posts) | Codex review (after #43) |
+
+**Claude's TODO (user request, October 19; tokens are limited, so it is queued, not done): Haiku vs Sonnet eval.**
+The user is NOT sure the cheaper Haiku should do the reading step. Run `docs/evals/HAIKU_READING_EVAL.md` on 100 real
+items (harness: `scripts/eval_reading.py`, PR #49; real items come from the first live runs' work files). Show the user the
+100 examples, both models' outputs and the agreement percentage. Switch to Haiku ONLY if agreement is over 90% (and Haiku
+finds at least 90% of Sonnet's jobs and the user has read the disagreements). Until then the reading stays on Sonnet. The
+eval file is saved so the user can learn how it was done.
 
 **D. Claude's next steps:** when Codex is back: review, fix, merge in order (#42, #44, #45, #46, then #40 and the PRs
 stacked on it). Then the live X and LinkedIn test, then a first manual run, then A3.
