@@ -1,5 +1,6 @@
 """X hiring-post collector: limits, allowance order, cookie handling and the twscrape adapter, all offline."""
 
+from datetime import datetime, timezone
 import json
 import sys
 import types
@@ -186,7 +187,9 @@ class FakeTweet:
         self.user = types.SimpleNamespace(username='acme_hiring')
 
 
-def install_fake_twscrape(monkeypatch, tweets=(), search_error=None, init_error=None):
+def install_fake_twscrape(monkeypatch, tweets=(), search_error=None, init_error=None, no_response=False, account='active'):
+    """A stand-in for twscrape 0.20.1: search_raw yields one response per tweet; an empty-but-answered search
+    yields one response holding no tweets; a blocked search yields nothing at all."""
     log = types.SimpleNamespace(api_args=None, cookies=None, level=None, yielded=0, closed=False)
 
     class HttpStatusError(Exception):
@@ -196,28 +199,46 @@ def install_fake_twscrape(monkeypatch, tweets=(), search_error=None, init_error=
     class NoAccountError(Exception):
         pass
 
+    states = {'active': types.SimpleNamespace(active=True, locks={}),
+              'banned': types.SimpleNamespace(active=False, locks={}),
+              'cooling': types.SimpleNamespace(active=True, locks={'SearchTimeline': datetime(2099, 1, 1, tzinfo=timezone.utc)}),
+              'naive-lock': types.SimpleNamespace(active=True, locks={'SearchTimeline': datetime(2099, 1, 1)}),
+              'expired-lock': types.SimpleNamespace(active=True, locks={'SearchTimeline': datetime(2000, 1, 1, tzinfo=timezone.utc)}),
+              'missing': None}
+
     class Pool:
         async def add_account_cookies(self, username, cookies):
             if init_error:
                 raise init_error
             log.cookies = (username, cookies)
 
+        async def get_account(self, username):
+            return states[account]
+
     class API:
         def __init__(self, db_file, raise_when_no_account=False):
             log.api_args = (db_file, raise_when_no_account)
             self.pool = Pool()
 
-        async def search(self, query, limit=-1):
+        async def search_raw(self, query, limit=-1):
             if search_error:
                 raise search_error(log) if callable(search_error) else search_error
+            if no_response:
+                return
             try:
+                if not tweets:
+                    yield types.SimpleNamespace(json=lambda: [])  # X answered, with nothing to show
                 for tweet in tweets:
                     log.yielded += 1
-                    yield tweet
+                    yield types.SimpleNamespace(json=lambda tweet=tweet: [tweet])
             finally:
                 log.closed = True
 
+    def parse_tweets(obj, limit=-1):
+        return iter(obj if limit < 0 else obj[:limit])
+
     module = types.SimpleNamespace(API=API, HttpStatusError=HttpStatusError, NoAccountError=NoAccountError,
+                                   models=types.SimpleNamespace(parse_tweets=parse_tweets),
                                    set_log_level=lambda level: setattr(log, 'level', level))
     monkeypatch.setitem(sys.modules, 'twscrape', module)
     return log, module
@@ -309,3 +330,46 @@ def test_a_refusal_stays_blocked_through_the_validated_source_record(tmp_path, c
     assert source['status'] == status and source['error'] in {sc.LOGIN_FAILED, sc.RATE_LIMITED, sc.COLLECTOR_ERROR}
     prepare_payload([], [source])  # the Sheet writer accepts the record
     assert {sc.LOGIN_FAILED, sc.RATE_LIMITED} == set(pf.BLOCKED_ERRORS)
+
+
+def test_an_answer_with_no_tweets_is_a_genuine_zero_not_a_failure(monkeypatch):
+    install_fake_twscrape(monkeypatch, tweets=[])
+    fetcher = x.TwscrapeFetcher('tok', 'ct')
+    try:
+        assert fetcher.search('q', 5) == []
+    finally:
+        fetcher.close()
+
+
+def test_no_response_at_all_is_a_refusal_not_a_healthy_empty_result(monkeypatch):
+    # twscrape ends the stream silently when X answers with an HTML/Cloudflare block
+    install_fake_twscrape(monkeypatch, no_response=True)
+    fetcher = x.TwscrapeFetcher('tok', 'ct')
+    try:
+        with pytest.raises(sc.FetchBlocked):
+            fetcher.search('q', 5)
+    finally:
+        fetcher.close()
+
+
+@pytest.mark.parametrize('account,expected', [('banned', sc.FetchBlocked), ('missing', sc.FetchBlocked),
+                                              ('cooling', sc.FetchRateLimited), ('naive-lock', sc.FetchRateLimited),
+                                              ('expired-lock', sc.FetchBlocked), ('active', sc.FetchBlocked)])
+def test_no_available_account_is_told_apart_a_rejected_session_or_a_cooling_down_one(monkeypatch, account, expected):
+    def raise_no_account(log):
+        return sys.modules['twscrape'].NoAccountError('x')
+    install_fake_twscrape(monkeypatch, search_error=raise_no_account, account=account)
+    fetcher = x.TwscrapeFetcher('tok', 'ct')
+    try:
+        with pytest.raises(expected):
+            fetcher.search('q', 5)
+    finally:
+        fetcher.close()
+
+
+def test_a_blocked_first_search_stops_the_run_records_blocked_and_spends_the_day(monkeypatch, tmp_path):
+    install_fake_twscrape(monkeypatch, no_response=True)
+    code, out, store = run(tmp_path, None, environ=COOKIES)  # the real adapter, over the stand-in
+    payload = json.loads(out.read_text())
+    assert code == 0 and payload['error'] == 'social_login_failed' and payload['candidates'] == []
+    assert rows(store)['allowance/x-twscrape/2026-10-19']['state'] == 'blocked'

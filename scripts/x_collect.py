@@ -63,7 +63,9 @@ class TwscrapeFetcher:
         try:
             return self._loop.run_until_complete(self._search(query, limit))
         except self._twscrape.NoAccountError:
-            raise FetchBlocked from None  # the saved session was rejected or is cooling down
+            # twscrape raises this both when the session was rejected/banned (account inactive) and when the only
+            # account is cooling down after a rate limit (account active but locked): tell them apart.
+            raise self._why_no_account() from None
         except self._twscrape.HttpStatusError as exc:
             code = getattr(getattr(exc, 'response', None), 'status_code', None)
             if code in (401, 403):
@@ -72,17 +74,41 @@ class TwscrapeFetcher:
                 raise FetchRateLimited from None
             raise
 
+    def _why_no_account(self):
+        try:
+            account = self._loop.run_until_complete(self._api.pool.get_account(ACCOUNT))
+        except Exception:  # noqa: BLE001 - unknown state: report the safe, fixed "refused" word
+            return FetchBlocked()
+        if account is None or not account.active:
+            return FetchBlocked()  # logged out, banned or checkpointed
+        now = datetime.now(timezone.utc)
+        for until in (account.locks or {}).values():
+            try:
+                if until > now:
+                    return FetchRateLimited()
+            except TypeError:  # a naive timestamp: treat it as still locked
+                return FetchRateLimited()
+        return FetchBlocked()
+
     async def _search(self, query, limit):
-        found = []
+        found, responses = [], 0
         # twscrape treats `limit` as a target and can yield more, so stop here and close the stream ourselves.
-        async with contextlib.aclosing(self._api.search(query, limit=limit)) as results:
-            async for tweet in results:
-                if tweet.retweetedTweet is not None:
-                    continue  # a repost repeats someone else's post
-                found.append({'url': tweet.url, 'created_at': tweet.date.isoformat(), 'text': tweet.rawContent,
-                              'links': [link.url for link in tweet.links], 'author': tweet.user.username})
+        # The raw stream is used (not `search`) so that "X answered with nothing to show" can be told apart from
+        # "no answer at all": a Cloudflare/HTML block makes twscrape end the stream silently with no response.
+        async with contextlib.aclosing(self._api.search_raw(query, limit=limit)) as pages:
+            async for page in pages:
+                responses += 1
+                for tweet in self._twscrape.models.parse_tweets(page.json(), limit - len(found)):
+                    if tweet.retweetedTweet is not None:
+                        continue  # a repost repeats someone else's post
+                    found.append({'url': tweet.url, 'created_at': tweet.date.isoformat(), 'text': tweet.rawContent,
+                                  'links': [link.url for link in tweet.links], 'author': tweet.user.username})
+                    if len(found) >= limit:
+                        break
                 if len(found) >= limit:
                     break
+        if responses == 0:
+            raise FetchBlocked  # no response at all is a refusal, never a healthy empty result
         return found
 
     def close(self):
