@@ -1,4 +1,5 @@
-# Starting search lists for the logged-in social lane (docs/PLAN.md). Read-only searches; the collector adds the
+# Every search must name a role the delivery filter collects (a test checks this), because each one spends part of
+# the daily query limit. Starting search lists for the logged-in social lane (docs/PLAN.md). Read-only searches; the collector adds the
 # date window and drops replies. Tune after the first live run. Allowed characters are checked by the code.
 x-twscrape:
   - 'hiring "AI product manager"'
@@ -6,8 +7,8 @@ x-twscrape:
   - 'hiring "senior product manager"'
   - 'hiring "head of product"'
   - 'hiring "chief of staff"'
-  - 'hiring "strategy and operations"'
+  - 'hiring "head of strategy"'
   - 'hiring "founder in residence" OR "entrepreneur in residence"'
-  - 'hiring "technical program manager" AI'
-  - 'hiring "product operations"'
-  - 'hiring "business operations" startup'
+  - 'hiring "leadership development program"'
+  - 'hiring "group product manager"'
+  - 'hiring "strategy manager"'

@@ -48,6 +48,15 @@ def rows(store):
     return {row[0]: json.loads(row[1]) for row in store.tables['_State'][1:]}
 
 
+def test_every_search_names_a_role_the_delivery_filter_collects():
+    import re
+    from jobhunter.postings import ROLE_TEXT, role_family
+    for query in sc.load_queries('sources/social_queries.yaml', 'x-twscrape'):
+        phrases = re.findall(r'"([^"]+)"', query)
+        assert phrases and any(ROLE_TEXT.search(phrase) for phrase in phrases), query
+        assert any(role_family(phrase) for phrase in phrases), query  # and a title like it is really delivered
+
+
 def test_the_registry_queries_load_and_respect_the_query_limit():
     queries = sc.load_queries('sources/social_queries.yaml', 'x-twscrape')
     assert 1 <= len(queries) <= sc.LIMITS['x-twscrape']['queries']
