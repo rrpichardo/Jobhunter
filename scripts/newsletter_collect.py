@@ -56,10 +56,11 @@ def main(argv=None, *, fetch=fetch_feed, now=lambda: datetime.now(timezone.utc))
         moment = now()
         candidates, stats = edition_candidates(args.source, text, moment, args.lookback_days)
         artifact = candidate_artifact(args.source, candidates, moment.isoformat(), queries_run=1)
-        artifact['stats'] = {**artifact['stats'], **stats}
+        cleaned_out = artifact['stats']['unreadable']  # editions the shared cleaning step refused (size, address form)
+        artifact['stats'] = {**artifact['stats'], **stats, 'unreadable': stats['unreadable'] + cleaned_out}
         digest = write_artifact(args.output, artifact)
         print(f"newsletter_collected: editions={stats['editions']} in_window={stats['in_window']} "
-              f"candidates={len(artifact['candidates'])} unreadable={stats['unreadable'] + artifact['stats']['unreadable']}")
+              f"candidates={len(artifact['candidates'])} unreadable={artifact['stats']['unreadable']}")
         print(f'newsletter_candidates_sha256={digest}')
         return 0
     except (ValueError, TypeError, KeyError, OSError) as exc:  # OSError includes timeouts and connection errors

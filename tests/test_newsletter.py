@@ -99,8 +99,8 @@ def test_the_edition_flows_through_the_queue_and_the_validator_and_pairs_a_role_
     assert {p['title']: p['apply_url'] for p in data['postings']} == {
         'Chief of Staff to the CEO': 'https://jobs.ashbyhq.com/acme/1234-abcd',
         'Associate Chief of Staff': 'https://boards.greenhouse.io/beta/jobs/55'}
-    assert all(p['job_id'].startswith('alirohde:edition-275-ali-rohde-jobs:') and p['posted_at'].startswith('2026-10-16')
-               for p in data['postings'])
+    assert all(p['job_id'].startswith('alirohde:') and p['posted_at'].startswith('2026-10-16') for p in data['postings'])
+    assert len({p['job_id'] for p in data['postings']}) == 2
 
 
 def test_an_invented_value_or_a_link_the_edition_does_not_contain_is_rejected(tmp_path, capsys):
@@ -117,3 +117,41 @@ def test_an_invented_value_or_a_link_the_edition_does_not_contain_is_rejected(tm
                               '--extractions', str(facts), '--output', str(result)]) == 0
     data = json.loads(result.read_text())
     assert data['postings'] == [] and data['source']['rejected_items'] == 2 and data['processed_ids'] == []  # held for retry
+
+
+def _facts_for(link_title_company):
+    edition = 'edition-275-ali-rohde-jobs'
+    return [{'item_id': edition, 'title': t, 'company': c, 'location': 'Remote', 'salary': '', 'description_quote': q, 'apply_url': link}
+            for link, t, c, q in link_title_company]
+
+
+def test_same_title_at_different_companies_are_different_jobs_and_a_role_relisted_next_week_is_the_same_job():
+    from jobhunter import post_facts as pf
+    body = ('<p><a href="https://jobs.ashbyhq.com/a/1">Chief of Staff</a>, Acme (AI, Series B), Remote</p>'
+            '<p><a href="https://jobs.ashbyhq.com/b/2">Chief of Staff</a>, Beta (AI, Series B), Remote</p>')
+    def candidates(slug):
+        cands, _ = nl.edition_candidates(SOURCE, feed(item('E', 'Fri, 16 Oct 2026 15:17:32 GMT',
+                                                           f'https://alirohdejobs.substack.com/p/{slug}', content=body)), NOW, 28)
+        cleaned, _ = pf.clean_social_candidates(SOURCE, cands)
+        return cleaned
+    ids = []
+    for slug in ('edition-275-ali-rohde-jobs', 'edition-276-ali-rohde-jobs'):
+        cands = candidates(slug)
+        quote_a = 'Chief of Staff [https://jobs.ashbyhq.com/a/1] , Acme (AI, Series B), Remote'
+        quote_b = 'Chief of Staff [https://jobs.ashbyhq.com/b/2] , Beta (AI, Series B), Remote'
+        facts = [{'item_id': slug, 'title': 'Chief of Staff', 'company': 'Acme', 'location': 'Remote', 'salary': '',
+                  'description_quote': quote_a, 'apply_url': 'https://jobs.ashbyhq.com/a/1'},
+                 {'item_id': slug, 'title': 'Chief of Staff', 'company': 'Beta', 'location': 'Remote', 'salary': '',
+                  'description_quote': quote_b, 'apply_url': 'https://jobs.ashbyhq.com/b/2'}]
+        result = pf.social_result(SOURCE, cands, facts, '2026-10-19T16:00:00+00:00', listed=1, stats={}, known_ids={slug})
+        ids.append([p['job_id'] for p in result['postings']])
+    assert len(ids[0]) == 2 and len(set(ids[0])) == 2   # two companies, one title: two jobs
+    assert ids[0] == ids[1]                            # carried over to the next edition: the same two ids
+
+
+def test_unreadable_editions_from_both_steps_are_added_not_overwritten(tmp_path):
+    big = item('Huge', 'Fri, 16 Oct 2026 15:17:32 GMT', 'https://alirohdejobs.substack.com/p/edition-300', content='<p>' + 'x ' * 15000 + '</p>')
+    empty = item('Empty', 'Fri, 16 Oct 2026 15:17:32 GMT', 'https://alirohdejobs.substack.com/p/edition-301', content='')
+    code, out = run(tmp_path, feed(NEW, big, empty))
+    payload = json.loads(out.read_text())
+    assert code == 0 and payload['stats']['unreadable'] == 2 and len(payload['candidates']) == 1

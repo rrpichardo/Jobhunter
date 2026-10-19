@@ -20,7 +20,7 @@ def fact_fields(id_field):
     return frozenset({id_field, *FACT_KEYS})
 
 
-def _posting(fact, by_id, captured_at, *, source_id, id_field, id_prefix, permalink):
+def _posting(fact, by_id, captured_at, *, source_id, id_field, id_prefix, permalink, link_ids=False):
     if not isinstance(fact, dict) or set(fact) != fact_fields(id_field):
         raise ValueError('invalid_post_facts')
     candidate = by_id.get(fact[id_field]) if isinstance(fact[id_field], str) else None
@@ -38,8 +38,14 @@ def _posting(fact, by_id, captured_at, *, source_id, id_field, id_prefix, permal
     if link and (link not in candidate['links'] or not https_url(link)):
         raise ValueError('invalid_post_link')
     # Identity comes from code: one post can list several roles, each told apart by its title.
-    digest = hashlib.sha256(fact['title'].casefold().encode()).hexdigest()[:10]
-    return Posting(f"{id_prefix}:{candidate[id_field]}:{digest}", source_id, fact['company'], fact['title'],
+    if link_ids and link:
+        # A listing that repeats from one edition to the next, or shares a title with another company's role, is told
+        # apart by its own application link: same link = same job in every edition, different link = different job.
+        job_id = f"{id_prefix}:{hashlib.sha256(link.encode()).hexdigest()[:16]}"
+    else:  # existing scheme, kept as it was so already-delivered Hacker News, X and LinkedIn jobs keep their ids
+        digest = hashlib.sha256((f"{fact['company']}\n{fact['title']}" if link_ids else fact['title']).casefold().encode()).hexdigest()[:10]
+        job_id = f"{id_prefix}:{candidate[id_field]}:{digest}"
+    return Posting(job_id, source_id, fact['company'], fact['title'],
                    fact['location'], fact['description_quote'], link or permalink(candidate), captured_at,
                    salary=fact['salary'], posted_at=candidate['created_at'])
 
@@ -53,7 +59,7 @@ def _claimed_id(fact, id_field):
 
 
 def build_result(source_id, candidates, facts, captured_at, *, id_field, id_prefix, permalink, listed, stats,
-                 attempts, error='', known_ids=None):
+                 attempts, error='', known_ids=None, link_ids=False):
     """Validate proposed facts; returns {'source': record, 'postings': [dict]} for source_probe.
 
     `candidates` are the items that were read; `known_ids` is every item id in the candidate artifact (default:
@@ -73,7 +79,7 @@ def build_result(source_id, candidates, facts, captured_at, *, id_field, id_pref
     for fact in facts:
         try:
             posting = _posting(fact, by_id, captured_at, source_id=source_id, id_field=id_field,
-                               id_prefix=id_prefix, permalink=permalink)
+                               id_prefix=id_prefix, permalink=permalink, link_ids=link_ids)
         except (ValueError, TypeError, AttributeError):
             source['rejected_items'] += 1
             claimed = _claimed_id(fact, id_field)
@@ -121,7 +127,7 @@ SOCIAL = {
     # Ali Rohde Jobs (weekly Substack edition listing chief of staff, BizOps and VC roles): one "post" per edition,
     # read like a social post. Public feed, no login, no allowance.
     'alirohde-rss': {'hosts': {'alirohdejobs.substack.com'}, 'prefix': 'alirohde', 'registry_id': 'alirohde-rss',
-                     'path': re.compile(r'/p/([a-z0-9][a-z0-9-]{2,120})/?'), 'max_chars': 24000},
+                     'path': re.compile(r'/p/([a-z0-9][a-z0-9-]{2,119})/?'), 'max_chars': 24000, 'link_ids': True},
 }
 MAX_POST_CHARS = 10000
 # Collector errors that mean the site refused us (logged out, restricted, rate limited), as opposed to a defect
@@ -179,4 +185,4 @@ def social_result(source_id, candidates, facts, captured_at, *, listed, stats, e
     rules = SOCIAL[source_id]
     return build_result(source_id, candidates, facts, captured_at, id_field='item_id', id_prefix=rules['prefix'],
                         permalink=lambda candidate: candidate['url'], listed=listed, stats=stats, attempts=1,
-                        error=error, known_ids=known_ids)
+                        error=error, known_ids=known_ids, link_ids=rules.get('link_ids', False))
