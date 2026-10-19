@@ -6,7 +6,7 @@ done, change its status here and in the PR that did it. Nothing below is a claim
 
 ## 0. At a glance (the one place to look; Claude updates it in every change)
 
-Last updated October 19, 2026, evening. When the user asks "what is pending", "what do you need from me" or
+Last updated October 19, 2026, 17:40 UTC (Codex still at its usage limit when last checked, 17:26 UTC). When the user asks "what is pending", "what do you need from me" or
 "where are we", Claude reads THIS section first, checks it against GitHub, answers in plain language, and fixes
 this section if it is out of date.
 
@@ -17,6 +17,7 @@ this section if it is out of date.
 | A2 First live X and LinkedIn test | You said yes (October 19): run it after Codex's limit resets and #40 and #43 are approved and merged. Cookie names CHECKED in JobHunterEnv (names only, October 19): `X_AUTH_TOKEN`, `X_CT0` and `LINKEDIN_LI_AT` are set; `WAAS_SESSION_COOKIE`, `JSEARCH_API_KEY`, `JOOBLE_API_KEY` and the spreadsheet id are set too. The collector tests (91) pass in that environment with the social extra. Runbook: `docs/FIRST_LIVE_TEST.md`. You do not need to do anything for it except copy the spreadsheet first. |
 | A3 Create the daily routine | Only after a manual run is checked. |
 | A4 Merging | You said (October 19) to merge what Codex approves and to use the `engineering:code-review` check in the meantime. |
+| A10 NEW: close the old stack PRs #21 to #30 | Their content already landed on `main` through #39, so they are stale duplicates (they still show as open). Closing them is housekeeping; Claude will not close anything without your OK. |
 | A7 Limits | 5 LinkedIn post searches, 5 LinkedIn job searches, 10 X searches a day. Say so if you want them changed. |
 
 **B. Your tasks** (only you can do them; details in section B below)
@@ -64,7 +65,7 @@ stacked on it). Then the live X and LinkedIn test, then a first manual run, then
 **Decisions already made (do not ask again):** A1 build LinkedIn, X and Work at a Startup (read-only); A3 only after
 a checked manual run; A5 keep 28 days; A6 no extra JSearch pages; A8 BizOps stays out, and the Forward-Deployed /
 AI Deployment / AI Implementation Strategist titles are in; first manual run 28 days, daily routine 3 days; the
-reading step uses a cheap model (Haiku subagent, untested); old commits keep their "Claude-Session" line (see below).
+the reading step stays on Sonnet UNLESS the Haiku eval shows over 90% agreement (you are not sure about Haiku); old commits keep their "Claude-Session" line (see below).
 
 **About the old "Claude-Session" lines.** Some of Claude's older commits end with a line linking to the chat session
 that wrote them. They were left in on purpose: removing them would mean re-creating those commits, which voids every
