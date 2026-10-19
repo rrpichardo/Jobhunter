@@ -25,7 +25,14 @@ keys or tokens. Do not call any paid service.
    `mktemp -d`. Every artifact below is written there as a NEW file (the tools
    refuse to overwrite). Delete the directory when the run ends, but only after
    step 3 has exited 0 or you have reported its failure.
-3. Set a NEW run label for every collection, for example
+3. Choose the look-back window `WINDOW` (days). The user decided on October 19:
+   - **First manual run, and any catch-up run: `WINDOW=28`.**
+   - **The scheduled daily routine: `WINDOW=2`.** Two days covers one missed day plus a day to fix it.
+   - **Catch-up rule:** before a daily run, read the Run Log. If the last complete run is more than 2 days old, the
+     routine is NOT allowed to run with `WINDOW=2`; stop and report that a manual `WINDOW=28` catch-up run is
+     needed first (otherwise postings from the gap would never be collected). Repeats are harmless: jobs already in
+     the Sheet are recognized by Job ID and keep their Status, Notes and My rating.
+4. Set a NEW run label for every collection, for example
    `RUN=daily-$(TZ=America/New_York date +%Y%m%d-%H%M%S)-$(openssl rand -hex 3)`
    (the random part keeps two collections started in the same second apart). The writer
    binds a run label to the jobs and source records it was first given, so a label may be
@@ -40,7 +47,7 @@ keys or tokens. Do not call any paid service.
 Run, saving each printed digest:
 
 ```
-uv run --locked python -m scripts.hn_hiring candidates --output $DIR/hn_cand.json
+uv run --locked python -m scripts.hn_hiring candidates --output $DIR/hn_cand.json --lookback-days $WINDOW
 uv run --locked python -m scripts.ai_queue pull --source hn-who-is-hiring \
     --candidates $DIR/hn_cand.json --candidates-sha256 <candidates_sha256> --output $DIR/hn_work.json
 ```
@@ -94,12 +101,13 @@ Then:
 
 ```
 uv run --locked python -m scripts.source_probe --output $DIR/probe.json \
+    --lookback-days $WINDOW \
     --known-ids $DIR/known.json --known-ids-sha256 <known_ids_sha256> \
     --hn-result $DIR/hn_result.json --hn-result-sha256 <hn_result_sha256>
 ```
 
-(Omit the two `--hn-` options if step 1 was skipped. If `known_ids` fails, run without `--known-ids`: it only saves requests.) The default window is the last
-28 days, which is also the first-run backfill. Boards, public job sites, YC and
+(Omit the two `--hn-` options if step 1 was skipped. If `known_ids` fails, run without `--known-ids`: it only saves requests.) The window is
+`$WINDOW` days (28 for the first run, 2 for the daily routine). Boards, public job sites, YC and
 Built In, Getro, JSearch and Jooble are fetched here. Sources without a key or an
 account are recorded `needs setup` by the tool; do not try to work around that.
 

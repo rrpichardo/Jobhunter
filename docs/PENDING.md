@@ -51,6 +51,17 @@ reviews, and it is not proof that the current code or environment works. Still t
 the scheduled routine have NOT been run; nothing is merged. The next gate is the next-morning check of the
 routine's first scheduled run, which needs A3 and the code on `main` (A4: your go-ahead to merge; Codex has reviewed the fix PRs).
 
+## Run modes (user decision, October 19)
+
+| Run | Window | When |
+| --- | --- | --- |
+| First manual run | `--lookback-days 28` | once, by hand, before the routine exists (A3) |
+| Daily routine | `--lookback-days 2` | 06:07 America/New_York, every day |
+| Catch-up | `--lookback-days 28` | by hand, whenever the last complete Run Log row is more than 2 days old |
+
+The routine must refuse to run with the 2-day window when the last complete run is older than 2 days
+(ROUTINE_PROMPT.md step 0). Overlap never duplicates jobs.
+
 ## How the first run and the daily runs work (user direction, October 18)
 
 1. **First pull is a one-off manual run, not the scheduled routine.** It looks back
