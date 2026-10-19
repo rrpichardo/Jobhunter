@@ -38,7 +38,9 @@ keys or tokens. Do not call any paid service.
    exit 3 `catch_up_needed`, when there has never been a complete run or the last complete run started more than
    about two days ago (2 days plus 6 hours of drift). On exit 3 do nothing else: report that a manual 28-day catch-up
    run is needed first, otherwise postings from the gap would never be collected. Repeats are harmless: jobs already
-   in the Sheet keep their Status, Notes and My rating.
+   in the Sheet keep their Status, Notes and My rating. The guard checks that a run was delivered, not that every source
+   worked: if one source failed for several days (for example an expired cookie), fix it and then run `--mode manual` to
+   backfill that source, because the 3-day window will not reach back that far.
 4. Set a NEW run label for every collection, for example
    `RUN=daily-$(TZ=America/New_York date +%Y%m%d-%H%M%S)-$(openssl rand -hex 3)`
    (the random part keeps two collections started in the same second apart). The writer
@@ -151,7 +153,7 @@ is harmless because jobs collapse by Job ID.
   alert rules are not finished.
 - X hiring posts: the collector exists (`scripts/x_collect.py`; install with `uv sync --locked --extra social`)
   but is NOT run by this routine until the user gives the go-ahead for the first live test (A2) and sets
-  `X_AUTH_TOKEN` and `X_CT0` in the environment settings. When approved, the steps are: `x_collect` (reserves
+  `X_AUTH_TOKEN` and `X_CT0` in the environment settings. When approved, the steps are: `x_collect ... --lookback-days $WINDOW` (reserves
   today's allowance first, searches, writes a candidate file), `ai_queue pull --id-field item_id`, Claude reads,
   `social_posts validate`, then `source_probe --social-result`, step 3 (delivery) and, only after step 3 exited 0,
   `ai_queue commit --source x-twscrape --result <validated file> --result-sha256 <digest>` so the same posts are not
