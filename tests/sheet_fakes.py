@@ -7,6 +7,7 @@ class MemoryStore:
         self.after_write = None
         self.reads = []
     def refresh(self): pass
+    def has_tab(self, title): return title in self.tables
     def ensure_tab(self, title, headers, **kwargs):
         self.tables.setdefault(title, [list(headers)])
     def read(self, title):

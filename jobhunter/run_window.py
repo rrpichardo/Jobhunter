@@ -14,6 +14,7 @@ DAILY_DAYS = 2
 # A daily schedule drifts by minutes; one missed day is exactly two days between starts. One hour of tolerance
 # keeps that legitimate case from being refused. Source dates are mostly whole days, so the hour is not a real gap.
 GAP_TOLERANCE = timedelta(hours=1)
+CLOCK_SKEW = timedelta(minutes=5)  # a recorded time further in the future than this cannot be real
 RUN_LOG_HEADERS = ('Run ID', 'Started', 'Completed', 'Status')
 COMPLETE = {'complete', 'complete-with-source-failure'}
 
@@ -36,8 +37,12 @@ def _moment(value):
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
-def last_complete_start(rows):
-    """Start time of the most recent complete run in the Run Log rows, or None."""
+def last_complete_start(rows, now):
+    """Start time of the most recent complete run in the Run Log rows, or None.
+
+    A row only counts if its times make sense: started before it completed, and neither in the future. A corrupt
+    row therefore cannot make an old gap look recent.
+    """
     if not rows:
         return None
     headers, identities = table_index(rows, RUN_LOG_HEADERS, 'Run ID')
@@ -46,7 +51,8 @@ def last_complete_start(rows):
         status = values[headers['Status']] if headers['Status'] < len(values) else ''
         started = _moment(values[headers['Started']] if headers['Started'] < len(values) else '')
         done = _moment(values[headers['Completed']] if headers['Completed'] < len(values) else '')
-        if status in COMPLETE and started and done and (best is None or started > best):
+        if (status in COMPLETE and started and done and started <= done <= now + CLOCK_SKEW
+                and (best is None or started > best)):
             best = started
     return best
 
@@ -57,7 +63,7 @@ def window_days(mode, rows, now):
         return MANUAL_DAYS, 'manual run: full 28-day window'
     if mode != 'daily':
         raise ValueError('invalid_run_mode')
-    last = last_complete_start(rows)
+    last = last_complete_start(rows, now)
     if last is None:
         raise CatchUpNeeded('no_complete_run')
     if now - last > timedelta(days=DAILY_DAYS) + GAP_TOLERANCE:

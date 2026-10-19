@@ -100,3 +100,46 @@ def test_the_run_log_is_only_read_never_written():
     store = log(row('r1', NOW - timedelta(hours=3)))
     cli.main(['--mode', 'daily'], store=store, now=lambda: NOW)
     assert store.writes == [] and store.owner is None
+
+
+# ---- the real store without a Run Log tab, and rows whose times make no sense -------------------
+
+def test_a_real_workbook_with_no_run_log_tab_means_no_prior_run_exit_3_not_an_error(capsys):
+    from fake_workbook import FakeWorkbook
+    from jobhunter.sheet_io import GspreadStore
+    store = GspreadStore(FakeWorkbook())  # a workbook that has never been written to
+    assert store.has_tab('Run Log') is False
+    code, out = run('daily', store, capsys)
+    assert code == 3 and 'no_complete_run' in out
+
+
+def test_has_tab_is_true_when_the_tab_exists_and_refuses_unapproved_tabs():
+    from jobhunter.sheet_io import GspreadStore
+
+    class Workbook:
+        def fetch_sheet_metadata(self):
+            return {'sheets': [{'properties': {'title': 'Run Log', 'sheetId': 7,
+                                               'gridProperties': {'rowCount': 10, 'columnCount': 8}}}]}
+    store = GspreadStore(Workbook())
+    assert store.has_tab('Run Log') is True and store.has_tab('Jobs') is False
+    with pytest.raises(ValueError, match='unapproved_tab'):
+        store.has_tab('Secrets')
+
+
+@pytest.mark.parametrize('started,done', [
+    (NOW + timedelta(days=30), NOW + timedelta(days=30, minutes=20)),   # started in the future
+    (NOW - timedelta(days=4), NOW - timedelta(days=4, hours=1)),         # completed before it started
+    (NOW - timedelta(days=4), NOW + timedelta(days=2)),                  # completed in the future
+])
+def test_a_corrupt_complete_row_cannot_make_an_old_gap_look_recent(capsys, started, done):
+    bad = ['bad', started.isoformat(), done.isoformat(), 1, 1, 'complete']
+    old = row('old', NOW - timedelta(days=6))
+    code, out = run('daily', log(old, bad), capsys)
+    assert code == 3 and 'window_days' not in out
+
+
+def test_a_row_a_few_minutes_ahead_of_this_machines_clock_is_still_believed(capsys):
+    started = NOW - timedelta(hours=1)
+    ahead = ['r', started.isoformat(), (NOW + timedelta(minutes=2)).isoformat(), 1, 1, 'complete']  # small clock skew
+    code, out = run('daily', log(ahead), capsys)
+    assert code == 0 and 'window_days=2' in out

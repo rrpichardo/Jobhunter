@@ -29,10 +29,7 @@ def main(argv=None, *, store=None, now=None) -> int:
         rows = []
         if args.mode == 'daily':  # a manual run never needs the Sheet to choose its window
             backend = GspreadStore(open_workbook()) if store is None else store
-            try:
-                rows = backend.read('Run Log')
-            except KeyError:
-                rows = []  # no Run Log tab yet means no run yet
+            rows = backend.read('Run Log') if backend.has_tab('Run Log') else []  # no tab means no run yet
         days, note = window_days(args.mode, rows, moment)
         print(f'window_days={days}')
         print(note)
