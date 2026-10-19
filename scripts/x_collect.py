@@ -37,6 +37,10 @@ SEARCH_QUEUE = 'SearchTimeline'  # twscrape's name for the search request queue
 ACCOUNT = 'jobhunter-x'  # a label for twscrape's private account table; not a real account name
 
 
+class CollectorFailure(Exception):
+    """The collector, not X, failed (recorded with the fixed word social_collector_error)."""
+
+
 class TwscrapeFetcher:
     """Thin adapter over twscrape 0.20.1 (pinned in the `social` extra). Cookies go straight into a private
     temporary SQLite file and are deleted with it. Verified against the library source, not yet against X."""
@@ -50,7 +54,13 @@ class TwscrapeFetcher:
         twscrape.set_log_level('ERROR')
         self._dir = Path(tempfile.mkdtemp(prefix='.jobhunter-x-'))
         self._loop = None
+        self._sink = None
+        self._rate_limit_seen = False
         try:
+            # twscrape logs "Rate limited: ..." only when X really sent a rate limit (its account locks are also set
+            # after network and unknown errors, so a lock alone proves nothing). Keep a yes/no flag, never the text.
+            self._log = twscrape.logger.logger
+            self._sink = self._log.add(self._watch_log, level='DEBUG', format='{message}')
             self._dir.chmod(stat.S_IRWXU)
             self._loop = asyncio.new_event_loop()
             self._api = twscrape.API(str(self._dir / 'accounts.db'), raise_when_no_account=True)
@@ -59,6 +69,10 @@ class TwscrapeFetcher:
         except BaseException:
             self.close()  # the constructor never returns, so the caller cannot clean up: remove the cookie file here
             raise
+
+    def _watch_log(self, message):
+        if str(message).startswith('Rate limited'):
+            self._rate_limit_seen = True
 
     def search(self, query, limit):
         before = self._successful_requests()
@@ -96,14 +110,17 @@ class TwscrapeFetcher:
             return FetchBlocked()
         if account is None or not account.active:
             return FetchBlocked()  # logged out, banned or checkpointed
-        now = datetime.now(timezone.utc)
-        for until in (account.locks or {}).values():
-            try:
-                if until > now:
-                    return FetchRateLimited()
-            except TypeError:  # a naive timestamp: treat it as still locked
-                return FetchRateLimited()
-        return FetchBlocked()
+        if self._rate_limit_seen:
+            return FetchRateLimited()  # X itself said so, and the account is cooling down
+        return CollectorFailure()  # locked after a network or unknown error: a defect, not a rate limit
+
+    def _successful_requests(self):
+        """twscrape adds to the account's per-queue counter only after a response passed its checks."""
+        try:
+            account = self._loop.run_until_complete(self._api.pool.get_account(ACCOUNT))
+            return int((account.stats or {}).get(SEARCH_QUEUE, 0)) if account is not None else 0
+        except Exception:  # noqa: BLE001 - unknown state counts as "no success seen", the safe direction
+            return 0
 
     async def _search(self, query, limit):
         found = []
@@ -123,6 +140,12 @@ class TwscrapeFetcher:
         return found
 
     def close(self):
+        if self._sink is not None:
+            try:
+                self._log.remove(self._sink)
+            except Exception:  # noqa: BLE001
+                pass
+            self._sink = None
         if self._loop is not None:
             self._loop.close()
         shutil.rmtree(self._dir, ignore_errors=True)
