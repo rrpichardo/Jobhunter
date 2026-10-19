@@ -1,4 +1,5 @@
-"""How far back a run looks: 28 days for a manual first run or catch-up, 2 days for the daily routine.
+"""How far back a run looks: 28 days for a manual first run or catch-up, 2 days for the daily routine (3 only when
+the previous run is a few minutes older than 2 days, so windows always overlap).
 
 The daily window only works if the run before it was recent: each run must overlap the last one, or postings from
 the gap are never collected. So the daily mode READS the Run Log and refuses (needs a manual catch-up) when the last
@@ -11,8 +12,9 @@ from jobhunter.sheet_records import table_index
 
 MANUAL_DAYS = 28
 DAILY_DAYS = 2
-# A daily schedule drifts by minutes; one missed day is exactly two days between starts. One hour of tolerance
-# keeps that legitimate case from being refused. Source dates are mostly whole days, so the hour is not a real gap.
+# A daily schedule drifts by minutes; one missed day is two days between starts, plus or minus the drift. A gap of up
+# to one hour beyond two days is still accepted, but then the window is widened to 3 days so that it ALWAYS reaches
+# back to the start of the previous run: no posting can fall between two runs.
 GAP_TOLERANCE = timedelta(hours=1)
 CLOCK_SKEW = timedelta(minutes=5)  # a recorded time further in the future than this cannot be real
 RUN_LOG_HEADERS = ('Run ID', 'Started', 'Completed', 'Status')
@@ -66,6 +68,9 @@ def window_days(mode, rows, now):
     last = last_complete_start(rows, now)
     if last is None:
         raise CatchUpNeeded('no_complete_run')
-    if now - last > timedelta(days=DAILY_DAYS) + GAP_TOLERANCE:
+    gap = now - last
+    if gap > timedelta(days=DAILY_DAYS) + GAP_TOLERANCE:
         raise CatchUpNeeded('last_run_too_old')
-    return DAILY_DAYS, f'daily run: 2-day window; last complete run started {last.isoformat()}'
+    days = DAILY_DAYS if gap <= timedelta(days=DAILY_DAYS) else DAILY_DAYS + 1
+    note = f'daily run: {days}-day window; last complete run started {last.isoformat()}'
+    return days, note + (' (gap just over 2 days, so one extra day keeps the windows overlapping)' if days > DAILY_DAYS else '')

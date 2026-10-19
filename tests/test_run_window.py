@@ -38,10 +38,22 @@ def test_a_daily_run_after_a_recent_complete_run_is_2_days(capsys):
     assert code == 0 and 'window_days=2' in out
 
 
-def test_one_missed_day_is_still_covered_even_with_scheduler_drift(capsys):
-    # last run started 48h 40m ago: one day missed plus a few minutes of drift
+def test_one_missed_day_with_scheduler_drift_gets_a_window_that_still_covers_the_gap(capsys):
+    # last run started 48h 40m ago: one day missed plus drift. A 2-day window would leave 40 minutes uncovered.
     code, out = run('daily', log(row('r1', NOW - timedelta(hours=48, minutes=40))), capsys)
-    assert code == 0 and 'window_days=2' in out
+    assert code == 0 and 'window_days=3' in out
+
+
+@pytest.mark.parametrize('hours,expected', [(1, 2), (24, 2), (47.9, 2), (48, 2), (48.01, 3), (48.99, 3)])
+def test_the_window_always_reaches_back_to_the_start_of_the_previous_run(hours, expected):
+    gap = timedelta(hours=hours)
+    days, _ = rw.window_days('daily', [HEADERS, row('r1', NOW - gap)], NOW)
+    assert days == expected and timedelta(days=days) >= gap  # no posting can fall between two runs
+
+
+def test_a_gap_beyond_the_tolerance_is_refused_not_stretched(capsys):
+    code, out = run('daily', log(row('r1', NOW - timedelta(hours=49, minutes=5))), capsys)
+    assert code == 3 and 'last_run_too_old' in out
 
 
 def test_two_missed_days_need_a_manual_catch_up(capsys):
