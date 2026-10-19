@@ -165,9 +165,14 @@ is harmless because jobs collapse by Job ID.
   `ai_queue commit --source x-twscrape --result <validated file> --result-sha256 <digest>` so the same posts are not
   read again tomorrow. Exit 3 means today's allowance is spent: collect
   nothing. Exit 4 means the cookies are not set up. Never print or ask for cookie values.
-- LinkedIn jobs and hiring posts: the collector that fetches posts is not built. The validation side and the
-  daily allowance command (`scripts.allowance`, which must succeed before any live request) exist. Never log in
-  or open this site in this routine.
+- LinkedIn hiring posts: the collector exists (`scripts/linkedin_collect.py`, headless browser with the saved `li_at`,
+  `LINKEDIN_LI_AT` in the environment settings) but is NOT run by this routine until the user gives the go-ahead for the
+  first live test (A2). Same flow as X: `linkedin_collect` (reserves today's allowance first), `ai_queue pull --source
+  linkedin-login --id-field item_id`, Claude reads, `social_posts validate --source linkedin-login`, `source_probe
+  --social-result`, delivery, then `ai_queue commit`. It prints one `search_N:` line per search (numbers only); paste
+  them into the report. Exit 3 = allowance spent, exit 4 = not set up. Never print or ask for the cookie value.
+- LinkedIn job listings: not built. The daily allowance command (`scripts.allowance`) is shared with the post collector
+  (one live LinkedIn session per day). Never log in or open this site in this routine except through the collector.
 - Work at a Startup (logged in), Cosign, school and MBA sites, Next Play and Ali
   Rohde feeds: not set up.
 - a16z: listing-only, delivers no jobs.
