@@ -44,23 +44,45 @@ def _posting(fact, by_id, captured_at, *, source_id, id_field, id_prefix, permal
                    salary=fact['salary'], posted_at=candidate['created_at'])
 
 
+def _claimed_id(fact, id_field):
+    """The item id a fact names, whether written as text or as a JSON number; None if it names none."""
+    value = fact.get(id_field) if isinstance(fact, dict) else None
+    if isinstance(value, bool) or not isinstance(value, (str, int)):
+        return None
+    return str(value)
+
+
 def build_result(source_id, candidates, facts, captured_at, *, id_field, id_prefix, permalink, listed, stats,
-                 attempts, error=''):
-    """Validate proposed facts; returns {'source': record, 'postings': [dict]} for source_probe."""
+                 attempts, error='', known_ids=None):
+    """Validate proposed facts; returns {'source': record, 'postings': [dict]} for source_probe.
+
+    `candidates` are the items that were read; `known_ids` is every item id in the candidate artifact (default:
+    just the ones read). A rejected fact holds the item it names. One that names an id outside `known_ids` (a typo
+    or an invented id) could be about any item that was read, so every read item is held; naming a real item that
+    was merely not reported as read holds nothing.
+    """
     if not isinstance(facts, list):
         raise ValueError('extractions_must_be_list')
     by_id = {candidate[id_field]: candidate for candidate in candidates}
+    known = set(by_id) if known_ids is None else set(known_ids)
     source = {'source_id': source_id, 'status': 'OK-zero-jobs', 'captured_at': captured_at,
               'jobs_fetched': listed, 'valid_jobs': 0, 'rejected_items': stats.get('unreadable', 0),
               'pm_candidates': 0, 'selected_for_m0': 0, 'attempts': attempts, 'http_status': 200,
               'retry_after_seconds': None, 'coverage': 'partial-response', 'error': error}
-    postings, seen = [], set()
+    postings, seen, rejected_ids, unattributed = [], set(), set(), False
     for fact in facts:
         try:
             posting = _posting(fact, by_id, captured_at, source_id=source_id, id_field=id_field,
                                id_prefix=id_prefix, permalink=permalink)
         except (ValueError, TypeError, AttributeError):
             source['rejected_items'] += 1
+            claimed = _claimed_id(fact, id_field)
+            if claimed is None:
+                unattributed = True  # cannot tell which item this fact was about
+            elif claimed in by_id:
+                rejected_ids.add(claimed)  # an item with a rejected fact was not read successfully
+            elif claimed not in known:
+                unattributed = True  # names no item that exists
             continue
         if posting.job_id in seen:
             continue
@@ -75,7 +97,8 @@ def build_result(source_id, candidates, facts, captured_at, *, id_field, id_pref
         source['status'] = 'failed'
     elif postings:
         source['status'] = 'OK'
-    return {'source': source, 'postings': [asdict(posting) for posting in postings]}
+    return {'source': source, 'postings': [asdict(posting) for posting in postings],
+            'rejected_item_ids': sorted(by_id if unattributed else rejected_ids)}
 
 
 def postings_from_result(result):
@@ -138,8 +161,8 @@ def clean_social_candidates(source_id, items):
     return candidates, unreadable
 
 
-def social_result(source_id, candidates, facts, captured_at, *, listed, stats, error=''):
+def social_result(source_id, candidates, facts, captured_at, *, listed, stats, error='', known_ids=None):
     rules = SOCIAL[source_id]
     return build_result(source_id, candidates, facts, captured_at, id_field='item_id', id_prefix=rules['prefix'],
                         permalink=lambda candidate: candidate['url'], listed=listed, stats=stats, attempts=1,
-                        error=error)
+                        error=error, known_ids=known_ids)

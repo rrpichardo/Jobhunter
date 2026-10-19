@@ -96,7 +96,7 @@ def main(argv=None, *, client=None, sleep=time.sleep, now=lambda: datetime.now(t
         result = build_result(read, extractions['facts'], data['captured_at'], listed=data['stats'].get('in_window', 0),
                               stats=data['stats'], threads=data['threads'], known_ids=known)
         # A comment whose proposed fact was rejected stays queued, so one extraction error cannot lose a job.
-        held = set(result['rejected_comment_ids'])
+        held = set(result['rejected_item_ids'])
         result['processed_ids'] = sorted(set(processed) - held)
         digest = write_artifact(args.output, result)
         source = result['source']

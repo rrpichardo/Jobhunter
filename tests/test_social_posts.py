@@ -190,3 +190,45 @@ def test_probe_social_result_options_must_pair_up(tmp_path, capsys):
     out = tmp_path.parent / (tmp_path.name + '_pair.json')
     assert probe.main(['--output', str(out), '--social-result', 'a.json']) == 2
     assert 'invalid_ai_result' in capsys.readouterr().out and not out.exists()
+
+
+def test_a_post_with_a_rejected_fact_is_not_marked_read(tmp_path, capsys):
+    path, digest = candidates_file(tmp_path, name='_c4.json')
+    facts = tmp_path.parent / (tmp_path.name + '_f4.json')
+    both = ['1850000000000000001', '1850000000000000002']
+    facts.write_text(json.dumps({'processed': both, 'facts': [fact(company='Not Acme')]}))  # invented company
+    result = tmp_path.parent / (tmp_path.name + '_r4.json')
+    assert cli.main(['validate', '--source', X, '--candidates', str(path), '--candidates-sha256', digest,
+                     '--extractions', str(facts), '--output', str(result)]) == 0
+    payload = json.loads(result.read_text())
+    assert payload['postings'] == [] and payload['rejected_item_ids'] == ['1850000000000000001']
+    assert payload['processed_ids'] == ['1850000000000000002']  # the bad post stays queued for tomorrow
+    assert 'held_for_retry=1' in capsys.readouterr().out
+
+
+def test_numeric_or_missing_ids_in_rejected_social_facts_still_hold_posts(tmp_path, capsys):
+    both = ['1850000000000000001', '1850000000000000002']
+    for number, (bad, held) in enumerate([(fact(item_id=1850000000000000001), ['1850000000000000001']),
+                                          ({'title': 'no id'}, both), ('junk', both)]):
+        path, digest = candidates_file(tmp_path, name=f'_cn{number}.json')
+        facts = tmp_path.parent / (tmp_path.name + f'_fn{number}.json')
+        facts.write_text(json.dumps({'processed': both, 'facts': [bad]}))
+        result = tmp_path.parent / (tmp_path.name + f'_rn{number}.json')
+        assert cli.main(['validate', '--source', X, '--candidates', str(path), '--candidates-sha256', digest,
+                         '--extractions', str(facts), '--output', str(result)]) == 0
+        assert sorted(set(both) - set(json.loads(result.read_text())['processed_ids'])) == held
+
+
+def test_a_mistyped_social_id_holds_every_post_that_was_read_but_a_real_unread_one_holds_nothing(tmp_path, capsys):
+    both = ['1850000000000000001', '1850000000000000002']
+    cases = [(fact(item_id='185000000000000000l'), both), (fact(item_id='1850000000000000099'), both),
+             (fact(item_id='1850000000000000002'), [])]  # real post 2 was simply not reported as read
+    for number, (bad, held) in enumerate(cases):
+        path, digest = candidates_file(tmp_path, name=f'_cm{number}.json')
+        facts = tmp_path.parent / (tmp_path.name + f'_fm{number}.json')
+        facts.write_text(json.dumps({'processed': ['1850000000000000001'], 'facts': [bad]}))
+        result = tmp_path.parent / (tmp_path.name + f'_rm{number}.json')
+        assert cli.main(['validate', '--source', X, '--candidates', str(path), '--candidates-sha256', digest,
+                         '--extractions', str(facts), '--output', str(result)]) == 0
+        processed = json.loads(result.read_text())['processed_ids']
+        assert processed == ([] if held else ['1850000000000000001'])
