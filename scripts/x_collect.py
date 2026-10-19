@@ -49,6 +49,11 @@ class CollectorFailure(Exception):
         self.found = list(found)
 
 
+def _clean(value):
+    """A pasted secret often carries a trailing newline, spaces or quotes; blank after cleaning counts as not set."""
+    return (value or '').strip().strip('"\'').strip()
+
+
 def _has_next_page(body, depth=0):
     """True if the page carries a Bottom cursor (what twscrape follows to the next page)."""
     if depth > 12:
@@ -68,7 +73,7 @@ class TwscrapeFetcher:
     """Thin adapter over twscrape 0.20.1 (pinned in the `social` extra). Cookies go straight into a private
     temporary SQLite file and are deleted with it. Verified against the library source, not yet against X."""
 
-    def __init__(self, auth_token, ct0):
+    def __init__(self, auth_token, ct0, since=None):
         # twscrape can send anonymous usage counts to PostHog from its command line; turn that off for certain.
         os.environ['TWS_TELEMETRY'] = '0'
         os.environ['DO_NOT_TRACK'] = '1'
@@ -78,6 +83,7 @@ class TwscrapeFetcher:
         self._dir = Path(tempfile.mkdtemp(prefix='.jobhunter-x-'))
         self._loop = None
         self._sink = None
+        self.since = since  # YYYY-MM-DD: nothing dated before this is kept (a quoted old post comes back inside a new one)
         self._rate_limit_seen = False
         self._partial = []  # posts read by the search in progress, kept if it ends in a refusal
         try:
@@ -157,6 +163,8 @@ class TwscrapeFetcher:
                 for tweet in self._twscrape.models.parse_tweets(body, limit - len(found)):
                     if tweet.retweetedTweet is not None:
                         continue  # a repost repeats someone else's post
+                    if self.since and tweet.date.date().isoformat() < self.since:
+                        continue  # e.g. an old post quoted inside a new one: outside the window
                     found.append({'url': tweet.url, 'created_at': tweet.date.isoformat(), 'text': tweet.rawContent,
                                   'links': [link.url for link in tweet.links], 'author': tweet.user.username})
                     if len(found) >= limit:
@@ -191,7 +199,7 @@ def main(argv=None, *, store=None, fetcher=None, environ=None, now=None, sleep=t
             raise ValueError('invalid_lookback_days')
         new_artifact_path(args.output)  # a doomed output path must not spend the day's allowance
         queries = load_queries(args.queries, SOURCE)
-        missing = [name for name in COOKIE_VARIABLES if not environ.get(name)]
+        missing = [name for name in COOKIE_VARIABLES if not _clean(environ.get(name))]
         if missing:
             print(f"x_needs_setup: set {' and '.join(missing)} in the environment settings (names only; "
                   'values are never printed). Nothing was collected and no allowance was spent.')
@@ -200,6 +208,18 @@ def main(argv=None, *, store=None, fetcher=None, environ=None, now=None, sleep=t
             print('x_needs_setup: the social extra is not installed (run uv sync --locked --extra social). '
                   'Nothing was collected and no allowance was spent.')
             return EXIT_NEEDS_SETUP
+        captured = now()
+        if fetcher is None:
+            # Start the library and hand it the cookies BEFORE the allowance is reserved: neither is a request to X, and a
+            # missing library or a malformed cookie must not use up the day.
+            try:
+                fetcher = TwscrapeFetcher(_clean(environ['X_AUTH_TOKEN']), _clean(environ['X_CT0']),
+                                          since=since_date(captured, args.lookback_days))
+            except Exception:  # noqa: BLE001 - the message could carry a cookie; keep only a fixed word
+                print('x_needs_setup: the X library could not start with those cookie values (check that the social '
+                      'extra is installed and the cookies were pasted without quotes or spaces). Nothing was collected '
+                      'and no allowance was spent.')
+                return EXIT_NEEDS_SETUP
         if store is None:
             from jobhunter.google_auth import open_workbook
             from jobhunter.sheet_io import GspreadStore
@@ -207,19 +227,17 @@ def main(argv=None, *, store=None, fetcher=None, environ=None, now=None, sleep=t
         try:
             day = reserve(store, SOURCE, args.run_id)
         except AllowanceSpent:
+            getattr(fetcher, 'close', lambda: None)()
             print('allowance_spent: x-twscrape already used today (America/New_York); collect nothing')
             return EXIT_SPENT
         outcome, items, ran, error = 'failed', [], 0, COLLECTOR_ERROR
         try:
-            captured = now()
             try:
-                if fetcher is None:
-                    fetcher = TwscrapeFetcher(environ['X_AUTH_TOKEN'], environ['X_CT0'])
                 since = since_date(captured, args.lookback_days)
                 items, ran, error = collect_posts(
                     fetcher.search, [build_query(q, since) for q in queries],
                     max_posts=LIMITS[SOURCE]['posts'], per_query=LIMITS[SOURCE]['per_query'], sleep=sleep, rng=rng)
-            except Exception:  # noqa: BLE001 - e.g. the library could not start; keep only a fixed word
+            except Exception:  # noqa: BLE001 - keep only a fixed word
                 items, ran, error = [], 0, COLLECTOR_ERROR
             # Written even when the collection failed, so the failed attempt reaches Sources and Run Log
             # instead of the source staying "needs setup".
