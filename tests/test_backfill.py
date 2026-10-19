@@ -169,6 +169,11 @@ def test_the_cli_rejects_a_nonsense_window(tmp_path, capsys):
 
 # ---- delivery in recoverable batches -------------------------------------------------------------
 
+@pytest.fixture(autouse=True)
+def no_real_pauses(monkeypatch):
+    monkeypatch.setattr(sheets_sync.time, 'sleep', lambda seconds: None)
+
+
 def artifact(tmp_path, count, *, status='OK', selected=None):
     rows = [p.to_row(p.Posting(f'bulk:{i:04d}', 'bulk', 'Co', f'Product Manager {i}', 'United States',
                                'Build products.', f'https://example.com/jobs/{i}', STAMP, posted_at=STAMP))
@@ -193,6 +198,20 @@ def test_a_run_larger_than_one_batch_delivers_every_job_in_numbered_batches(tmp_
     assert [row[3] for row in backend.tables['Run Log'][1:]] == [150, 150, 20]
     assert len(backend.tables['Sources']) == 2  # one source row with the full total, not one per batch
     assert backend.tables['Sources'][1][backend.tables['Sources'][0].index('Selected')] == 320
+
+
+def test_batches_are_paced_so_a_large_backfill_stays_under_the_sheets_quota(tmp_path, monkeypatch):
+    pauses = []
+    monkeypatch.setattr(sheets_sync.time, 'sleep', pauses.append)
+    out, backend = artifact(tmp_path, 320), MemoryStore()
+    assert sheets_sync.main(['--input', str(out), '--run-id', 'paced'], store=backend) == 0
+    assert pauses == [sheets_sync.BATCH_PAUSE_SECONDS] * 2  # between three batches, never before the first
+
+
+def test_a_run_id_that_just_fits_with_the_batch_suffix_is_accepted(tmp_path):
+    out, backend = artifact(tmp_path, 320), MemoryStore()
+    assert sheets_sync.main(['--input', str(out), '--run-id', 'x' * 75], store=backend) == 0
+    assert backend.tables['Run Log'][1][0] == 'x' * 75 + '-b001'
 
 
 def test_a_single_batch_keeps_the_plain_run_id(tmp_path):
