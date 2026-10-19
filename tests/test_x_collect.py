@@ -534,13 +534,33 @@ def test_a_genuine_zero_first_query_does_not_stop_the_run_or_record_blocked(monk
     assert rows(store)['allowance/x-twscrape/2026-10-19']['state'] == 'zero'
 
 
-def test_a_startup_failure_after_the_day_is_reserved_is_still_written_down(monkeypatch, tmp_path):
-    log, _ = install_fake_twscrape(monkeypatch, init_error=RuntimeError('sqlite i/o error'))
+def test_a_startup_failure_spends_nothing_leaks_nothing_and_leaves_no_cookie_file(monkeypatch, tmp_path, capsys):
+    log, _ = install_fake_twscrape(monkeypatch, init_error=RuntimeError('token=secret-auth-token-value sqlite i/o error'))
     code, out, store = run(tmp_path, None, environ=COOKIES)
-    payload = json.loads(out.read_text())
-    assert code == 0 and payload['error'] == 'social_collector_error' and payload['candidates'] == []
-    assert 'sqlite' not in out.read_text() and rows(store)['allowance/x-twscrape/2026-10-19']['state'] == 'failed'
+    text = capsys.readouterr().out
+    assert code == 4 and not out.exists() and '_State' not in store.tables
+    assert 'secret' not in text and 'no allowance was spent' in text
     assert not __import__('pathlib').Path(log.api_args[0]).parent.exists()  # and the cookie file is gone
+
+
+def test_cookies_pasted_with_quotes_or_a_newline_are_cleaned_and_blank_ones_count_as_missing(monkeypatch, tmp_path):
+    log, _ = install_fake_twscrape(monkeypatch, [])
+    code, _, _ = run(tmp_path, None, environ={'X_AUTH_TOKEN': ' "tok"\n', 'X_CT0': "'ct'  "})
+    assert code == 0 and log.cookies == ('jobhunter-x', 'auth_token=tok; ct0=ct')
+    code, _, store = run(tmp_path.parent / (tmp_path.name + 'b'), None, environ={'X_AUTH_TOKEN': 'tok', 'X_CT0': ' \n'})
+    assert code == 4 and '_State' not in store.tables
+
+
+def test_a_post_quoted_inside_a_new_one_but_dated_before_the_window_is_dropped(monkeypatch):
+    old = FakeTweet(2)
+    old.date = __import__('datetime').datetime(2024, 1, 1, tzinfo=timezone.utc)
+    install_fake_twscrape(monkeypatch, [FakeTweet(1), old])
+    fetcher = x.TwscrapeFetcher('tok', 'ct', since='2026-09-21')
+    try:
+        found = fetcher.search('q', 10)
+    finally:
+        fetcher.close()
+    assert [post_['url'][-1] for post_ in found] == ['1']
 
 
 def test_the_adapter_starts_against_the_real_library_when_it_is_installed(monkeypatch):
