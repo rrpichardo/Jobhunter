@@ -76,11 +76,12 @@ def candidate_comments(thread, item, cutoff):
     return candidates, stats
 
 
-def build_result(candidates, facts, captured_at, *, listed, stats, threads, error=''):
+def build_result(candidates, facts, captured_at, *, listed, stats, threads, error='', known_ids=None):
     """Validate proposed facts and return {'source': record, 'postings': [dict]} for source_probe."""
     return post_facts.build_result(SOURCE_ID, candidates, facts, captured_at, id_field='comment_id', id_prefix='hn',
                                    permalink=lambda candidate: PERMALINK.format(id=candidate['comment_id']),
-                                   listed=listed, stats=stats, attempts=1 + len(threads), error=error)
+                                   listed=listed, stats=stats, attempts=1 + len(threads), error=error,
+                                   known_ids=known_ids)
 
 
 postings_from_result = post_facts.postings_from_result
