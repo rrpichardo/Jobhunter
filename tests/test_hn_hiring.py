@@ -299,13 +299,59 @@ def test_business_operations_comments_are_not_candidates_because_delivery_cannot
     assert [c['comment_id'] for c in found] == ['2005']
 
 
-def test_the_candidate_file_stays_under_its_byte_stop_and_says_it_was_truncated(tmp_path, monkeypatch, capsys):
-    monkeypatch.setattr(cli, 'CANDIDATE_BYTE_STOP', 3000)
-    long_text = 'Acme | Product Manager | Remote US ' + 'y' * 1200
-    story = item(1000, [comment(2001 + 2 * i, long_text) for i in range(6)])
-    out = tmp_path.parent / (tmp_path.name + '_bytes.json')
-    assert cli.main(['candidates', '--output', str(out)], client=hn_client(story), sleep=lambda s: None,
+def test_a_candidate_file_over_the_default_limit_is_written_with_its_digest_and_drains_through_the_queue(tmp_path, capsys):
+    from scripts import ai_queue as queue_cli
+    from sheet_fakes import MemoryStore
+    big = 'Acme | Product Manager | Remote US ' + 'y' * 14000
+    story = item(1000, [comment(2001 + 2 * i, big) for i in range(400)])  # about 5.6 MB of role comments
+    candidates = tmp_path.parent / (tmp_path.name + '_big.json')
+    assert cli.main(['candidates', '--output', str(candidates)], client=hn_client(story), sleep=lambda s: None,
                     now=lambda: NOW) == 0
-    data = json.loads(out.read_text())
-    assert data['truncated'] is True and 0 < len(data['candidates']) < 6
-    assert sum(len(json.dumps(c)) for c in data['candidates']) <= 3000
+    out = capsys.readouterr().out
+    assert candidates.stat().st_size > 5 * 1024 * 1024 and 'candidates=400' in out and 'truncated=False' in out
+    digest = out.split('candidates_sha256=')[1].split()[0]
+    store, seen = MemoryStore(), set()
+    for round_number in range(1, 10):
+        work = tmp_path.parent / (tmp_path.name + f'_work{round_number}.json')
+        assert queue_cli.main(['pull', '--source', 'hn-who-is-hiring', '--candidates', str(candidates),
+                               '--candidates-sha256', digest, '--output', str(work)], store=store) == 0
+        capsys.readouterr()
+        handed = json.loads(work.read_text())['candidates']
+        if not handed:
+            break
+        assert work.stat().st_size < 5 * 1024 * 1024  # what Claude is handed always fits the default limit
+        seen |= {c['comment_id'] for c in handed}
+        assert queue_cli.main(['commit', '--source', 'hn-who-is-hiring', '--result', str(_result_with(tmp_path, handed, round_number)),
+                               '--result-sha256', _digest_of(tmp_path, round_number)], store=store) == 0
+        capsys.readouterr()
+    assert len(seen) == 400  # nothing was cut off: the tail waited its turn instead of being dropped
+
+
+def _result_with(tmp_path, handed, number):
+    from jobhunter.artifacts import write_artifact
+    path = tmp_path.parent / (tmp_path.name + f'_res{number}.json')
+    _DIGESTS[number] = write_artifact(path, {'processed_ids': [c['comment_id'] for c in handed]})
+    return path
+
+
+def _digest_of(tmp_path, number):
+    return _DIGESTS[number]
+
+
+_DIGESTS = {}
+
+
+@pytest.mark.parametrize('title', ['Product Manager', 'Group Product Manager', 'Head of Product', 'VP of Product',
+                                   'Chief of Staff', 'Leadership Development Program', 'MBA rotational program',
+                                   'management development program', 'Strategy Manager', 'Head of Strategy',
+                                   'Entrepreneur in Residence', 'Founder in Residence', 'Project Manager',
+                                   'Project Management Lead'])
+def test_every_role_the_delivery_filter_collects_is_a_candidate(title):
+    assert hn.ROLE_WORDS.search(f'Acme | {title} | Remote US')
+    assert p.role_family(title)  # and delivery really does collect it
+
+
+@pytest.mark.parametrize('text', ['Acme | Business Operations Manager | NYC', 'Call me at 5 PM', 'Backend Engineer | strategy game studio',
+                                  'Product Owner'])
+def test_things_delivery_cannot_collect_are_not_candidates(text):
+    assert not hn.ROLE_WORDS.search(text)

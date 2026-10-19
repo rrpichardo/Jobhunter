@@ -21,8 +21,9 @@ import feedparser
 from jobhunter.records import https_url
 from jobhunter.job_identity import canonical_key, verified_requisition
 
-PM_TITLE = re.compile(r"\b(product manager|product lead|group product manager|head of product|"
-                      r"director of product|vp of product|vp,? product|pm)\b", re.I)
+PM_TITLE_TERMS = (r"product manager|product lead|group product manager|head of product|"
+                  r"director of product|vp of product|vp,? product")
+PM_TITLE = re.compile(rf"\b({PM_TITLE_TERMS}|pm)\b", re.I)
 EXCLUDED_TITLE = re.compile(r"\b(intern|internship|summer associate|product marketing|"
                             r"product designer|product design|product communications|program manager|"
                             r"project manager)\b", re.I)
@@ -218,6 +219,13 @@ ROLE_FAMILIES = (
     ('Entrepreneurship', re.compile(r'\b(?:entrepreneur|founder) in residence\b', re.I)),
     ('Project management', re.compile(r'\bproject (?:manager|management lead|director)\b', re.I)),
 )
+
+# Free-text scan (Hacker News comments, social posts): the same families as above, built from ROLE_FAMILIES so
+# candidate selection and delivery cannot drift apart. The bare "PM" token is left out because in running text
+# it is mostly a time of day.
+ROLE_TEXT = re.compile("|".join(
+    rf"\b(?:{PM_TITLE_TERMS})\b" if family == "Product management" else pattern.pattern
+    for family, pattern in ROLE_FAMILIES), re.I)
 
 
 def role_family(title: str) -> str | None:

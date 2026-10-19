@@ -14,7 +14,7 @@ import argparse
 import re
 
 from jobhunter.ai_queue import WORK_SAFETY_STOP, commit, pull
-from jobhunter.artifacts import read_artifact, safe_error_code, write_artifact
+from jobhunter.artifacts import SYNC_MAX_BYTES, read_artifact, safe_error_code, write_artifact
 from jobhunter.google_auth import open_workbook
 from jobhunter.sheet_io import GspreadStore
 from scripts.sheets_sync import SAFE_ERRORS
@@ -41,7 +41,9 @@ def main(argv=None, *, store=None) -> int:
     try:
         backend = GspreadStore(open_workbook()) if store is None else store
         if args.command == 'pull':
-            data = read_artifact(args.candidates, expected_sha256=args.candidates_sha256)
+            # the candidate list can be large; the digest proves it is the collector's file, and the work file handed on
+            # to Claude is bounded separately (WORK_BYTE_STOP)
+            data = read_artifact(args.candidates, expected_sha256=args.candidates_sha256, max_bytes=SYNC_MAX_BYTES)
             if not isinstance(data, dict) or not isinstance(data.get('candidates'), list):
                 raise ValueError('invalid_work_artifact')
             work, summary = pull(backend, args.source, data['candidates'], id_field=args.id_field, limit=args.limit)
