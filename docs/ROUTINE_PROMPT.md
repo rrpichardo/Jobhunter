@@ -41,6 +41,12 @@ keys or tokens. Do not call any paid service.
    in the Sheet keep their Status, Notes and My rating. The guard checks that a run was delivered, not that every source
    worked: if one source failed for several days (for example an expired cookie), fix it and then run `--mode manual` to
    backfill that source, because the 3-day window will not reach back that far.
+   Two further limits: (1) X and LinkedIn each allow ONE live collection per New York day, so after the daily routine has
+   used a day's allowance a 28-day social catch-up the same day is refused (exit 3); the social lanes cannot be backfilled
+   beyond the daily window unless the routine's social step is skipped that day and the manual run takes the allowance.
+   (2) Shortening the window from 28 to 3 days also shortens how long an unread or held queue item stays retrievable:
+   older ones are cleared as expired (`ai_queue pull` prints the count). A fully delivered run whose last batch is
+   exactly 150 jobs is treated as unfinished and asks for a manual run (the safe direction).
 4. Set a NEW run label for every collection, for example
    `RUN=daily-$(TZ=America/New_York date +%Y%m%d-%H%M%S)-$(openssl rand -hex 3)`
    (the random part keeps two collections started in the same second apart). The writer
