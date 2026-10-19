@@ -103,21 +103,43 @@ def _posting(fact, candidates_by_id, captured_at):
                    salary=fact['salary'], posted_at=candidate['created_at'])
 
 
-def build_result(candidates, facts, captured_at, *, listed, stats, threads, error=''):
-    """Validate proposed facts and return {'source': record, 'postings': [dict]} for source_probe."""
+def _claimed_id(fact):
+    """The comment id a fact names, whether written as text or as a JSON number; None if it names none."""
+    value = fact.get('comment_id') if isinstance(fact, dict) else None
+    if isinstance(value, bool) or not isinstance(value, (str, int)):
+        return None
+    return str(value)
+
+
+def build_result(candidates, facts, captured_at, *, listed, stats, threads, error='', known_ids=None):
+    """Validate proposed facts and return {'source': record, 'postings': [dict]} for source_probe.
+
+    `candidates` are the comments that were read; `known_ids` is every comment id that exists in the candidate
+    artifact (default: just the ones read). A rejected fact holds the comment it names. One that names a
+    comment outside `known_ids` (a typo or an invented id) could be about any comment that was read, so every
+    read comment is held; naming a real comment that was merely not reported as read holds nothing.
+    """
     if not isinstance(facts, list):
         raise ValueError('extractions_must_be_list')
     by_id = {candidate['comment_id']: candidate for candidate in candidates}
+    known = set(by_id) if known_ids is None else set(known_ids)
     source = {'source_id': SOURCE_ID, 'status': 'OK-zero-jobs', 'captured_at': captured_at,
               'jobs_fetched': listed, 'valid_jobs': 0, 'rejected_items': stats.get('unreadable', 0),
               'pm_candidates': 0, 'selected_for_m0': 0, 'attempts': 1 + len(threads), 'http_status': 200,
               'retry_after_seconds': None, 'coverage': 'partial-response', 'error': error}
-    postings, seen = [], set()
+    postings, seen, rejected_ids, unattributed = [], set(), set(), False
     for fact in facts:
         try:
             posting = _posting(fact, by_id, captured_at)
         except (ValueError, TypeError, AttributeError):
             source['rejected_items'] += 1
+            claimed = _claimed_id(fact)
+            if claimed is None:
+                unattributed = True  # cannot tell which comment this fact was about
+            elif claimed in by_id:
+                rejected_ids.add(claimed)  # a comment with a rejected fact was not read successfully
+            elif claimed not in known:
+                unattributed = True  # names no comment that exists
             continue
         if posting.job_id in seen:
             continue
@@ -132,7 +154,8 @@ def build_result(candidates, facts, captured_at, *, listed, stats, threads, erro
         source['status'] = 'failed'
     elif postings:
         source['status'] = 'OK'
-    return {'source': source, 'postings': [asdict(posting) for posting in postings]}
+    return {'source': source, 'postings': [asdict(posting) for posting in postings],
+            'rejected_comment_ids': sorted(by_id if unattributed else rejected_ids)}
 
 
 def postings_from_result(result):
