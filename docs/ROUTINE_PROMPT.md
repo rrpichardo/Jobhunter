@@ -48,7 +48,7 @@ uv run --locked python -m scripts.ai_queue pull --source hn-who-is-hiring \
 `pull` prints how many comments are new, already read, held back and expired. Open
 `$DIR/hn_work.json`. For EVERY comment under `candidates`, read its `text` and decide
 which job posts in it match the roles we collect (product management, chief of staff,
-strategy, entrepreneur or founder in residence, project management, leadership
+strategy, forward-deployed AI strategist, entrepreneur or founder in residence, project management, leadership
 programs). Write `$DIR/hn_facts.json` as:
 
 ```
