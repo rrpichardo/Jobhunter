@@ -21,3 +21,12 @@ linkedin-login:
   - 'hiring "chief of staff"'
   - 'hiring "head of strategy"'
   - 'hiring "leadership development program"'
+
+# LinkedIn job-listing searches (5 a run, user-confirmed October 18), sent with the "United States" location and the
+# date filter. Plain role words (no quotes): each one must itself be a role the delivery filter collects.
+linkedin-login-jobs:
+  - 'AI product manager'
+  - 'senior product manager'
+  - 'chief of staff'
+  - 'head of strategy'
+  - 'AI deployment strategist'

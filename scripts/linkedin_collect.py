@@ -24,16 +24,19 @@ from urllib.parse import quote, urlsplit
 
 from jobhunter.allowance import AllowanceSpent, finish, reserve
 from jobhunter.artifacts import new_artifact_path, safe_error_code, write_artifact
-from jobhunter.linkedin_cards import extract_post_cards
-from jobhunter.social_collect import (COLLECTOR_ERROR, FetchBlocked, FetchRateLimited, LIMITS, allowance_outcome,
-                                      candidate_artifact, collect_posts, load_queries, since_date)
+from jobhunter.linkedin_cards import extract_job_cards, extract_post_cards
+from jobhunter.social_collect import (COLLECTOR_ERROR, LOGIN_FAILED, RATE_LIMITED, FetchBlocked, FetchRateLimited, LIMITS,
+                                      allowance_outcome, candidate_artifact, collect_posts, load_queries, pause, since_date)
 from scripts.allowance import ALLOWANCE_ERRORS
 from scripts.sheets_sync import SAFE_ERRORS
 
 SOURCE = 'linkedin-login'
+JOBS_SOURCE = 'linkedin-jobs'  # candidate file id for job cards; the day's one allowance is still SOURCE's
+JOBS_QUERY_KEY = 'linkedin-login-jobs'
 COOKIE_VARIABLES = ('LINKEDIN_LI_AT', 'LI_AT')  # either name; the first one that is set is used
 EXIT_SPENT, EXIT_NEEDS_SETUP = 3, 4
 SEARCH_URL = 'https://www.linkedin.com/search/results/content/?keywords={keywords}&datePosted=%22{recent}%22&sortBy=%22date_posted%22&origin=FACETED_SEARCH'
+JOBS_URL = 'https://www.linkedin.com/jobs/search/?keywords={keywords}&location=United%20States&f_TPR={recent}&sortBy=DD'
 WALL_PATHS = ('/login', '/authwall', '/checkpoint', '/uas/', '/signup')  # LinkedIn sends logged-out visitors here
 SCROLLS = 4
 MAX_EXPANDS = 40
@@ -64,7 +67,7 @@ class BrowserSession:
             self.close()
             raise
 
-    def get(self, url):
+    def get(self, url, expand=True):
         page = self._context.new_page()
         try:
             response = page.goto(url, wait_until='domcontentloaded', timeout=45000)
@@ -74,15 +77,18 @@ class BrowserSession:
             except Exception:  # noqa: BLE001 - a busy page may never go idle; read what is there
                 pass
             if status == 200 and not urlsplit(page.url).path.startswith(WALL_PATHS):
+                if not expand:
+                    page.mouse.move(300, 500)  # the job list is a pane of its own: scroll with the pointer over it
                 for _ in range(SCROLLS):  # results load as the page scrolls
                     page.mouse.wheel(0, 3500)
                     page.wait_for_timeout(int(1200 + 1500 * self._rng()))
-                buttons = page.get_by_role('button', name=re.compile(MORE_BUTTON, re.I))
-                for index in range(min(buttons.count(), MAX_EXPANDS)):
-                    try:
-                        buttons.nth(index).click(timeout=1500)  # opens the full text of a cut-off post
-                    except Exception:  # noqa: BLE001 - a button that vanished is not a failure
-                        pass
+                if expand:
+                    buttons = page.get_by_role('button', name=re.compile(MORE_BUTTON, re.I))
+                    for index in range(min(buttons.count(), MAX_EXPANDS)):
+                        try:
+                            buttons.nth(index).click(timeout=1500)  # opens the full text of a cut-off post
+                        except Exception:  # noqa: BLE001 - a button that vanished is not a failure
+                            pass
                 page.wait_for_timeout(800)
             return Page(page.url, status, page.content())
         finally:
@@ -103,12 +109,13 @@ class BrowserSession:
 class LinkedInFetcher:
     """Search -> posts, over any session object with `get(url) -> Page` and `close()`."""
 
-    def __init__(self, session, *, since_day, recent='past-month'):
-        self.session, self.since_day, self.recent = session, since_day, recent
+    def __init__(self, session, *, since_day, recent='past-month', jobs_recent='r2592000', captured=None):
+        self.session, self.since_day, self.recent, self.jobs_recent = session, since_day, recent, jobs_recent
+        self.captured = captured or datetime.now(timezone.utc)
         self.diagnostics = []  # one fixed-shape record per search: no page text, no cookie, no query text
 
-    def search(self, query, limit):
-        page = self.session.get(SEARCH_URL.format(keywords=quote(query, safe=''), recent=self.recent))
+    def _load(self, url, **options):
+        page = self.session.get(url, **options)
         path = urlsplit(page.url).path
         record = {'status': page.status, 'wall': path.startswith(WALL_PATHS), 'path': path[:60]}
         self.diagnostics.append(record)
@@ -118,6 +125,11 @@ class LinkedInFetcher:
             raise FetchBlocked  # logged out, restricted or sent to a check
         if page.status != 200:
             raise RuntimeError('unexpected_status')
+        return page, record
+
+    def search(self, query, limit):
+        page, record = self._load(SEARCH_URL.format(keywords=quote(query, safe=''), recent=self.recent))
+        record['kind'] = 'posts'
         cards, stats = extract_post_cards(page.html)
         record.update(stats)
         fresh = [card for card in cards if card['created_at'].date().isoformat() >= self.since_day]
@@ -128,8 +140,29 @@ class LinkedInFetcher:
         return [{'url': card['url'], 'created_at': card['created_at'].isoformat(), 'text': card['text'],
                  'links': card['links'], 'author': card['author']} for card in fresh[:limit]]
 
+    def search_jobs(self, query, limit):
+        """Job cards as candidates. The listing shows an age ("3 days ago"), not a date, so the date is the capture day
+        minus that age; a card with no readable age gets the capture day. The AI read step supplies the fields."""
+        page, record = self._load(JOBS_URL.format(keywords=quote(query, safe=''), recent=self.jobs_recent), expand=False)
+        record['kind'] = 'jobs'
+        cards, stats = extract_job_cards(page.html)
+        record.update(stats)
+        window = (self.captured - datetime.fromisoformat(self.since_day).replace(tzinfo=timezone.utc)).days
+        fresh = [card for card in cards if card['age_days'] is None or card['age_days'] <= window]
+        record['outside_window'] = len(cards) - len(fresh)
+        record['undated'] = sum(card['age_days'] is None for card in fresh)
+        if not cards and not stats['no_results'] and not stats['job_ids']:
+            raise RuntimeError('layout_not_recognised')
+        return [{'url': card['url'], 'text': card['text'], 'links': [], 'author': '',
+                 'created_at': (self.captured - timedelta(days=card['age_days'] or 0)).isoformat()} for card in fresh[:limit]]
+
     def close(self):
         self.session.close()
+
+
+def jobs_recent_filter(lookback_days):
+    """LinkedIn's job date filter (seconds): nearest above the window; the exact cut-off is applied from the age."""
+    return 'r86400' if lookback_days <= 1 else 'r604800' if lookback_days <= 7 else 'r2592000'
 
 
 def recent_filter(lookback_days):
@@ -143,6 +176,8 @@ def main(argv=None, *, store=None, fetcher=None, environ=None, now=None, sleep=t
     parser.add_argument('--output', required=True)
     parser.add_argument('--lookback-days', type=int, default=28)
     parser.add_argument('--queries', default='sources/social_queries.yaml')
+    parser.add_argument('--jobs-output', help='also search job listings in the same session (up to 5 searches); '
+                        'writes a second candidate file here (a NEW path outside the checkout)')
     args = parser.parse_args(argv)
     environ = os.environ if environ is None else environ
     now = now or (lambda: datetime.now(timezone.utc).isoformat())
@@ -151,6 +186,12 @@ def main(argv=None, *, store=None, fetcher=None, environ=None, now=None, sleep=t
             raise ValueError('invalid_lookback_days')
         new_artifact_path(args.output)  # a doomed output path must not spend the day's allowance
         queries = load_queries(args.queries, SOURCE)
+        job_queries = []
+        if args.jobs_output:
+            if args.jobs_output == args.output:
+                raise ValueError('invalid_output_paths')
+            new_artifact_path(args.jobs_output)
+            job_queries = load_queries(args.queries, JOBS_QUERY_KEY, limit=LIMITS[SOURCE]['job_searches'])
         cookie_name = next((name for name in COOKIE_VARIABLES if environ.get(name)), None)
         if cookie_name is None:
             print(f"linkedin_needs_setup: set {COOKIE_VARIABLES[0]} in the environment settings (name only; the value "
@@ -170,23 +211,39 @@ def main(argv=None, *, store=None, fetcher=None, environ=None, now=None, sleep=t
             print('allowance_spent: linkedin-login already used today (America/New_York); collect nothing')
             return EXIT_SPENT
         outcome, items, ran, error, diagnostics = 'failed', [], 0, COLLECTOR_ERROR, []
+        job_items, job_ran, job_error, jobs_digest = [], 0, COLLECTOR_ERROR if job_queries else '', ''
         try:
             captured = now()
             try:
                 if fetcher is None:
                     fetcher = LinkedInFetcher(BrowserSession(environ[cookie_name], rng=rng),
                                               since_day=since_date(captured, args.lookback_days),
-                                              recent=recent_filter(args.lookback_days))
+                                              recent=recent_filter(args.lookback_days),
+                                              jobs_recent=jobs_recent_filter(args.lookback_days),
+                                              captured=datetime.fromisoformat(captured))
                 items, ran, error = collect_posts(
                     fetcher.search, queries, max_posts=LIMITS[SOURCE]['posts'], per_query=LIMITS[SOURCE]['per_query'],
                     sleep=sleep, rng=rng)
+                if job_queries:
+                    if error in (LOGIN_FAILED, RATE_LIMITED):
+                        job_error = error  # the session was refused: do not ask again in the same session
+                    else:
+                        sleep(pause(rng))
+                        job_items, job_ran, job_error = collect_posts(
+                            fetcher.search_jobs, job_queries, max_posts=LIMITS[SOURCE]['jobs'],
+                            per_query=LIMITS[SOURCE]['job_per_query'], sleep=sleep, rng=rng)
             except Exception:  # noqa: BLE001 - e.g. the browser could not start; keep only a fixed word
                 items, ran, error = [], 0, COLLECTOR_ERROR
+                job_items, job_ran, job_error = [], 0, COLLECTOR_ERROR if job_queries else ''
             diagnostics = list(getattr(fetcher, 'diagnostics', []))
             artifact = candidate_artifact(SOURCE, items, captured, queries_run=ran, error=error)
-            artifact['stats']['searches'] = diagnostics  # fixed-shape numbers only, to tune the reader after a live run
+            artifact['stats']['searches'] = [d for d in diagnostics if d.get('kind') != 'jobs']  # numbers only, to tune the reader
             digest = write_artifact(args.output, artifact)
-            outcome = allowance_outcome(items, error)
+            if job_queries:
+                jobs_artifact = candidate_artifact(JOBS_SOURCE, job_items, captured, queries_run=job_ran, error=job_error)
+                jobs_artifact['stats']['searches'] = [d for d in diagnostics if d.get('kind') == 'jobs']
+                jobs_digest = write_artifact(args.jobs_output, jobs_artifact)
+            outcome = allowance_outcome(items + job_items, error or job_error)
         finally:
             close = getattr(fetcher, 'close', None)
             if close:
@@ -199,10 +256,13 @@ def main(argv=None, *, store=None, fetcher=None, environ=None, now=None, sleep=t
         for number, record in enumerate(diagnostics, 1):
             print('search_%d: %s' % (number, ' '.join(f'{key}={value}' for key, value in record.items())))
         print(f'linkedin_candidates_sha256={digest}')
+        if job_queries:
+            print(f'linkedin_jobs_collected: queries_run={job_ran} jobs={len(job_items)} error={job_error or "none"}')
+            print(f'linkedin_jobs_candidates_sha256={jobs_digest}')
         return 0
     except Exception as exc:  # noqa: BLE001
         code = str(exc)
-        if code not in SAFE_ERRORS | ALLOWANCE_ERRORS | {'invalid_social_queries', 'invalid_lookback_days'}:
+        if code not in SAFE_ERRORS | ALLOWANCE_ERRORS | {'invalid_social_queries', 'invalid_lookback_days', 'invalid_output_paths'}:
             code = safe_error_code(exc)
         print(f'linkedin_failed: {code}; collect nothing')
         return 2

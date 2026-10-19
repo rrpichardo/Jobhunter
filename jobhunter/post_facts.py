@@ -118,6 +118,10 @@ SOCIAL = {
                        'prefix': 'linkedin-post', 'registry_id': 'linkedin-logged-in',
                        'path': re.compile(r'/(?:feed/update/urn:li:(?:activity|ugcPost|share):(\d{5,25})/?'
                                           r'|posts/[A-Za-z0-9_%.\-]+-(?:activity|ugcPost|share)-(\d{5,25})-[A-Za-z0-9_]{1,10}/?)')},
+    # LinkedIn job listings: one candidate per job card, read by the AI like a post (the card's own text is the only
+    # source of title, company and place), so code never guesses at LinkedIn's markup.
+    'linkedin-jobs': {'hosts': {'www.linkedin.com', 'linkedin.com'}, 'prefix': 'linkedin-job',
+                      'registry_id': 'linkedin-jobs', 'path': re.compile(r'/jobs/view/(\d{6,13})/?')},
 }
 MAX_POST_CHARS = 10000
 # Collector errors that mean the site refused us (logged out, restricted, rate limited), as opposed to a defect
