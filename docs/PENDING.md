@@ -56,12 +56,13 @@ routine's first scheduled run, which needs A3 and the code on `main` (A4: your g
 | Run | Window | When |
 | --- | --- | --- |
 | First manual run | `--lookback-days 28` | once, by hand, before the routine exists (A3) |
-| Daily routine | `--lookback-days 2` | 06:07 America/New_York, every day |
-| Catch-up | `--lookback-days 28` | by hand, whenever the last complete Run Log row is more than 2 days old |
+| Daily routine | `--lookback-days 3` | 06:07 America/New_York, every day |
+| Catch-up | `--lookback-days 28` | by hand, whenever the last complete Run Log row is more than about 2 days old |
 
-`scripts/run_window.py` enforces this: `--mode daily` prints the 2-day window, or exits 3 (`catch_up_needed`) when
-the last complete run started more than 2 days ago (the daily window is 2 days when the previous run is under 42 hours old and 3 days after a missed day, so the windows always overlap even allowing 6 hours of run time; a gap over 49 hours is refused) or there has never
-been one; `--mode manual` prints 28. Read-only, offline-tested. Overlap never duplicates jobs.
+`scripts/run_window.py` enforces this with one simple rule: the daily routine looks back 3 days and refuses to run
+(exit 3, `catch_up_needed`) when the last complete run started more than about 2 days ago (2 days plus 6 hours of scheduler
+drift) or there has never been one; `--mode manual` prints 28. Three days against a two-day limit leaves a full extra
+day of room for run time, so one missed day is covered and nothing falls between two runs. Read-only, offline-tested. Overlap never duplicates jobs.
 
 ## How the first run and the daily runs work (user direction, October 18)
 

@@ -33,29 +33,27 @@ def test_a_manual_run_is_always_28_days_and_does_not_even_read_the_sheet(capsys)
     assert code == 0 and 'window_days=28' in out
 
 
-def test_a_daily_run_after_a_recent_complete_run_is_2_days(capsys):
+def test_a_daily_run_after_a_recent_complete_run_is_3_days(capsys):
     code, out = run('daily', log(row('r1', NOW - timedelta(hours=24))), capsys)
-    assert code == 0 and 'window_days=2' in out
+    assert code == 0 and 'window_days=3' in out
 
 
-def test_one_missed_day_with_scheduler_drift_gets_a_window_that_still_covers_the_gap(capsys):
-    # last run started 48h 40m ago: one day missed plus drift. A 2-day window would leave 40 minutes uncovered.
+def test_one_missed_day_is_covered_even_with_scheduler_drift(capsys):
     code, out = run('daily', log(row('r1', NOW - timedelta(hours=48, minutes=40))), capsys)
     assert code == 0 and 'window_days=3' in out
 
 
-@pytest.mark.parametrize('hours,expected', [(1, 2), (24, 2), (41.9, 2), (42.1, 3), (48, 3), (48.99, 3)])
-def test_the_window_always_reaches_back_past_the_previous_run_even_allowing_for_run_time(hours, expected):
+@pytest.mark.parametrize('hours', [1, 24, 48, 53.9])
+def test_every_accepted_gap_fits_inside_the_window_with_a_full_day_to_spare(hours):
     gap = timedelta(hours=hours)
     days, _ = rw.window_days('daily', [HEADERS, row('r1', NOW - gap)], NOW)
-    assert days == expected
-    # the collectors cut off later than the guard measures; the window must still reach the previous run's start
-    assert timedelta(days=days) >= gap + rw.EXECUTION_MARGIN
+    assert days == 3 and timedelta(days=days) - gap >= timedelta(hours=18)  # room for drift and run time
 
 
-def test_a_gap_beyond_the_tolerance_is_refused_not_stretched(capsys):
-    code, out = run('daily', log(row('r1', NOW - timedelta(hours=49, minutes=5))), capsys)
-    assert code == 3 and 'last_run_too_old' in out
+@pytest.mark.parametrize('hours', [54.1, 72, 200])
+def test_a_longer_gap_is_refused_not_stretched(hours, capsys):
+    code, out = run('daily', log(row('r1', NOW - timedelta(hours=hours))), capsys)
+    assert code == 3 and 'last_run_too_old' in out and 'window_days' not in out
 
 
 def test_two_missed_days_need_a_manual_catch_up(capsys):
@@ -78,7 +76,7 @@ def test_only_complete_runs_count_a_pending_or_unfinished_run_does_not(capsys):
 
 def test_a_complete_with_source_failure_run_still_counts(capsys):
     code, out = run('daily', log(row('r1', NOW - timedelta(hours=20), status='complete-with-source-failure')), capsys)
-    assert code == 0 and 'window_days=2' in out
+    assert code == 0 and 'window_days=3' in out
 
 
 def test_the_newest_complete_run_decides(capsys):
@@ -95,7 +93,7 @@ def test_batch_rows_of_one_run_do_not_confuse_the_choice(capsys):
 def test_a_naive_timestamp_is_read_as_utc():
     started = (NOW - timedelta(hours=10)).replace(tzinfo=None).isoformat()
     rows = [HEADERS, ['r1', started, started, 1, 1, 'complete']]
-    assert rw.window_days('daily', rows, NOW)[0] == 2
+    assert rw.window_days('daily', rows, NOW)[0] == 3
 
 
 def test_a_corrupt_run_log_fails_closed_without_a_window(capsys):
@@ -156,4 +154,4 @@ def test_a_row_a_few_minutes_ahead_of_this_machines_clock_is_still_believed(caps
     started = NOW - timedelta(hours=1)
     ahead = ['r', started.isoformat(), (NOW + timedelta(minutes=2)).isoformat(), 1, 1, 'complete']  # small clock skew
     code, out = run('daily', log(ahead), capsys)
-    assert code == 0 and 'window_days=2' in out
+    assert code == 0 and 'window_days=3' in out

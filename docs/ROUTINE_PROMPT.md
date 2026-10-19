@@ -33,12 +33,12 @@ keys or tokens. Do not call any paid service.
    ```
 
    It prints `window_days=N`; use that N as `$WINDOW` below. The user decided on October 19: the first manual run
-   and any catch-up look back **28** days; the scheduled daily routine looks back **2** days (one missed day plus a
-   day to fix it). The daily mode reads the Run Log (read-only) and REFUSES, exit 3 `catch_up_needed`, when there has
-   never been a complete run or the last complete run started more than two days (plus one hour of drift) ago. The window is 2 days after a normal
-   day and 3 days after a missed day (previous run over 42 hours old), so the windows always overlap. On exit 3 do nothing else:
-   report that a manual 28-day catch-up run is needed first, otherwise postings from the gap would never be
-   collected. Repeats are harmless: jobs already in the Sheet keep their Status, Notes and My rating.
+   and any catch-up look back **28** days; the scheduled daily routine looks back **3** days (so one missed day is
+   still covered, with a full day of room for run time). The daily mode reads the Run Log (read-only) and REFUSES,
+   exit 3 `catch_up_needed`, when there has never been a complete run or the last complete run started more than
+   about two days ago (2 days plus 6 hours of drift). On exit 3 do nothing else: report that a manual 28-day catch-up
+   run is needed first, otherwise postings from the gap would never be collected. Repeats are harmless: jobs already
+   in the Sheet keep their Status, Notes and My rating.
 4. Set a NEW run label for every collection, for example
    `RUN=daily-$(TZ=America/New_York date +%Y%m%d-%H%M%S)-$(openssl rand -hex 3)`
    (the random part keeps two collections started in the same second apart). The writer
@@ -114,7 +114,7 @@ uv run --locked python -m scripts.source_probe --output $DIR/probe.json \
 ```
 
 (Omit the two `--hn-` options if step 1 was skipped. If `known_ids` fails, run without `--known-ids`: it only saves requests.) The window is
-`$WINDOW` days (28 for the first run, 2 for the daily routine). Boards, public job sites, YC and
+`$WINDOW` days (28 for the first run, 3 for the daily routine). Boards, public job sites, YC and
 Built In, Getro, JSearch and Jooble are fetched here. Sources without a key or an
 account are recorded `needs setup` by the tool; do not try to work around that.
 

@@ -1,9 +1,9 @@
-"""How far back a run looks: 28 days for a manual first run or catch-up, 2 days for the daily routine (3 after a missed
-day: when the previous run is more than 42 hours old, so windows always overlap even allowing for run time).
+"""How far back a run looks: 28 days for a manual first run or catch-up, 3 days for the daily routine.
 
-The daily window only works if the run before it was recent: each run must overlap the last one, or postings from
-the gap are never collected. So the daily mode READS the Run Log and refuses (needs a manual catch-up) when the last
-complete run started more than two days ago, or when there has never been one. Nothing here writes anything.
+One simple rule. The daily routine always looks back 3 days, and it refuses to run (a manual 28-day catch-up must
+come first) when the last complete run started more than about two days ago, or when there has never been one.
+Three days against a two-day limit leaves a full extra day of room for scheduler drift and run time, so one missed
+day is still covered and no posting can fall between two runs. Nothing here writes anything.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -11,14 +11,8 @@ from datetime import datetime, timedelta, timezone
 from jobhunter.sheet_records import table_index
 
 MANUAL_DAYS = 28
-DAILY_DAYS = 2
-# A daily schedule drifts by minutes; one missed day is two days between starts, plus or minus the drift. A gap of up
-# to one hour beyond two days is still accepted (a longer one needs a manual catch-up).
-GAP_TOLERANCE = timedelta(hours=1)
-# The collectors compute their own cutoff later than this guard does (Hacker News is processed before the probe, and
-# reading takes time), so the window must reach back past the previous run's start by more than the gap: it also
-# has to cover this much run time. With it, a window never leaves a posting between two runs.
-EXECUTION_MARGIN = timedelta(hours=6)
+DAILY_DAYS = 3
+MAX_GAP = timedelta(days=2, hours=6)  # two days, plus a little for the scheduler's drift
 CLOCK_SKEW = timedelta(minutes=5)  # a recorded time further in the future than this cannot be real
 RUN_LOG_HEADERS = ('Run ID', 'Started', 'Completed', 'Status')
 COMPLETE = {'complete', 'complete-with-source-failure'}
@@ -71,10 +65,6 @@ def window_days(mode, rows, now):
     last = last_complete_start(rows, now)
     if last is None:
         raise CatchUpNeeded('no_complete_run')
-    gap = now - last
-    if gap > timedelta(days=DAILY_DAYS) + GAP_TOLERANCE:
+    if now - last > MAX_GAP:
         raise CatchUpNeeded('last_run_too_old')
-    # 2 days only when the previous run is recent enough that gap + run time still fits inside it; otherwise 3.
-    days = DAILY_DAYS if gap + EXECUTION_MARGIN <= timedelta(days=DAILY_DAYS) else DAILY_DAYS + 1
-    note = f'daily run: {days}-day window; last complete run started {last.isoformat()}'
-    return days, note + (' (previous run is over 42 hours old: one extra day keeps the windows overlapping)' if days > DAILY_DAYS else '')
+    return DAILY_DAYS, f'daily run: {DAILY_DAYS}-day window; last complete run started {last.isoformat()}'

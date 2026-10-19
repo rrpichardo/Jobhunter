@@ -1,8 +1,9 @@
 # First-run backfill: 4-week window per source
 
 PLAN.md (October 18 decision 3): the first run collects jobs posted in the last
-28 days. User decision October 19: the scheduled daily routine then uses a 2-day window (`--lookback-days 2`),
-and any catch-up after more than 2 days without a complete run uses 28 again (see ROUTINE_PROMPT.md step 0).
+28 days. User decision October 19: the scheduled daily routine then uses a short window (`--lookback-days 3`: the
+user's "2 days to survive one missed day" plus one day of room for run time),
+and any catch-up after more than about 2 days without a complete run uses 28 again (see ROUTINE_PROMPT.md step 0).
 Every run overlaps the one before it. Repeats are harmless
 because Python upserts by Job ID and preserves Status, Notes and My rating.
 `scripts/source_probe.py --lookback-days 28` is the default; `Posting.posted_at`
