@@ -144,3 +144,18 @@ def test_a_retry_on_the_same_day_inspects_the_same_pages():
             probe.probe_source(client, YC, f'2026-10-18T{hour:02d}:00:00+00:00', detail_stop=2)
         runs.append(sorted(seen))
     assert runs[0] == runs[1]
+
+
+def test_the_provider_returning_the_same_jobs_in_another_order_does_not_change_the_pages_opened():
+    def opened(jobs):
+        listing = '<div data-page="' + escape(json.dumps({'props': {'jobPostings': jobs}}), quote=True) + '"></div>'
+        seen = []
+
+        def serve(request):
+            seen.append(str(request.url))
+            return httpx.Response(200, text=listing if 'jobs/role' in str(request.url) else PAGE)
+        with httpx.Client(transport=httpx.MockTransport(serve)) as client:
+            probe.probe_source(client, YC, '2026-10-18T12:00:00+00:00', detail_stop=2)
+        return sorted(seen[1:])
+
+    assert opened(JOBS) == opened(list(reversed(JOBS))) == opened(JOBS[2:] + JOBS[:2])

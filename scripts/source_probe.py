@@ -246,7 +246,8 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
             shortlist = [s for s in shortlist if s["job_id"] not in known_ids]
             # No listing-date prefilter: listing dates are unverified, and a wrong one would silently drop a job.
             # The window is applied after each page's own posting date is read.
-            shortlist.sort(key=lambda stub: collection_title_priority(stub['title'], entry.get('tag', 'other')))
+            # job_id breaks ties, so the order (and so each day's rotation) does not depend on the provider's response order
+            shortlist.sort(key=lambda stub: (collection_title_priority(stub['title'], entry.get('tag', 'other')), stub['job_id']))
             stop = DETAIL_SAFETY_STOP if detail_stop is None else detail_stop
             detail_skipped = max(0, len(shortlist) - stop)
             if detail_skipped:
