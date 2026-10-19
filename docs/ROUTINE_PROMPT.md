@@ -23,10 +23,15 @@ keys or tokens. Do not call any paid service.
    (the cloud image ships 0.11.32; install 0.13.1 with `python3 -m venv ~/uvvenv && ~/uvvenv/bin/pip install uv==0.13.1`).
 2. Make a private run directory OUTSIDE the checkout (mode 0700), for example
    `mktemp -d`. Every artifact below is written there as a NEW file (the tools
-   refuse to overwrite). Delete the directory when the run ends.
-3. Set `RUN=daily-<YYYYMMDD>` using today's date in America/New_York. Reuse it if
-   this is a retry of the same day: the writer then finishes unfinished work instead
-   of duplicating it.
+   refuse to overwrite). Delete the directory when the run ends, but only after
+   step 3 has exited 0 or you have reported its failure.
+3. Set `RUN=daily-<YYYYMMDD>-<HHMM>` from the current America/New_York time. The writer
+   binds a run ID to the exact bytes of the file it was given, so an ID may be reused
+   ONLY with the identical retained `$DIR/probe.json` (step 3 retry, below). If you
+   collect again (new `$DIR`, new files), choose a NEW `RUN`: even one changed
+   `captured_at` makes the old ID fail with `run_id_payload_conflict`. A rerun with a
+   new ID still finishes an interrupted earlier run, because the writer recovers every
+   pending journaled run first, and jobs already delivered collapse by Job ID.
 
 ## 1. Free-text sources you read yourself (Hacker News)
 
@@ -70,7 +75,10 @@ uv run --locked python -m scripts.hn_hiring validate --candidates $DIR/hn_work.j
 ```
 
 Save `hn_result_sha256`. If validation prints `hn_failed`, skip HN delivery for today,
-say so in the final report, and do NOT run the commit step for it.
+say so in the final report, and do NOT run the commit step for it. A comment whose
+proposed fact the code rejected is NOT marked read: validation prints
+`held_for_retry=N` and leaves those comments out of `processed_ids`, so they are read
+again on the next run. Report N in the final report.
 
 ## 2. Everything that code can fetch
 
@@ -90,9 +98,12 @@ account are recorded `needs setup` by the tool; do not try to work around that.
 uv run --locked python -m scripts.sheets_sync --input $DIR/probe.json --run-id $RUN
 ```
 
-Large runs are delivered in numbered batches and the command can be rerun with the
-same `--run-id` to finish. Exit 0 means the readback verified. Any other exit: do not
-retry more than once, do not touch the writer lock, report the printed code.
+Large runs are delivered in numbered batches. To retry after a failed delivery, rerun
+this exact command with the same `--run-id` and the same retained `$DIR/probe.json`;
+do not regenerate the files for that retry (keep `$DIR` until the delivery succeeds).
+If the files were regenerated, use a new `RUN` instead. Exit 0 means the readback
+verified. Any other exit: do not retry more than once, do not touch the writer lock,
+report the printed code.
 
 ## 4. Mark the Hacker News comments read (only after step 3 exited 0)
 

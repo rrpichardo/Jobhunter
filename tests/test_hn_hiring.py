@@ -244,3 +244,28 @@ def test_malformed_extractions_fail_closed_and_write_nothing(tmp_path, capsys, e
     code, out = validate_with(tmp_path, capsys, extractions)
     assert code == 2 and not out.exists()
     assert 'hn_failed: invalid_extractions' in capsys.readouterr().out
+
+
+def test_a_comment_with_a_rejected_fact_is_not_marked_read(tmp_path, capsys):
+    # 2001 gets an invented company (rejected); 2003 is read cleanly with no matching role.
+    code, out = validate_with(tmp_path, capsys, {'processed': ['2001', '2003'], 'facts': [fact(company='Not Acme')]})
+    result = json.loads(out.read_text())
+    assert code == 0 and result['postings'] == [] and result['source']['rejected_items'] == 1
+    assert result['rejected_comment_ids'] == ['2001']
+    assert result['processed_ids'] == ['2003']  # 2001 stays queued, so the job is retried tomorrow
+    assert 'held_for_retry=1' in capsys.readouterr().out
+
+
+def test_one_rejected_fact_holds_a_comment_even_when_another_fact_in_it_was_accepted(tmp_path, capsys):
+    good = fact()
+    bad = fact(title='Product Manager, Robots')  # same comment, second role not in its text
+    code, out = validate_with(tmp_path, capsys, {'processed': ['2001'], 'facts': [good, bad]})
+    result = json.loads(out.read_text())
+    assert code == 0 and len(result['postings']) == 1  # the supported role is still delivered
+    assert result['processed_ids'] == []  # but the comment is read again until every fact in it validates
+
+
+def test_a_malformed_fact_without_a_known_comment_holds_nothing(tmp_path, capsys):
+    code, out = validate_with(tmp_path, capsys, {'processed': ['2001'], 'facts': [fact(comment_id='9999'), 'junk']})
+    result = json.loads(out.read_text())
+    assert code == 0 and result['rejected_comment_ids'] == [] and result['processed_ids'] == ['2001']
