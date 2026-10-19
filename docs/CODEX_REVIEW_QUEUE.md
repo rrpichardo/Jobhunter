@@ -37,6 +37,7 @@ is still moving. Do not spam: one request per PR, then wait.
 | #44 | Work at a Startup: public product and operations pages | main | `209efbc7ca2b0cd253dcca26e1720b5e55b8cd67` | none yet (limit hit before) |
 | #45 | a16z portfolio jobs: four searches and each job's page | main | `e9d29ecea4384c96e2eb14071c9468caff9296f4` | none yet |
 | #46 | Status, handoff, parameters guide, this queue (docs only) | main | re-read from GitHub (changes with every docs update) | none yet |
+| #50 | E4: trace every rejected fact and filter drop with a reason code | main | re-read from GitHub (head `3cf0d6e` when written) | none yet (opened October 19 after the first live run) |
 | #49 | Haiku-vs-Sonnet eval tool, fix, first result, run record | main | `82bd0d499405429842b87295fd7eccec0ca4b66a` | none yet |
 | #40 | X (Twitter) hiring-post collector | main | `5ceb6ccf739485d60b173be2da35d783951f2490` | Eight reviews on seven earlier heads, all findings fixed (its 14 threads are still unmarked on GitHub; the two live ones were checked and are fixed); the final heads were never reviewed (limit). **Needs review of the current head.** |
 | #41 | Run modes: 28 days by hand, 3 days daily, refuse after a gap | #40 | `4c0fe90d8bfb47b3f24114b494206c24a9ef1bab` | Four Codex reviews on earlier heads (last: `c57046d`), findings fixed; current head not reviewed. The code changed after `c57046d` (not only documentation), so the new review is needed; the last commit alone is documentation. |
@@ -58,6 +59,9 @@ All of them end with: `Review only: do not implement fixes. Read AGENTS.md and d
 
 **#45**
 > @codex review <SHA>. Check: (1) the four a16z searches (product manager, chief of staff, strategy, founder in residence) read only the first page of each and then each shortlisted job's own page; (2) company, place, pay and posting date are parsed from the page, with the links validated; (3) caps and delays apply; (4) known Job IDs are skipped; (5) it merges with #44 once both sides of the `DETAIL_SOURCES` and registry lists are kept.
+
+**#50**
+> @codex review <SHA>. Check: (1) no rejection or drop reason code can carry post text, a name or an email (codes are whitelisted in `_reason`; the trace holds only numbers, codes and post ids); (2) `build_result` accepts and rejects exactly the same facts as before the change, whatever the fact shape; (3) `collection_reason` and the old `collection_match` agree for every posting; (4) the first output line of `social_posts validate` and `hn_hiring validate` is unchanged and the new `trace:` lines add up (`facts = valid + duplicates + rejected facts`, `valid = delivered + dropped`); (5) `docs/TRACEABILITY.md` and the `docs/ROUTINE_PROMPT.md` change match the code.
 
 **#46**
 > @codex review <SHA>. Docs only. Check that `docs/PENDING.md`, `docs/CLAUDE_HANDOFF.md`, `docs/PARAMETERS.md` and `docs/CODEX_REVIEW_QUEUE.md` match the code and the PR list: every number in PARAMETERS against the constants it names, every head SHA in the handoff against GitHub, and that no secret, cookie value or personal data is included.
@@ -82,6 +86,6 @@ All of them end with: `Review only: do not implement fixes. Read AGENTS.md and d
 
 ## Not a Codex task
 
-A **combined run branch** (`claude/combined-live-run`, all ten PRs merged with the documented conflict fixes, 1,056 tests passing) exists
+A **combined run branch** (`claude/combined-live-run`, all ten PRs and #50 merged with the documented conflict fixes, 1,071 tests passing) exists
 only so the live test and first manual run can happen before these reviews. It is never merged to `main`; the individual PRs
 above are what get reviewed and merged. Running unreviewed code against real accounts was your decision on October 19.
