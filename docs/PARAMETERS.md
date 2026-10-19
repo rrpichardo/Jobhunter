@@ -9,7 +9,7 @@ to change (numbers kept in the program). Today most numbers live inside the prog
 explains the plan to move them all into one file you can edit.
 
 **Safety rule that overrides everything below.** LinkedIn and X can restrict an account that looks like a robot. The
-program therefore reads each of them **once per New York day**, with random 3 to 9 second pauses, and never types, likes,
+program therefore reads each of them **once per New York day**, with random 3 to 9 second pauses between searches, and never types, likes,
 follows or messages. Raising a number below raises that risk. Nothing here is a guarantee that an account stays safe.
 
 ---
@@ -47,8 +47,8 @@ follows or messages. Raising a number below raises that risk. Nothing here is a 
 | --- | --- | --- | --- | --- | --- |
 | Manual run look-back | 28 days | A run you start by hand looks back this far. Used for the first big pull and for catch-ups. | more jobs, longer run | fewer old jobs | `MANUAL_DAYS` in `jobhunter/run_window.py` (PR #41) |
 | Daily run look-back | 3 days | The scheduled routine looks back this far. | safer overlap, a little more work | risks missing jobs after a missed day | `DAILY_DAYS` in `jobhunter/run_window.py` (PR #41) |
-| Longest gap a daily run accepts | 2 days 6 hours since the last complete run | If the last complete run is older than this, the daily run **refuses** (exit 3) and asks for a manual run, so nothing is silently skipped. | tolerates longer breaks (but 3 days of look-back must still cover it) | refuses sooner | `MAX_GAP` in `jobhunter/run_window.py` (PR #41) |
-| Default window for the collector tools | 28 days | What the collectors use if no window is passed. | | | `LOOKBACK_DAYS` in `scripts/source_probe.py` |
+| Longest gap a daily run accepts | 2 days 6 hours since the last complete run **started** | If the last complete run started longer ago than this, the daily run **refuses** (exit 3) and asks for a manual run, so nothing is silently skipped. | tolerates longer breaks (but 3 days of look-back must still cover it) | refuses sooner | `MAX_GAP` in `jobhunter/run_window.py` (PR #41) |
+| Default window for the collector tools | 28 days | What the collectors use if no window is passed. The routine always passes the window explicitly, so this matters only for hand runs. Several tools carry their own copy: change all of them together. | | | `LOOKBACK_DAYS` in `scripts/source_probe.py` and `scripts/hn_hiring.py`; `default=28` in `scripts/x_collect.py`, `linkedin_collect.py`, `newsletter_collect.py` |
 | Hacker News threads read | the monthly "Who is hiring?" threads that can hold comments inside the window | The tool also reads the previous month's thread when it could still hold recent comments. | | | `select_threads` in `jobhunter/hn_hiring.py` |
 
 Important: the daily window (3 days) must stay larger than the longest accepted gap (2 days 6 hours), or jobs can fall
@@ -86,7 +86,7 @@ staff; head of strategy; AI deployment strategist.
 | LinkedIn job cards kept per run | 125 | Stops collecting job cards at this many (PR #48). | `LIMITS['linkedin-login']['jobs']` |
 | LinkedIn job cards kept per search | 30 | Same idea for job searches (PR #48). | `LIMITS['linkedin-login']['job_per_query']` |
 | LinkedIn "detail views" | 50 | **Not used today.** The number exists in the file but no code opens detail pages; the program reads only the result cards. Changing it does nothing until detail views are built. | `LIMITS['linkedin-login']['detail_views']` |
-| Pause between live requests | random 3.0 to 9.0 seconds | Makes the pace look human and gentle. | `DELAY_SECONDS` in `jobhunter/social_collect.py` |
+| Pause between searches | random 3.0 to 9.0 seconds | Makes the pace look human and gentle. It is applied between searches (and between the LinkedIn post phase and job phase); inside one search the page is read at the tool's own pace (X pages in turn, LinkedIn 4 scrolls with 1.2 to 2.7 second waits). | `DELAY_SECONDS` in `jobhunter/social_collect.py` |
 | Sessions per source per day | 1 (America/New_York calendar day) | The day's allowance is reserved in the Sheet's `_State` tab **before** any request and is spent even if the run fails. The program refuses a second run the same day. | `jobhunter/allowance.py` (a rule, not a number to tune) |
 | Scrolls per LinkedIn results page | 4 | How far the page is scrolled so more results load. | `SCROLLS` in `scripts/linkedin_collect.py` |
 | "See more" expansions per page | up to 40 | Opens cut-off posts to read their full text. | `MAX_EXPANDS` in `scripts/linkedin_collect.py` |
@@ -104,22 +104,25 @@ All of this is applied by code after the AI has copied the facts out of a post. 
 
 | Family | Matches (examples) |
 | --- | --- |
-| Product management | product manager, product lead, group product manager, head of product, director of product, VP of product |
+| Product management | product manager, product lead, group product manager, head of product, director of product, VP of product (also "VP, Product" and the bare "PM", for example "AI PM") |
 | Chief of Staff | chief of staff |
 | Leadership program | leadership (development) program; MBA or management development/rotation program |
 | Strategy | strategy manager/lead/director; manager/director/head/VP of (corporate or business) strategy |
 | Entrepreneurship | entrepreneur in residence; founder in residence |
-| Project management | project manager; project management lead; project director |
-| Forward-deployed strategy (PR #42) | Forward-Deployed AI Strategist and name variants; AI Deployment Strategist; AI Implementation Strategist; Deployment Strategist. Any title naming an engineer or developer (Engineer, Eng., Engr, Dev, SDE, SWE, "Software Development") is **not** accepted in this family. |
+| Project management | project manager; project management lead; project director (plural titles are not matched, see below) |
+| Forward-deployed strategy (PR #42) | Forward-Deployed AI Strategist and name variants; AI Deployment Strategist; AI Implementation Strategist; Deployment Strategist. Any title naming an engineer or developer (Engineer, Engineering, Eng., Engr, Developer, Dev, SDE, SWE, "Software Development", plus plurals) is **not** accepted in this family. A title like "Forward Deployed Strategy Lead" is still collected, through the general Strategy family. |
 
 **Roles that are always dropped:** intern, internship, summer associate, product marketing, product design(er), product
 communications. "BizOps" is out of scope (your decision, October 19). Plain "program manager" is not a family.
 
-**Known gap (your call, item A13):** a plural title such as "Product Managers" is **not** matched today, while the singular is.
+**Known gap (your call, item A13):** a plural title such as "Product Managers" or "Project Managers" is **not** matched today, while the singular is. The same gap applies to the first filter on Hacker News and social posts: a post that says only "Product Managers" is never sent to the AI.
 
-**Places accepted:** the United States, Latin America, or "unclear". A place that is clearly elsewhere (for example Canada
-or Europe) is dropped. If the place is unclear the job is kept and flagged for you to check. Remote roles are read from the
-text ("remote" alone does not prove a country).
+**Places accepted:** the United States; Latin America **only in narrow cases**; or "unclear". Latin America is accepted when
+the job is remote (the source says so, or the place text says remote), or when the country is Colombia or the Dominican
+Republic. An on-site job in another Latin American country (for example Brazil, Argentina or Mexico) is dropped. A city plus
+country such as "Sao Paulo, Brazil" counts as unclear: kept and flagged, with the $70,000 minimum. A place that is clearly
+elsewhere (for example Canada or Europe) is dropped. If the place is unclear the job is kept and flagged for you to check.
+Remote roles are read from the text ("remote" alone does not prove a country).
 
 **Salary floors (annual USD base):**
 
@@ -128,10 +131,10 @@ text ("remote" alone does not prove a country).
 | Floor for United States jobs | $140,000 | A job whose top pay is below this is dropped. |
 | Floor for Latin America jobs | $70,000 | Same, for Latin America. |
 | Absolute minimum when the place is unclear | $70,000 | Anything clearly under this is dropped whatever the place. |
-| Pay not stated | kept | The row is kept and marked "check the salary yourself". |
+| Pay missing, or not an explicit annual USD figure (hourly, monthly, another currency, OTE, total compensation, equity) | kept | The row is kept. "More details" says "Salary preference: unresolved" and "Check first: verify annual USD base salary reaches ..." so you check the pay yourself. |
 
 Where: `salary_preference`, `collection_stub_match` and `collection_match` in `jobhunter/postings.py` (the numbers 140,000
-and 70,000 appear there and in the row text).
+and 70,000 appear there and in the row text; 70,000 is also `MIN_REGIONAL_ANNUAL_USD`).
 
 ## 6. Where jobs come from (the source list)
 
@@ -151,10 +154,10 @@ Most of this is in `sources/v0_sources.yaml`, which you can edit (see section 12
 | Setting | Today | What it does | Where |
 | --- | --- | --- | --- |
 | Pages opened per detail source per run | 300 | Safety stop (reported as `details_skipped`). | `DETAIL_SAFETY_STOP` in `scripts/source_probe.py`, or `--detail-safety-stop` |
-| Extra pages per paged service per run | 100 | Safety stop (reported as `paging_stopped`). | `PAGE_SAFETY_STOP`, or `--page-safety-stop` |
+| Pages per paged service per run | 100 (the first page counts, so 99 extra) | Safety stop (reported as `paging_stopped`). Only The Muse and Jobicy are paged; Himalayas reads one page of 20. | `PAGE_SAFETY_STOP`, or `--page-safety-stop` |
 | Pause between ordinary requests | 1.0 second | Politeness. | `--delay` |
 | Largest answer accepted | 40 MB | Safety stop. | `MAX_BYTES` |
-| Newsletter editions read | 12 most recent | Only recent ones can be inside the window. | `MAX_ENTRIES` in `jobhunter/newsletter.py` (PR #47) |
+| Newsletter editions read | the first 12 entries in the feed's own order | The feed lists newest first; the program does not sort. | `MAX_ENTRIES` in `jobhunter/newsletter.py` (PR #47) |
 
 ## 7. The AI reading step
 
@@ -165,9 +168,18 @@ Most of this is in `sources/v0_sources.yaml`, which you can edit (see section 12
 | Size of the file handed to the AI | 3 MB | The rest stays pending. | `WORK_BYTE_STOP` |
 | Hacker News comments collected per run | 1,500 | Safety stop. | `CANDIDATE_SAFETY_STOP` in `jobhunter/hn_hiring.py` |
 | Hacker News comment length | 20,000 characters | Longer comments are counted but not read. | `MAX_COMMENT_CHARS` |
-| Quote kept for each job | 300 characters | A short exact excerpt from the post. | the validators |
+| Quote kept for each job | 300 characters | A short exact excerpt from the post. A quote longer than this makes the fact **rejected**; it is not cut. | the validators |
 | Gmail extractions per run | 1,000 | Safety stop (Gmail is not live yet). | `EXTRACTION_SAFETY_STOP` in `jobhunter/gmail_alerts.py` |
 | Items not read within the window | cleared and reported | An unread item that leaves the window is dropped, and the run says how many. | `jobhunter/ai_queue.py` |
+
+**Other built-in limits (all kept in the program; rarely worth changing):**
+
+| Setting | Today | What it does | Where |
+| --- | --- | --- | --- |
+| Longest post read | 10,000 characters (24,000 for a newsletter edition) | A longer one is counted as unreadable rather than read. | `MAX_POST_CHARS` in `jobhunter/post_facts.py` |
+| Newsletter feed size | 5 MiB | Larger feeds are refused. | `MAX_FEED_BYTES` in `jobhunter/newsletter.py` |
+| Hand-off file size | 5 MiB (64 MiB for the final writer input) | Safety limit on the files passed between steps. | `DEFAULT_MAX_BYTES`, `SYNC_MAX_BYTES` in `jobhunter/artifacts.py` |
+| Gmail messages read per run | 50 | Gmail is not live yet. | `jobhunter/gmail_alerts.py` |
 
 ## 8. Writing to the Google Sheet
 
@@ -177,7 +189,7 @@ Most of this is in `sources/v0_sources.yaml`, which you can edit (see section 12
 | Pause between batches | 45 seconds | Keeps under Google's per-minute quota. | `BATCH_PAUSE_SECONDS` in `scripts/sheets_sync.py`, or `--batch-pause` (0 to 60) |
 | Writes per request | up to 100 | Also kept near 1 MB. | `--chunk-size` |
 | Retries on a temporary error | 3 attempts, waits up to 60 seconds; a quota error waits 20 then 40 seconds | Protects against Google's quota errors. | `jobhunter/sheets.py` |
-| Duplicates | never added | A job already in the Sheet is recognised by its Job ID and left alone, so your notes are never overwritten. | the writer |
+| Duplicates | never added | A job already in the Sheet is recognised by its Job ID and is not added again. Its program-written columns can be refreshed; your columns (Status, Notes, My rating) and the Date found are never touched. | the writer (`plan_jobs` in `jobhunter/sheet_records.py`) |
 
 ## 9. Secrets and connections (names only: never paste a value into a chat or a file)
 
@@ -187,7 +199,7 @@ These are set in the Claude Code environment settings for `JobHunterEnv`. This s
 | --- | --- |
 | `X_AUTH_TOKEN` and `X_CT0` | the two X cookies for the dedicated X account |
 | `LINKEDIN_LI_AT` (or `LI_AT`) | the LinkedIn cookie for the dedicated LinkedIn account |
-| `WAAS_SESSION_COOKIE` | optional: Work at a Startup logged-in lists (it needs a cookie name, task B10) |
+| `WAAS_SESSION_COOKIE` | reserved for a future logged-in Work at a Startup reader; **no code reads it today** (it needs a cookie name, task B10) |
 | `JSEARCH_API_KEY` and `JOOBLE_API_KEY` | the two keyed job services |
 | `JOBHUNTER_SPREADSHEET_ID` | which Google Sheet is written (a copy has a different ID; a backup copy does not redirect the run) |
 | `JOBHUNTER_GOOGLE_AUTH_MODE` | how the program signs in to Google |
@@ -202,7 +214,7 @@ America/New_York, repository `rrpichardo/Jobhunter`, environment `JobHunterEnv`,
 | Mode | Look-back | Starts how | Refuses when |
 | --- | --- | --- | --- |
 | Manual (first pull, catch-ups) | 28 days | by hand | never refuses; each social source still allows only one session per New York day |
-| Daily | 3 days | the scheduled routine | the last complete run is more than 2 days 6 hours old, or there never was one |
+| Daily | 3 days | the scheduled routine | the last complete run started more than 2 days 6 hours ago, or there never was one |
 
 ---
 
@@ -216,7 +228,7 @@ role the program does not collect).
 
 **B. Numbers kept in the program** (sections 3, 4b, 5, 6, 7, 8): send Claude a message in this form:
 > Change `<setting name from this file>` from `<today>` to `<new value>`. Keep everything else. Run the tests, open a PR,
-> and update `docs/PARAMETERS.md` and `docs/LIMITS.md`.
+> and update `docs/PARAMETERS.md` (and `docs/LIMITS.md`, which is out of date on the social sources and should be brought in line).
 
 Claude changes one file, runs the 1,000+ tests, and opens a PR. Because the program reads real accounts, code changes wait
 for a Codex review before merging (see `docs/CODEX_REVIEW_QUEUE.md`).
@@ -224,8 +236,9 @@ for a Codex review before merging (see `docs/CODEX_REVIEW_QUEUE.md`).
 **C. Risky changes (ask for a second opinion first):** raising any X or LinkedIn number; shortening the pause between
 requests; raising the daily window above the longest accepted gap or lowering it below it; lowering a salary floor.
 
-**After any change to a search limit:** run once, read the printed `search_N` lines (they are numbers only), and look for
-`wall=True` or a login or rate-limit word. If you see one, stop for the day and do not retry.
+**After any change to a search limit:** run once, read the printed lines (numbers only: LinkedIn prints `search_N:` lines; X prints one
+`x_collected:` line with `queries_run=`, `posts=` and `error=`), and look for `wall=True` or a login or rate-limit word
+(`social_login_failed`, `social_rate_limited`). If you see one, stop for the day and do not retry.
 
 ## 13. Planned: one editable file for all numbers (item E3)
 
