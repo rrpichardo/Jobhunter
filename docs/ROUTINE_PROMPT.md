@@ -25,13 +25,19 @@ keys or tokens. Do not call any paid service.
    `mktemp -d`. Every artifact below is written there as a NEW file (the tools
    refuse to overwrite). Delete the directory when the run ends, but only after
    step 3 has exited 0 or you have reported its failure.
-3. Choose the look-back window `WINDOW` (days). The user decided on October 19:
-   - **First manual run, and any catch-up run: `WINDOW=28`.**
-   - **The scheduled daily routine: `WINDOW=2`.** Two days covers one missed day plus a day to fix it.
-   - **Catch-up rule:** before a daily run, read the Run Log. If the last complete run is more than 2 days old, the
-     routine is NOT allowed to run with `WINDOW=2`; stop and report that a manual `WINDOW=28` catch-up run is
-     needed first (otherwise postings from the gap would never be collected). Repeats are harmless: jobs already in
-     the Sheet are recognized by Job ID and keep their Status, Notes and My rating.
+3. Choose the look-back window by running the guard, never by guessing:
+
+   ```
+   uv run --locked python -m scripts.run_window --mode daily     # the scheduled routine
+   uv run --locked python -m scripts.run_window --mode manual    # first manual run, or a catch-up by hand
+   ```
+
+   It prints `window_days=N`; use that N as `$WINDOW` below. The user decided on October 19: the first manual run
+   and any catch-up look back **28** days; the scheduled daily routine looks back **2** days (one missed day plus a
+   day to fix it). The daily mode reads the Run Log (read-only) and REFUSES, exit 3 `catch_up_needed`, when there has
+   never been a complete run or the last complete run started more than two days ago. On exit 3 do nothing else:
+   report that a manual 28-day catch-up run is needed first, otherwise postings from the gap would never be
+   collected. Repeats are harmless: jobs already in the Sheet keep their Status, Notes and My rating.
 4. Set a NEW run label for every collection, for example
    `RUN=daily-$(TZ=America/New_York date +%Y%m%d-%H%M%S)-$(openssl rand -hex 3)`
    (the random part keeps two collections started in the same second apart). The writer

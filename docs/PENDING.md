@@ -59,8 +59,9 @@ routine's first scheduled run, which needs A3 and the code on `main` (A4: your g
 | Daily routine | `--lookback-days 2` | 06:07 America/New_York, every day |
 | Catch-up | `--lookback-days 28` | by hand, whenever the last complete Run Log row is more than 2 days old |
 
-The routine must refuse to run with the 2-day window when the last complete run is older than 2 days
-(ROUTINE_PROMPT.md step 0). Overlap never duplicates jobs.
+`scripts/run_window.py` enforces this: `--mode daily` prints the 2-day window, or exits 3 (`catch_up_needed`) when
+the last complete run started more than 2 days ago (one hour of scheduler drift is tolerated) or there has never
+been one; `--mode manual` prints 28. Read-only, offline-tested. Overlap never duplicates jobs.
 
 ## How the first run and the daily runs work (user direction, October 18)
 

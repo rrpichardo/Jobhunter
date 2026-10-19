@@ -1,0 +1,102 @@
+"""Run modes: 28 days by hand, 2 days daily, and a daily run refused when it would leave a gap."""
+
+from datetime import datetime, timedelta, timezone
+
+import pytest
+
+from jobhunter import run_window as rw
+from scripts import run_window as cli
+from sheet_fakes import MemoryStore
+
+HEADERS = ['Run ID', 'Started', 'Completed', 'Jobs input', 'Jobs unique', 'Status']
+NOW = datetime(2026, 10, 21, 10, 7, tzinfo=timezone.utc)
+
+
+def row(run, started, status='complete', done=True):
+    finished = (started + timedelta(minutes=20)).isoformat() if done else ''
+    return [run, started.isoformat(), finished, 10, 10, status]
+
+
+def log(*rows):
+    store = MemoryStore()
+    store.tables['Run Log'] = [HEADERS, *rows]
+    return store
+
+
+def run(mode, store, capsys, now=NOW):
+    code = cli.main(['--mode', mode], store=store, now=lambda: now)
+    return code, capsys.readouterr().out
+
+
+def test_a_manual_run_is_always_28_days_and_does_not_even_read_the_sheet(capsys):
+    code, out = run('manual', None, capsys)  # no store: it must not be needed
+    assert code == 0 and 'window_days=28' in out
+
+
+def test_a_daily_run_after_a_recent_complete_run_is_2_days(capsys):
+    code, out = run('daily', log(row('r1', NOW - timedelta(hours=24))), capsys)
+    assert code == 0 and 'window_days=2' in out
+
+
+def test_one_missed_day_is_still_covered_even_with_scheduler_drift(capsys):
+    # last run started 48h 40m ago: one day missed plus a few minutes of drift
+    code, out = run('daily', log(row('r1', NOW - timedelta(hours=48, minutes=40))), capsys)
+    assert code == 0 and 'window_days=2' in out
+
+
+def test_two_missed_days_need_a_manual_catch_up(capsys):
+    code, out = run('daily', log(row('r1', NOW - timedelta(days=3))), capsys)
+    assert code == 3 and 'catch_up_needed: last_run_too_old' in out and 'window_days' not in out
+
+
+def test_the_first_ever_run_must_be_manual(capsys):
+    for store in (log(), MemoryStore()):  # an empty Run Log, and no Run Log at all
+        code, out = run('daily', store, capsys)
+        assert code == 3 and 'no_complete_run' in out
+
+
+def test_only_complete_runs_count_a_pending_or_unfinished_run_does_not(capsys):
+    old = row('old', NOW - timedelta(days=5))
+    pending = row('p', NOW - timedelta(hours=2), status='pending', done=False)
+    code, out = run('daily', log(old, pending), capsys)
+    assert code == 3 and 'last_run_too_old' in out
+
+
+def test_a_complete_with_source_failure_run_still_counts(capsys):
+    code, out = run('daily', log(row('r1', NOW - timedelta(hours=20), status='complete-with-source-failure')), capsys)
+    assert code == 0 and 'window_days=2' in out
+
+
+def test_the_newest_complete_run_decides(capsys):
+    code, out = run('daily', log(row('old', NOW - timedelta(days=9)), row('new', NOW - timedelta(hours=5))), capsys)
+    assert code == 0
+
+
+def test_batch_rows_of_one_run_do_not_confuse_the_choice(capsys):
+    rows = [row('daily-1-b001', NOW - timedelta(days=4)), row('daily-1-b002', NOW - timedelta(days=4, minutes=-3))]
+    code, out = run('daily', log(*rows), capsys)
+    assert code == 3
+
+
+def test_a_naive_timestamp_is_read_as_utc():
+    started = (NOW - timedelta(hours=10)).replace(tzinfo=None).isoformat()
+    rows = [HEADERS, ['r1', started, started, 1, 1, 'complete']]
+    assert rw.window_days('daily', rows, NOW)[0] == 2
+
+
+def test_a_corrupt_run_log_fails_closed_without_a_window(capsys):
+    store = MemoryStore()
+    store.tables['Run Log'] = [['Run ID', 'Run ID', 'Started', 'Completed', 'Status']]  # duplicate header
+    code, out = run('daily', store, capsys)
+    assert code == 2 and 'window_days' not in out
+
+
+def test_an_unknown_mode_is_refused():
+    with pytest.raises(ValueError, match='invalid_run_mode'):
+        rw.window_days('weekly', [], NOW)
+
+
+def test_the_run_log_is_only_read_never_written():
+    store = log(row('r1', NOW - timedelta(hours=3)))
+    cli.main(['--mode', 'daily'], store=store, now=lambda: NOW)
+    assert store.writes == [] and store.owner is None
