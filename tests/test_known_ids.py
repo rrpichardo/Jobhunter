@@ -127,3 +127,60 @@ def test_a_listing_that_is_entirely_malformed_still_fails_even_with_a_known_list
     with httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200, text=listing))) as client:
         record, jobs, _ = probe.probe_source(client, YC, '2026-10-18T12:00:00+00:00', known_ids=frozenset({'yc-product:7'}))
     assert jobs == [] and record['status'] == 'failed' and record['error'] == 'invalid_items_quarantined'
+
+
+def test_a_stop_smaller_than_the_shortlist_moves_through_old_pages_on_successive_days():
+    # job 1's page is dated long ago (inspected, never delivered); job 2's page is recent. With a stop of one
+    # page, skipping delivered IDs alone would reopen job 1 every day and never read job 2.
+    jobs = JOBS[:2]
+    listing = '<div data-page="' + escape(json.dumps({'props': {'jobPostings': jobs}}), quote=True) + '"></div>'
+
+    def serve(request):
+        url = str(request.url)
+        if 'jobs/role' in url:
+            return httpx.Response(200, text=listing)
+        date = '2026-01-01' if url.endswith('/1') else '2026-10-17'
+        return httpx.Response(200, text='<script type="application/ld+json">{"@type":"JobPosting",'
+                                        f'"description":"Build things.","datePosted":"{date}"}}</script>')
+
+    delivered = set()
+    for day in (18, 19):
+        with httpx.Client(transport=httpx.MockTransport(serve)) as client:
+            record, found, note = probe.probe_source(client, YC, f'2026-10-{day}T12:00:00+00:00',
+                                                     lookback_days=28, detail_stop=1)
+        assert 'details_skipped=1' in note
+        delivered |= {j.job_id for j in found}
+    assert delivered == {'yc-product:2'}  # reached on one of the two days
+
+
+def test_a_retry_on_the_same_day_inspects_the_same_pages():
+    jobs = JOBS[:3]
+    listing = '<div data-page="' + escape(json.dumps({'props': {'jobPostings': jobs}}), quote=True) + '"></div>'
+    seen = []
+
+    def serve(request):
+        seen.append(str(request.url))
+        return httpx.Response(200, text=listing if 'jobs/role' in str(request.url) else PAGE)
+
+    runs = []
+    for hour in (6, 20):
+        seen.clear()
+        with httpx.Client(transport=httpx.MockTransport(serve)) as client:
+            probe.probe_source(client, YC, f'2026-10-18T{hour:02d}:00:00+00:00', detail_stop=2)
+        runs.append(sorted(seen))
+    assert runs[0] == runs[1]
+
+
+def test_the_provider_returning_the_same_jobs_in_another_order_does_not_change_the_pages_opened():
+    def opened(jobs):
+        listing = '<div data-page="' + escape(json.dumps({'props': {'jobPostings': jobs}}), quote=True) + '"></div>'
+        seen = []
+
+        def serve(request):
+            seen.append(str(request.url))
+            return httpx.Response(200, text=listing if 'jobs/role' in str(request.url) else PAGE)
+        with httpx.Client(transport=httpx.MockTransport(serve)) as client:
+            probe.probe_source(client, YC, '2026-10-18T12:00:00+00:00', detail_stop=2)
+        return sorted(seen[1:])
+
+    assert opened(JOBS) == opened(list(reversed(JOBS))) == opened(JOBS[2:] + JOBS[:2])

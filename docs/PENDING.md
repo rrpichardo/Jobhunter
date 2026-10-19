@@ -114,7 +114,9 @@ routine's first scheduled run, which needs A3 and the code on `main` (A4: your g
   and JSearch paging still wait on A6 and a quota decision.
 - DONE on branch `claude/known-ids`: `scripts.known_ids` + `source_probe --known-ids` skip
   job pages for jobs already in the Sheet, so a big source is not reopened daily and
-  its detail-page stop no longer starves the tail.
+  its detail-page stop no longer starves the tail. Delivered IDs alone did not fix this for
+  pages inspected but not delivered; a date-based rotation of the detail window now does
+  (half the stop stays in priority order; see BACKFILL_WINDOWS.md).
 - A Run Log column for the AI queue counts (a Sheet schema change, done carefully).
 - DONE on branch `claude/social-allowance`: the daily allowance reservation in `_State`
   (`scripts.allowance reserve/finish/status`; exit 3 means spent, any other failure
