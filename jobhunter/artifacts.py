@@ -77,7 +77,7 @@ def safe_error_code(exc: Exception) -> str:
                "invalid_registry", "invalid_board", "invalid_source_id", "invalid_company_tag",
                "invalid_source_text", "invalid_source_location_or_url", "invalid_capture_timestamp",
                "invalid_lookback_days", "invalid_hn_result", "invalid_board_response", "hn_no_threads",
-               "invalid_candidates", "invalid_extractions", "invalid_work_artifact"}
+               "invalid_candidates", "invalid_safety_stop", "invalid_extractions", "invalid_work_artifact"}
     if isinstance(exc, FileExistsError):
         return "artifact_exists"
     return str(exc) if str(exc) in allowed else "invalid_input_or_artifact"

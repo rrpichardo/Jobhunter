@@ -58,8 +58,9 @@ numbers: #18 docs, #19 keep-every-match and 4-week window, #20 Hacker News,
 
 ## D. Claude continues without waiting
 
-- Per-run limit flags so the first manual pull can raise or ignore the safety stops
-  (`--detail-safety-stop` and similar), recorded in LIMITS.md.
+- DONE on branch `claude/limit-flags`: per-run flags so the first manual pull can
+  raise the safety stops (`--detail-safety-stop`, `--candidate-safety-stop`,
+  `--batch-pause`, `ai_queue pull --limit`), recorded in LIMITS.md.
 - Pagination for Himalayas, The Muse, Jooble and Remote OK after the paging
   parameters are checked with a few public requests. JSearch paging waits for A6.
 - Skip Job IDs already in the Sheet so a source that hits its detail-page stop does

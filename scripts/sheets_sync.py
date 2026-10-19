@@ -25,7 +25,7 @@ duplicate_existing_id writer_locked lock_acquisition_unconfirmed lock_identity_c
 ambiguous_existing_job_identity
 lock_release_unconfirmed lock_ownership_lost lock_acquisition_already_attempted too_many_pending_runs
 completed_run_changed sheet_write_verification_failed sheet_retry_delay_exceeds_budget sheet_write_too_large
-sheet_mutation_unconfirmed writer_lock_required writes_verified_lock_release_unconfirmed
+sheet_mutation_unconfirmed invalid_batch_pause writer_lock_required writes_verified_lock_release_unconfirmed
 sheet_request_failed sheet_tls_error sheet_transport_error invalid_sheet_response unapproved_tab
 invalid_google_configuration google_workbook_unavailable google_proxy_auth_missing google_workbook_not_found
 google_workbook_forbidden google_tls_error google_timeout google_transport_error invalid_json
@@ -58,6 +58,8 @@ def _deliver_many(args, payload, store):
         raise ValueError('invalid_extraction_delivery')
     # Every job is delivered. A large run is split into recoverable batches, each its own journaled run
     # (<run id>-b001, -b002, ...) carrying the full source totals; one batch keeps the plain run id.
+    if not 0 <= args.batch_pause <= 60:
+        raise ValueError('invalid_batch_pause')
     batches = [jobs[start:start + JOB_BATCH_SIZE] for start in range(0, len(jobs), JOB_BATCH_SIZE)] or [[]]
     base = args.run_id or uuid.uuid4().hex
     if len(batches) > 1 and len(base) > 75:  # leaves room for the -bNNN suffix within 80 characters
@@ -69,7 +71,7 @@ def _deliver_many(args, payload, store):
     results = []
     for number, (batch, run_id) in enumerate(zip(batches, run_ids)):
         if number:
-            time.sleep(BATCH_PAUSE_SECONDS)
+            time.sleep(args.batch_pause)
         results.append(sync_jobs(backend, batch, sources, run_id=run_id, chunk_size=args.chunk_size))
     problems = sum(source['status'] in {'failed', 'blocked'} for source in sources)
     print(f"sync_verified: run_id={base} batches={len(batches)} "
@@ -86,6 +88,8 @@ def main(argv=None, *, store=None):
                         help='operator only: move a poisoned pending run out of recovery, keeping its data')
     parser.add_argument('--run-id')
     parser.add_argument('--chunk-size', type=int, choices=range(1, 101), default=100)
+    parser.add_argument('--batch-pause', type=float, default=BATCH_PAUSE_SECONDS,
+                        help='seconds between writer batches of a large run (0 to 60)')
     args = parser.parse_args(argv)
     if (args.input is None) == (args.quarantine_run is None):
         parser.error('give exactly one of --input or --quarantine-run')

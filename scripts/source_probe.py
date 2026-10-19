@@ -143,7 +143,8 @@ def fetch_details(client, entry, stubs, stamp, *, delay, sleep):
     return postings, rejected, problem, attempts
 
 
-def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=None, lookback_days=None):
+def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=None, lookback_days=None,
+                 detail_stop=None):
     """Returns (source record or None for an unresponsive candidate, postings, note).
 
     lookback_days keeps postings whose source date is inside the window; a posting with no usable date is
@@ -188,9 +189,10 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
             # No listing-date prefilter: listing dates are unverified, and a wrong one would silently drop a job.
             # The window is applied after each page's own posting date is read.
             shortlist.sort(key=lambda stub: collection_title_priority(stub['title'], entry.get('tag', 'other')))
-            detail_skipped = max(0, len(shortlist) - DETAIL_SAFETY_STOP)
+            stop = DETAIL_SAFETY_STOP if detail_stop is None else detail_stop
+            detail_skipped = max(0, len(shortlist) - stop)
             postings, failed, problem, detail_attempts = fetch_details(
-                client, entry, shortlist[:DETAIL_SAFETY_STOP], stamp, delay=delay, sleep=sleep)
+                client, entry, shortlist[:stop], stamp, delay=delay, sleep=sleep)
             attempts += detail_attempts
             rejected += failed
             total = len(stubs)
@@ -255,7 +257,7 @@ def entries(registry):
 
 
 def run(registry, client, *, delay=1.0, sleep=time.sleep, environ=None, gmail_result=None, hn_result=None,
-        now=lambda: datetime.now(timezone.utc).isoformat(), lookback_days=LOOKBACK_DAYS):
+        now=lambda: datetime.now(timezone.utc).isoformat(), lookback_days=LOOKBACK_DAYS, detail_stop=None):
     environ = os.environ if environ is None else environ
     stamp = now()
     sources, jobs, notes = [], [], {}
@@ -263,7 +265,7 @@ def run(registry, client, *, delay=1.0, sleep=time.sleep, environ=None, gmail_re
         if hn_result is not None and entry['id'] == hn_result['source']['source_id']:
             continue  # the validated comment extraction replaces the listing-only count
         record_, selected, note = probe_source(client, entry, stamp, delay=delay, sleep=sleep,
-                                                    environ=environ, lookback_days=lookback_days)
+                                                    environ=environ, lookback_days=lookback_days, detail_stop=detail_stop)
         notes[entry["id"]] = note
         if record_ is not None:
             sources.append(record_)
@@ -318,6 +320,9 @@ def main(argv=None, *, client=None, sleep=time.sleep) -> int:
     parser.add_argument("--delay", type=float, default=1.0, help="seconds between requests")
     parser.add_argument("--lookback-days", type=int, default=LOOKBACK_DAYS,
                         help="keep postings dated inside this many days (first run = backfill); undated are kept")
+    parser.add_argument("--detail-safety-stop", type=int, default=DETAIL_SAFETY_STOP,
+                        help="job pages opened per detail source (a guard, reported as details_skipped); "
+                             "raise it for the one-off first pull")
     parser.add_argument("--hn-result", help="validated Hacker News result from scripts.hn_hiring validate")
     parser.add_argument("--hn-result-sha256", help="digest printed when that result was written")
     args = parser.parse_args(argv)
@@ -327,12 +332,16 @@ def main(argv=None, *, client=None, sleep=time.sleep) -> int:
         registry = yaml.safe_load(Path(args.config).read_text(encoding="utf-8"))
         if not 1 <= args.lookback_days <= 365:
             raise ValueError('invalid_lookback_days')
+        if not 1 <= args.detail_safety_stop <= 100000:
+            raise ValueError('invalid_safety_stop')
+        print(f'limits: lookback_days={args.lookback_days} detail_safety_stop={args.detail_safety_stop} '
+              f'delay={args.delay}')
         hn_result = None
         if args.hn_result:
             source, found = postings_from_result(read_artifact(args.hn_result, expected_sha256=args.hn_result_sha256))
             hn_result = {'source': source, 'postings': found}
         payload = run(registry, client, delay=args.delay, sleep=sleep, lookback_days=args.lookback_days,
-                      hn_result=hn_result)
+                      hn_result=hn_result, detail_stop=args.detail_safety_stop)
         print(summary(payload))
         failed = sum(s["status"] in {"failed", "blocked"} for s in payload["sources"])
         digest = write_artifact(args.output, payload)

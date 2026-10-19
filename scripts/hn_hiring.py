@@ -23,7 +23,7 @@ from jobhunter.hn_hiring import (CANDIDATE_SAFETY_STOP, ITEM_URL, SEARCH_URL, SO
 LOOKBACK_DAYS = 28
 
 
-def collect_candidates(fetcher, *, now, lookback_days, sleep=time.sleep):
+def collect_candidates(fetcher, *, now, lookback_days, sleep=time.sleep, safety_stop=CANDIDATE_SAFETY_STOP):
     search = fetcher.get_json(SEARCH_URL)
     threads = select_threads(search, now, lookback_days)
     if not threads:
@@ -35,7 +35,7 @@ def collect_candidates(fetcher, *, now, lookback_days, sleep=time.sleep):
         found, stats = candidate_comments(thread, fetcher.get_json(ITEM_URL.format(id=thread['story_id'])), cutoff)
         for key, value in stats.items():
             totals[key] += value
-        room = CANDIDATE_SAFETY_STOP - len(candidates)
+        room = safety_stop - len(candidates)
         truncated = truncated or len(found) > room
         candidates.extend(found[:room])
     return {'schema_version': 1, 'source_id': SOURCE_ID, 'captured_at': now.isoformat(),
@@ -49,6 +49,8 @@ def main(argv=None, *, client=None, sleep=time.sleep, now=lambda: datetime.now(t
     first = commands.add_parser('candidates')
     first.add_argument('--output', required=True, help='New artifact path outside the checkout')
     first.add_argument('--lookback-days', type=int, default=LOOKBACK_DAYS)
+    first.add_argument('--candidate-safety-stop', type=int, default=CANDIDATE_SAFETY_STOP,
+                       help='candidate comments handed to the AI (a guard, reported as truncated)')
     second = commands.add_parser('validate')
     second.add_argument('--candidates', required=True)
     second.add_argument('--candidates-sha256', required=True)
@@ -61,9 +63,13 @@ def main(argv=None, *, client=None, sleep=time.sleep, now=lambda: datetime.now(t
         if args.command == 'candidates':
             if not 1 <= args.lookback_days <= 365:
                 raise ValueError('invalid_lookback_days')
+            if not 1 <= args.candidate_safety_stop <= 100000:
+                raise ValueError('invalid_safety_stop')
+            print(f'limits: lookback_days={args.lookback_days} candidate_safety_stop={args.candidate_safety_stop}')
             new_artifact_path(args.output)
             payload = collect_candidates(JsonFetcher(client, sleep=sleep), now=now(),
-                                         lookback_days=args.lookback_days, sleep=sleep)
+                                         lookback_days=args.lookback_days, sleep=sleep,
+                                         safety_stop=args.candidate_safety_stop)
             digest = write_artifact(args.output, payload)
             stats = payload['stats']
             print(f"threads={len(payload['threads'])} comments_in_window={stats['in_window']} "

@@ -13,7 +13,7 @@ means set by another service. Today every number below is a constant in code or 
 | Jobs per source per run | no cap | removed in #19 | `scripts/source_probe.py` |
 | Jobs per run overall | no cap | removed in #19 | `scripts/source_probe.py` |
 | Lookback window | 28 days (`--lookback-days`, 1 to 365) | target | `scripts/source_probe.py`, `scripts/hn_hiring.py` |
-| Detail pages opened per detail source per run | 300 | safety stop (`details_skipped`) | `DETAIL_SAFETY_STOP` |
+| Detail pages opened per detail source per run | 300 (`source_probe --detail-safety-stop`, 1 to 100000) | safety stop (`details_skipped`) | `DETAIL_SAFETY_STOP` |
 | Polite delay between requests | 1.0 s (`--delay`) | target | `scripts/source_probe.py` |
 | Largest response accepted | 40 MB | safety stop | `MAX_BYTES` |
 | Remotive page | 50 jobs, product category | external, registry URL | `sources/v0_sources.yaml` |
@@ -28,7 +28,7 @@ means set by another service. Today every number below is a constant in code or 
 | Limit | Value | Kind | Where |
 | --- | --- | --- | --- |
 | Items handed to the AI per run | 1000 (`ai_queue pull --limit`) | safety stop | `WORK_SAFETY_STOP` |
-| Hacker News candidate comments per run | 1500 | safety stop | `CANDIDATE_SAFETY_STOP` |
+| Hacker News candidate comments per run | 1500 (`hn_hiring candidates --candidate-safety-stop`, 1 to 100000) | safety stop | `CANDIDATE_SAFETY_STOP` |
 | Hacker News comment length | 20,000 characters | safety stop | `MAX_COMMENT_CHARS` |
 | Gmail AI extractions per run | 1000 | safety stop | `EXTRACTION_SAFETY_STOP` |
 | Gmail messages read per run | 50 (one page) | gap until the live adapter | `jobhunter/gmail_alerts.py` |
@@ -40,7 +40,7 @@ means set by another service. Today every number below is a constant in code or 
 | Limit | Value | Kind | Where |
 | --- | --- | --- | --- |
 | Jobs per writer batch | 150 | batch size, not a delivery limit | `JOB_BATCH_SIZE` |
-| Pause between batches | 2 s | target | `BATCH_PAUSE_SECONDS` |
+| Pause between batches | 2 s (`sheets_sync --batch-pause`, 0 to 60) | target | `BATCH_PAUSE_SECONDS` |
 | Writes per Sheets request | up to 100 (`--chunk-size`, 1 to 100), also capped near 1 MB | batch size | `scripts/sheets_sync.py` |
 | Recovery journal | 1 MB per batch | safety stop | `jobhunter/sheet_journal.py` |
 | Retries on a transient Sheets error | 3 attempts, wait at most 60 s | safety stop | `jobhunter/sheets.py` |
@@ -63,6 +63,7 @@ figure comes from third-party guides and is not a guarantee against restriction.
 ## First pull versus daily runs
 
 The first pull is a one-off manual four-week backfill where these safety stops are
-meant to be raised or ignored. Today they cannot be changed without editing code;
-command-line flags for that are in PENDING.md section D. Limits set by a source's
+meant to be raised or ignored. The flags named in the tables above do that without
+editing code, and each run prints the limits it used (`limits: ...`). The Gmail
+extraction stop (1000) and the Gmail page (50) have no flag yet; Gmail is not live. Limits set by a source's
 own API (the "external" and "gap" rows) cannot be ignored from our side.
