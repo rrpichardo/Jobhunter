@@ -1,7 +1,8 @@
 # Claude Code continuation handoff
 
 **Start with docs/PENDING.md** (what only the user can do, what is blocked and what
-Claude continues) and docs/LIMITS.md (every limit and its value).
+Claude continues) and docs/LIMITS.md (every limit and its value). docs/SOURCES_HOW_READ.md
+says which sources are read by code and which by Claude.
 
 ## Latest clarification — full source scope and decisions still pending
 
