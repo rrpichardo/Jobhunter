@@ -27,12 +27,13 @@ from jobhunter.allowance import AllowanceSpent, finish, reserve
 from jobhunter.artifacts import new_artifact_path, safe_error_code, write_artifact
 from scripts.allowance import ALLOWANCE_ERRORS
 from scripts.sheets_sync import SAFE_ERRORS
-from jobhunter.social_collect import (FetchBlocked, FetchRateLimited, LIMITS, allowance_outcome, build_query,
+from jobhunter.social_collect import (COLLECTOR_ERROR, FetchBlocked, FetchRateLimited, LIMITS, allowance_outcome, build_query,
                                       candidate_artifact, collect_posts, load_queries, since_date)
 
 SOURCE = 'x-twscrape'
 COOKIE_VARIABLES = ('X_AUTH_TOKEN', 'X_CT0')
 EXIT_SPENT, EXIT_NEEDS_SETUP = 3, 4
+SEARCH_QUEUE = 'SearchTimeline'  # twscrape's name for the search request queue
 ACCOUNT = 'jobhunter-x'  # a label for twscrape's private account table; not a real account name
 
 
@@ -60,8 +61,9 @@ class TwscrapeFetcher:
             raise
 
     def search(self, query, limit):
+        before = self._successful_requests()
         try:
-            return self._loop.run_until_complete(self._search(query, limit))
+            found = self._loop.run_until_complete(self._search(query, limit))
         except self._twscrape.NoAccountError:
             # twscrape raises this both when the session was rejected/banned (account inactive) and when the only
             # account is cooling down after a rate limit (account active but locked): tell them apart.
@@ -73,6 +75,19 @@ class TwscrapeFetcher:
             if code == 429:
                 raise FetchRateLimited from None
             raise
+        if not found and self._successful_requests() <= before:
+            # Nothing came back AND twscrape never counted a successful request: it dropped the call silently (an
+            # HTML/Cloudflare block ends the stream with no response). A genuine empty search still counts one.
+            raise FetchBlocked
+        return found
+
+    def _successful_requests(self):
+        """twscrape adds to the account's per-queue counter only after a response passed its checks."""
+        try:
+            account = self._loop.run_until_complete(self._api.pool.get_account(ACCOUNT))
+            return int((account.stats or {}).get(SEARCH_QUEUE, 0)) if account is not None else 0
+        except Exception:  # noqa: BLE001 - unknown state counts as "no success seen", the safe direction
+            return 0
 
     def _why_no_account(self):
         try:
@@ -91,13 +106,11 @@ class TwscrapeFetcher:
         return FetchBlocked()
 
     async def _search(self, query, limit):
-        found, responses = [], 0
-        # twscrape treats `limit` as a target and can yield more, so stop here and close the stream ourselves.
-        # The raw stream is used (not `search`) so that "X answered with nothing to show" can be told apart from
-        # "no answer at all": a Cloudflare/HTML block makes twscrape end the stream silently with no response.
+        found = []
+        # twscrape treats `limit` as a target and can yield more, so stop here and close the stream ourselves
+        # (closing it also lets twscrape record the request count that search() relies on).
         async with contextlib.aclosing(self._api.search_raw(query, limit=limit)) as pages:
             async for page in pages:
-                responses += 1
                 for tweet in self._twscrape.models.parse_tweets(page.json(), limit - len(found)):
                     if tweet.retweetedTweet is not None:
                         continue  # a repost repeats someone else's post
@@ -107,8 +120,6 @@ class TwscrapeFetcher:
                         break
                 if len(found) >= limit:
                     break
-        if responses == 0:
-            raise FetchBlocked  # no response at all is a refusal, never a healthy empty result
         return found
 
     def close(self):
@@ -145,15 +156,20 @@ def main(argv=None, *, store=None, fetcher=None, environ=None, now=None, sleep=t
         except AllowanceSpent:
             print('allowance_spent: x-twscrape already used today (America/New_York); collect nothing')
             return EXIT_SPENT
-        outcome, items, error = 'failed', [], 'social_collector_error'
+        outcome, items, ran, error = 'failed', [], 0, COLLECTOR_ERROR
         try:
             captured = now()
-            if fetcher is None:
-                fetcher = TwscrapeFetcher(environ['X_AUTH_TOKEN'], environ['X_CT0'])
-            since = since_date(captured, args.lookback_days)
-            items, ran, error = collect_posts(
-                fetcher.search, [build_query(q, since) for q in queries],
-                max_posts=LIMITS[SOURCE]['posts'], sleep=sleep, rng=rng)
+            try:
+                if fetcher is None:
+                    fetcher = TwscrapeFetcher(environ['X_AUTH_TOKEN'], environ['X_CT0'])
+                since = since_date(captured, args.lookback_days)
+                items, ran, error = collect_posts(
+                    fetcher.search, [build_query(q, since) for q in queries],
+                    max_posts=LIMITS[SOURCE]['posts'], sleep=sleep, rng=rng)
+            except Exception:  # noqa: BLE001 - e.g. the library could not start; keep only a fixed word
+                items, ran, error = [], 0, COLLECTOR_ERROR
+            # Written even when the collection failed, so the failed attempt reaches Sources and Run Log
+            # instead of the source staying "needs setup".
             digest = write_artifact(args.output, candidate_artifact(SOURCE, items, captured,
                                                                     queries_run=ran, error=error))
             outcome = allowance_outcome(items, error)
