@@ -307,7 +307,9 @@ def test_the_adapter_uses_a_private_temporary_database_turns_telemetry_off_and_c
     db, raise_flag = log.api_args
     assert raise_flag is True and log.level == 'ERROR' and log.cookies == ('jobhunter-x', 'auth_token=tok; ct0=ct')
     folder = __import__('pathlib').Path(db).parent
-    assert folder.is_dir() and (folder.stat().st_mode & 0o077) == 0  # private
+    assert folder.is_dir()
+    if os.name != 'nt':  # Windows has no owner-only permission bits to check; the folder is still deleted below
+        assert (folder.stat().st_mode & 0o077) == 0  # private
     found = fetcher.search('hiring "pm"', 10)
     assert [p['text'] for p in found] == ['post 1', 'post 3']  # the repost is skipped
     assert found[0]['links'] == ['https://acme.example/jobs'] and found[0]['created_at'].startswith('2026-10-15')
