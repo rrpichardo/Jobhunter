@@ -26,7 +26,7 @@ NOT replace Codex.** Heads at the time of writing:
 | #46 | claude/handoff-oct19 | main | see PR | this status/handoff text, CLAUDE.md "what is pending" rule |
 | #47 | claude/newsletter-alirohde | #40 | 9400d18 | Ali Rohde Jobs weekly newsletter (jobs keyed by application link) |
 | #48 | claude/linkedin-jobs | #43 | 42d109d | LinkedIn job cards in the same session/allowance (contains #42's commit) |
-| #50 | claude/trace-rejections | main | 3cf0d6e | E4: reason codes and a printed `trace:` for every rejected fact and filter drop; docs/TRACEABILITY.md (opened after the first live run; needs Codex) |
+| #50 | claude/trace-rejections | main | da48dae | E4: reason codes and a printed `trace:` for every rejected fact and filter drop; docs/TRACEABILITY.md (opened after the first live run; needs Codex) |
 | #49 | claude/haiku-eval | main | 82bd0d4 | Haiku-vs-Sonnet eval harness, bug fix and first result (100 of 100 agree; user's rule 3 open) |
 
 **UPDATE, October 19 about 22:30 UTC (read this first):** the user decided to run the live test and the first manual run NOW with the
