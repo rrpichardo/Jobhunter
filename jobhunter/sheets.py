@@ -104,6 +104,8 @@ def _retry(operation, sleep, jitter):
             if not exc.transient or attempt == 2:
                 raise
             delay = max(2 ** attempt + jitter(), exc.retry_after or 0)
+            if str(exc) == 'sheet_http_429':  # the read quota is per minute: a 1 to 2 second wait only fails again
+                delay = max(delay, 20 * (attempt + 1))
             if delay > 60:
                 raise ValueError('sheet_retry_delay_exceeds_budget') from None
             sleep(delay)

@@ -41,10 +41,10 @@ means set by another service. Today every number below is a constant in code or 
 | Limit | Value | Kind | Where |
 | --- | --- | --- | --- |
 | Jobs per writer batch | 150 | batch size, not a delivery limit | `JOB_BATCH_SIZE` |
-| Pause between batches | 2 s (`sheets_sync --batch-pause`, 0 to 60) | target | `BATCH_PAUSE_SECONDS` |
+| Pause between batches | 45 s (`sheets_sync --batch-pause`, 0 to 60) | target | `BATCH_PAUSE_SECONDS` |
 | Writes per Sheets request | up to 100 (`--chunk-size`, 1 to 100), also capped near 1 MB | batch size | `scripts/sheets_sync.py` |
 | Recovery journal | 1 MB per batch | safety stop | `jobhunter/sheet_journal.py` |
-| Retries on a transient Sheets error | 3 attempts, wait at most 60 s | safety stop | `jobhunter/sheets.py` |
+| Retries on a transient Sheets error | 3 attempts, wait at most 60 s; a 429 quota error waits 20 s then 40 s | safety stop | `jobhunter/sheets.py` |
 
 ## Social sources (planned; collectors not built)
 

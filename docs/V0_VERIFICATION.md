@@ -404,3 +404,28 @@ Read-only readback: 167 Jobs rows, no duplicate Job IDs, earlier rows present on
 jooble Sources rows OK, one Run Log row for the run, lock released. Noted, not failures: one jsearch
 row with a blank location and an odd company string; 47 Sources rows for 46 registry sources (likely
 the old adzuna row); a transient Sheets read-quota 429 during readback.
+
+## First manual non-social pull in JobHunterEnv — October 18 to 19, 2026 (PARTIAL, not a pass)
+
+Cloud session `session_01KuVxYnAppMwqn66vKEgfS1`, detached at `4b9860e` (top of the PR #19 to #27 stack),
+uv 0.13.1, clean tree: **760 tests passed, 10 subtests**. Four-week window, safety stops raised
+(`--detail-safety-stop 1000 --page-safety-stop 200`).
+
+- **Hacker News:** 2 threads, 266 comments in the window, 28 role candidates, all 28 read; 18 facts proposed,
+  validate reported `valid=18 delivered=14 rejected=0` (the 4 not delivered were excluded by the collection
+  filter; the tool does not say which). The AI-queue commit did NOT run (see below), so these 28 comments
+  are still unread in the queue and will be read again.
+- **Collect:** 344 jobs from 46 sources, none failed or blocked. The Muse delivered 177 jobs (paging works),
+  Jooble 20, Jobicy 16, Getro Primary 15, Hacker News 14, JSearch 9. 8 sources stayed `needs setup`.
+- **Delivery to the real Sheet FAILED partway.** `sheets_sync` exited 2 with `sheet_http_429` (Google's
+  per-minute read quota; the 2-second pause between batches was far too short) and lock cleanup also
+  failed, so the writer lock (`_JobHunterLock`) was left behind. The single allowed retry printed
+  `writer_locked`. Batches `first-pull-20261018-b001` and `-b002` (150 jobs each) completed; the third
+  (about 44 jobs) did not. Neither run printed `sync_verified`. The repeat-safety step did not run.
+- **Read-only readback:** Jobs 420 rows, 0 duplicate Job IDs, 0 blank IDs; Sources 47 rows; Run Log 8 rows
+  (6 earlier plus the two batch rows); the lock is still held. Nothing was unlocked by the session.
+
+Not proven: a complete first pull, idempotent rerun of a batched run, the AI queue commit, lock release after a
+quota error. Fix on branch `claude/writer-quota-pacing`: 45 s between batches, a 429 now waits 20 s then 40 s, and
+lock reads retry through a quota error (creates and deletes still never repeat). The stuck lock needs an explicit
+operator decision before removal (runbook rule); see PENDING.md.

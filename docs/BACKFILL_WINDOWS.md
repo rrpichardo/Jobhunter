@@ -57,5 +57,5 @@ Design notes from the October 18 self-review:
   refreshes on every run. With a 28-day window that rewrites that machine-owned
   column for every in-window job each day. It was already true for board jobs; the
   window makes it more rows. A stable first-seen time needs a separate follow-up.
-- Writer batches pause `BATCH_PAUSE_SECONDS = 2.0` between each other to stay under
+- Writer batches pause `BATCH_PAUSE_SECONDS = 45.0` between each other to stay under
   the Sheets quota. A 3,000-job first run is about 20 batches; it is untested live.

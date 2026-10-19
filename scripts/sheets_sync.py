@@ -13,7 +13,7 @@ from jobhunter.sheets import prepare_payload, quarantine_run, sync_jobs
 
 # Each batch reads and writes several tabs; pausing between batches keeps a large backfill under the
 # Sheets per-minute quota. A quota error is still retried and a rerun resumes at the first unfinished batch.
-BATCH_PAUSE_SECONDS = 2.0
+BATCH_PAUSE_SECONDS = 45.0
 
 SAFE_ERRORS = frozenset('''invalid_sync_input invalid_pending_payload invalid_source_records
 invalid_source_counts invalid_source_coverage invalid_source_error invalid_job_batch
