@@ -1,5 +1,180 @@
 # Claude Code continuation handoff
 
+**Start with docs/PENDING.md** (what only the user can do, what is blocked and what
+Claude continues) and docs/LIMITS.md (every limit and its value). docs/SOURCES_HOW_READ.md
+says which sources are read by code and which by Claude.
+
+## Latest clarification — full source scope and decisions still pending
+
+The user asked for another commit/push/PR handoff after the plain-language
+explanation. Continue on `codex/social-next-handoff`, existing PR #18:
+https://github.com/rrpichardo/Jobhunter/pull/18 . It is the documentation-only
+continuation PR, not a completed social implementation. Obtain actual Claude
+review of the latest pushed revision and required CI before merging; an older
+review or green action alone is insufficient.
+
+**Do not narrow the project to LinkedIn and X.** The user specifically reminded
+us about Hacker News and YC. Preserve all planned sources; the LinkedIn-posts ->
+X -> real-test sequence is the next work order, not replacement of other sources.
+Read the full PLAN.md and registry, not only this shortened inventory:
+
+- Company boards: Greenhouse, Lever, Ashby and the other planned ATS adapters.
+- Public boards: Remotive, Remote OK, Himalayas, Jobicy, The Muse, WWR, Built In.
+- YC public Product Manager jobs AND separate logged-in Work at a Startup.
+- VC boards: Accel/Primary Getro, a16z and other planned portfolio/discovery paths.
+- Hacker News Who Is Hiring; main's registry only retrieves thread listings. Branch
+  `claude/hn-hiring-comments` adds `scripts.hn_hiring candidates` (public fetch and
+  filter), a Claude extraction step, `validate`, and `source_probe --hn-result`.
+  The routine prompt is now drafted in docs/ROUTINE_PROMPT.md (branch
+  `claude/ai-queue`), but no routine exists and nothing is proven in the cloud.
+  `scripts.ai_queue` (pull/commit) remembers which comments the AI already read in
+  `_State` under `queue/<source>/...`, so each run reads only new ones; leftovers
+  are counted in its printed summary (not yet a Run Log column).
+- a16z is also listing-only in the current registry; do not claim it delivers jobs.
+- Approved newsletters/RSS and forwarded job alerts: Next Play, Ali Rohde,
+  LinkedIn/TrueUp/Indeed/Glassdoor and other plan-approved senders; current Gmail
+  routing/live binding and some feed URLs remain incomplete.
+- Configured JSearch and Jooble APIs. Adzuna was excluded as paid-only; no new
+  spending, services, credits, proxies or paid API plans are authorized.
+- LinkedIn job listings AND hiring posts, X hiring posts; Cosign and school/MBA
+  sources still need correct URLs/setup. Missing sources remain visible with an
+  honest status. Historical public-source success does not prove current readiness.
+
+**Collection choices — ANSWERED October 18 (Claude session, after the plain-language
+ask above was repeated):**
+1. Keep every matching job found across all planned sources, send ready jobs to
+   the Sheet in batches, and save unfinished AI processing for later, without
+   buying anything. User chose YES. This means retaining discoveries within
+   bounded searches, not unlimited searching or asserting unknown eligibility.
+2. LinkedIn: user declined the 50-search ceiling for now and chose 5 JOB
+   searches plus 5 separate HIRING-POST searches (10 total) per daily run. Searches and opening individual
+   result details are different limits; detail views stay at <=50 per run.
+
+The answers are recorded in PLAN.md. On `main` and PR #18 the old caps are still in
+the code. They are removed on branch `claude/keep-every-match-batches` (new PR,
+branched from PR #18's head; needs Codex review because Claude wrote it):
+- `scripts/source_probe.py`: `PER_SOURCE_LIMIT`/`TOTAL_LIMIT` deleted. New
+  `DETAIL_SAFETY_STOP = 300` (job pages per detail source, reported as
+  `details_skipped`), `LOOKBACK_DAYS = 28`, `--lookback-days`.
+- `jobhunter/sheet_records.py`: `JOB_BATCH_SIZE = 150` is now a batch size. Also in
+  `jobhunter/sheets.py`, where a failed source's partial jobs may span batches
+  (`<=` Selected instead of `==`).
+- `scripts/sheets_sync.py`: runs of more than 150 jobs are split into `<run>-b001`,
+  `-b002`, ... each a journaled, recoverable run; one batch keeps the plain run id.
+- `jobhunter/gmail_alerts.py`: `EXTRACTION_SAFETY_STOP = 1000` replaces the 150
+  extraction budget, and the hidden `[:8]` cap on returned postings is gone.
+  One metadata page of 50 messages is still read; pagination arrives with the live adapter. `len(facts) > 150` is a separate reply-size sanity bound.
+- `jobhunter/postings.py`: `Posting.posted_at`, `parse_posted`, `within_lookback`.
+Not built: the saved AI backlog in `_State`, pagination for Himalayas/The Muse/
+Jooble/JSearch and skipping Job IDs already in the Sheet (all in
+docs/BACKFILL_WINDOWS.md). Do not claim the first-run backfill is complete.
+
+The existing plan includes randomized pauses between actions. The historical
+30-50 searches/day discussion appears farther below as vendor research, not an
+approved change, official LinkedIn limit, or guarantee against restriction.
+Do not silently turn 50 detail views into 50 searches or invent delay timings.
+Existing cloud saved-cookie authorization and no-new-spending rule remain.
+
+**PR #18 review status (October 18):** Claude reviewed head `4177f4e` (posted on the PR
+at 23:22Z; verdict: no blockers, four minor doc issues, now
+fixed in a later commit). That review does not cover any later push; the final
+head still needs its own review before merge. Codex has not reviewed this PR: it
+holds Codex-written commits (reviewed by Claude) plus Claude-written doc commits
+that the reciprocal rule says Codex should review.
+
+No new production code, source fetch, account action or Sheet write occurred
+while preparing this clarification. Prior cloud preflight and test evidence below
+remain scoped to their stated revisions; no daily routine has been deployed.
+
+
+## Next owner — LinkedIn hiring posts, then X, then real cloud test
+
+User explicitly requested searches of LinkedIn profile posts because people
+announce jobs outside the job board, followed by X and then the real test.
+User then requested a handoff before further implementation because context
+was running short. Resume this order; do not interpret the handoff as cancellation.
+
+- Main baseline is `5200ac01773ee51f7ddf18ea6b13267ac7911ac6` (PR17 merged).
+  PR16 is merged, reviewed and tested as recorded below. No social collector
+  implementation has started; only read-only research/preflight in this segment.
+- LinkedIn jobs **and hiring posts** remain distinct collection coverage under
+  `linkedin-login`, with post permalinks retained as evidence. Broader approved
+  roles and current salary/geography rules apply to both social sources. No
+  likes, follows, replies, connections, messages, applications or account creation.
+- Dedicated `LINKEDIN_LI_AT`, `X_AUTH_TOKEN`, `X_CT0` are already provisioned
+  per prior verified setup; never request values in chat, print them, inspect
+  cookies locally or dump environment values. Recheck only nonempty booleans.
+- Implement/test LinkedIn as its own milestone PR, then X as its own PR.
+  Codex implementation needs fresh Claude review of each pushed head and CI;
+  standing authorized merges still apply. No same-agent review gate.
+- The existing plan already defines cloud-only restoration, limits and output.
+  Use LinkedIn <=5 job + <=5 post searches / <=50 detail views, X <=10 queries /
+  <=200 posts, one live attempt per source per America/New_York day. Existing
+  eight-per-source / 150-total caps are still in the code; the decision to keep
+  every match is made (see top of this file) but not yet implemented.
+  Reserve each daily allowance durably in `_State` BEFORE live collection,
+  under the structural workbook writer lock; `_State` itself is not an atomic
+  lock. Fail closed on ambiguous writes. No allowance implementation exists yet.
+- Research the cookie-compatible LinkedIn MCP route first; use the plan's small
+  read-only Playwright fallback if unsupported. Current upstream candidates are
+  not selected/pinned or installed by this work. Do not add local production
+  dependencies, a hosted scraper, paid API/proxy or interactive cloud login.
+- X uses pinned/tested twscrape with temporary private cookie account DB,
+  deleted after the run. Suppress sensitive library logs, disable telemetry,
+  bound requests/time/pagination and account waits; no password login/IMAP,
+  automatic account rotation/relogin or indefinite rate-limit waiting.
+- Claude extracts explicit facts into validated structured postings. Python
+  owns filtering, stable identity, deduplication and Sheet writes. A post without
+  a direct application URL remains a lead using its canonical post URL; preserve
+  post/source evidence and unresolved fields, never infer salary eligibility.
+- Real-test gate: after reviewed collectors and cloud-safe allowance/writer
+  coordination exist, test actual JobHunterEnv LinkedIn posts then X within
+  that day's allowance, record results/errors honestly in Sources/Run Log, and
+  verify delivery/repeat from saved normalized data without a second live fetch.
+  Gmail comparison is unavailable, not zero. Test fresh session restoration;
+  manual tests still do not prove scheduled daily execution.
+- Independent Gmail routing/live adapter and schedule remain open. Gmail UI
+  blocker stays 3/3; this new social work does not authorize another UI retry.
+
+### Read-only research and preflight
+
+Cloud validation session (same JobHunterEnv):
+(cloud session link not kept in Git) . Latest prompt begins
+`Social-cloud preflight only`; it asks for a clean detached checkout at the
+baseline above, pinned uv/Python/package versions, boolean cookie presence,
+empty headless-browser launch, and read-only lock/pending/allowance readiness.
+No social/Gmail requests, cookie injection or Sheet writes were authorized
+for that preflight. Inspect its expanded command output before citing results;
+no live social allowance has been consumed by the preflight itself.
+
+Expanded outputs already inspected: exact baseline HEAD, clean tracked and
+untracked tree; uv0.13.1, project Python3.12.3; all three cookie variables
+nonempty (values never read back). Python `playwright`, `twscrape` and
+`mcp-server-linkedin` are not installed in project or system Python. The image
+has Node Playwright1.56.1 under `/opt/node-tools/node_modules/playwright`, Node
+`/opt/node22/bin/node`, and Chromium141.0.7390.37 under `/opt/pw-browsers`.
+An empty headless context launched, had zero cookies, stayed on `about:blank`
+and closed cleanly, exit0. This is browser availability only, not social login.
+Expanded final read-only workbook outputs: writer_lock_present=False,
+pending_writer_runs=0; no social/allowance key exists, including October18 in
+America/New_York. Both commands exited0 and tree remained clean. These are
+readiness observations, not an implemented allowance or serialization proof.
+
+Primary upstream references checked October 18:
+- https://github.com/stickerdaniel/linkedin-mcp-server : current README lists
+  `search_posts` as well as job searches, but its setup emphasizes saved local
+  browser profiles/interactive login. Direct supplied-cookie cloud restoration
+  remains unverified; inspect exact version/source before choosing it.
+- https://github.com/bcharleson/linkedincli : supports cookie env configuration,
+  but its current README expressly requires local MCP session origination, so
+  it cannot be adopted as the production cloud route under this plan.
+- https://github.com/vladkens/twscrape : current README shows
+  `API.pool.add_account_cookies`, `API.search`, bounded pool-wait options and
+  `TWS_TELEMETRY=0`. API/source/version compatibility and internal retry behavior
+  still need inspection. `limit` is a target, not a hard fetch/response cap;
+  enforce independent bounds in our collector. No installed version is assumed.
+
+
 ## Current checkpoint — PR #16 merged and manual cloud smoke passed
 
 This checkpoint supersedes older pending-review/open-PR statements below;
@@ -29,10 +204,12 @@ those entries preserve chronology, not current status.
   exact-label scope and security exclusions. End-to-end Gmail testing depends
   on a genuine alert plus precise forwarding/label filters. Do not retry the
   exhausted filter UI blocker without manual completion or a relevant change.
-- User input still needed: correct Cosign and desired school/MBA URLs; settle
-  the saved-cookie collector approach and proposed collection-cap change.
-  Current caps remain eight per source / 150 per batch. Do not ask for account
-  credentials in chat. PR16's extra repair authorization did not lift Gmail's cap.
+- User input still needed: correct Cosign and desired school/MBA URLs; approval of the saved-cookie collector
+  approach (A1 in PENDING.md). The collection-cap change is NOT open: the user decided it on October 18 (keep every
+  matching job, deliver in recoverable batches; see top of file), so it is implementation work and needs no
+  further answer. At this checkpoint the old caps (eight per source / 150 per batch) were still in the code; the
+  PRs from #19 onward replace them. Do not ask for account credentials in chat. PR16's extra repair
+  authorization did not lift Gmail's cap.
 
 ## Latest continuation — broader alerts and salary preferences
 
@@ -139,9 +316,10 @@ reset counters or replace cloud execution with local Gmail collection.
   no forwarding/filter enabled yet. See SETUP.md. Preserve all label-only rules.
 - User questioned the eight-jobs-per-source / 150-jobs-total collection caps.
   Proposed retaining all matching jobs found with safe batch delivery and a
-  separate AI-processing budget; answer/implementation still pending. Existing
-  caps remain unchanged. Explain browser/social setup in plain language before
-  relying on the user's tentative preference as a final scope decision.
+  separate AI-processing budget. The user answered on October 18: keep every matching job, in recoverable
+  batches (final decision, see top of file). Implementation was still pending at this checkpoint and the caps
+  were unchanged then. Explain browser/social setup in plain language before relying on the user's preference
+  for the collector method (that approval, A1, is still open).
 - No new social access, source harvest, Sheet write or deployment evidence.
 
 ## Handover from Claude (Opus) — October 18, 2026, evening
@@ -363,7 +541,7 @@ Repairs included in this checkpoint, still needing fresh independent review:
 ## Actual Claude cloud evidence, not Codex cloud
 
 Codex controlled Chrome Richard to select the repo and **JobHunterEnv** at
-https://claude.ai/code/session_015wZ8bZKVEjazvzsqciHokQ . That is a manual Claude
+(cloud session link not kept in Git) . That is a manual Claude
 cloud session, not a scheduled routine. Ubuntu24.04, Python3.12.3, uv0.13.1.
 Local authenticated Claude Sonnet CLI reviews were separate development checks.
 

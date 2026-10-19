@@ -20,6 +20,9 @@ SECURITY_SUBJECT = re.compile(r'\b(?:security|verification|verify|password|reset
                               r'sign[- ]?in|one[- ]time|authentication|code|2fa|two[- ]factor)\b', re.I)
 SECURITY_BODY = re.compile(r'\b(?:verification code|reset (?:your )?password|password reset|'
                            r'one[- ]time (?:code|password)|security (?:alert|notice)|confirm your (?:account|identity))\b', re.I)
+# Generous safety stop on AI extractions per run, not a target (our own guess, not an Anthropic limit).
+# Reaching it leaves the rest unprocessed and visible as partial coverage; tune after measuring real volume.
+EXTRACTION_SAFETY_STOP = 1000
 FACT_FIELDS = frozenset({'title', 'company', 'location', 'salary', 'description_quote', 'apply_url'})
 
 
@@ -135,8 +138,8 @@ def collect_alerts(connector, extractor, *, dedicated_recipient, rules, captured
                 source['status'], source['error'] = 'failed', 'gmail_layout_unverified'
                 continue
             for block, links in blocks:
-                if extractions >= 150:
-                    break  # bounded partial coverage, never a complete-mailbox claim
+                if extractions >= EXTRACTION_SAFETY_STOP:
+                    break  # visible partial coverage, never a complete-mailbox claim
                 extractions += 1
                 try:
                     facts = extractor(block)
@@ -166,6 +169,6 @@ def collect_alerts(connector, extractor, *, dedicated_recipient, rules, captured
         source['status'], source['error'] = 'failed', 'gmail_connector_failed'
     finally:
         # Also reconcile successful earlier messages after a later connector error.
-        output['postings'] = sorted(output['postings'], key=collection_priority)[:8]
+        output['postings'] = sorted(output['postings'], key=collection_priority)
         source['selected_for_m0'] = len(output['postings'])
     return output

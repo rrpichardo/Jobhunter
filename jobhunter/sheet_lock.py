@@ -4,10 +4,23 @@ No lease expiry or lock stealing. Manual recovery requires stopping every previo
 writer; a hidden Sheet cannot protect against editors deleting or changing it.
 """
 
+import time
+
+
 class SheetLock:
-    def __init__(self, store, owner, started):
-        self.store, self.owner, self.started = store, owner, started
+    def __init__(self, store, owner, started, *, sleep=time.sleep):
+        self.store, self.owner, self.started, self.sleep = store, owner, started, sleep
         self.attempted = self.held = False
+
+    def _owner(self):
+        """Read the lock owner, waiting out a transient quota error. Only READS retry: creating or deleting never repeats."""
+        for attempt in range(3):
+            try:
+                return self.store.lock_owner()
+            except Exception as exc:
+                if not getattr(exc, 'transient', False) or attempt == 2:
+                    raise
+                self.sleep(20 * (attempt + 1))
 
     def acquire(self):
         if self.attempted:
@@ -20,7 +33,7 @@ class SheetLock:
             # Ownership is the only acceptable confirmation; never retry create.
             pass
         try:
-            owner = self.store.lock_owner()
+            owner = self._owner()
         except Exception:
             raise ValueError('lock_acquisition_unconfirmed') from None
         if owner != self.owner:
@@ -36,7 +49,7 @@ class SheetLock:
         if hasattr(self.store, 'deactivate_owner'):
             self.store.deactivate_owner(self.owner)
         try:
-            owner = self.store.lock_owner()
+            owner = self._owner()
         except Exception:
             raise ValueError('lock_release_unconfirmed') from None
         if owner != self.owner:

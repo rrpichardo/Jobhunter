@@ -83,11 +83,18 @@ def test_a_blocked_source_is_requested_exactly_once():
     assert sum("walled" in url for url in seen) == 1
 
 
-def test_total_cap_keeps_source_counts_honest(monkeypatch):
-    monkeypatch.setattr(probe, "TOTAL_LIMIT", 0)
-    payload = run_probe()
-    assert payload["jobs"] == [] and payload["sources"][0]["status"] == "OK-zero-jobs"
-    assert all(s["selected_for_m0"] == 0 for s in payload["sources"])
+def test_every_match_is_delivered_with_no_total_cap_and_counts_stay_honest():
+    many = {"jobs": [{"id": i, "title": "Product Manager", "location": {"name": "Remote"},
+                      "content": "<p>Build.</p>", "absolute_url": f"https://example.com/jobs/{i}"}
+                     for i in range(1, 201)]}
+    registry = {"boards": {"greenhouse": [{"board": "big", "company": "Big", "tag": "other"}]},
+                "needs_setup": []}
+    client = httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200, json=many)))
+    payload = probe.run(registry, client, delay=0, sleep=lambda s: None, environ={},
+                        now=lambda: "2026-10-18T00:00:00+00:00")
+    assert len(payload["jobs"]) == 200 and payload["sources"][0]["selected_for_m0"] == 200
+    assert payload["extraction"]["selected"] == 200
+    assert "total_limit_skipped" not in payload["probe"]["notes"]
 
 
 def test_cli_writes_artifact_and_delivery_roundtrips_through_sheets_sync(tmp_path, capsys, monkeypatch):
@@ -276,15 +283,9 @@ def test_response_byte_limit_stops_reading_before_the_rest_of_the_body(monkeypat
     assert consumed == [b'12345']
 
 
-def test_total_cap_reports_how_many_jobs_were_omitted(monkeypatch):
-    monkeypatch.setattr(probe, 'TOTAL_LIMIT', 0)
-    payload = run_probe()
-    assert payload['probe']['notes']['total_limit_skipped'] == 1
-
-
-def test_detail_budget_prioritizes_known_ai_titles_and_reports_skipped_candidates(monkeypatch):
+def test_detail_safety_stop_prioritizes_known_ai_titles_and_reports_skipped_candidates(monkeypatch):
     from html import escape
-    monkeypatch.setattr(probe, 'PER_SOURCE_LIMIT', 1)
+    monkeypatch.setattr(probe, 'DETAIL_SAFETY_STOP', 2)
     listing = '<div data-page="' + escape(json.dumps({'props': {'jobPostings': [
         {'id': i, 'title': title, 'url': f'/companies/acme/jobs/{i}',
          'location': 'United States', 'companyName': 'Acme'}
@@ -298,9 +299,10 @@ def test_detail_budget_prioritizes_known_ai_titles_and_reports_skipped_candidate
     with httpx.Client(transport=httpx.MockTransport(serve)) as client:
         source, jobs, note = probe.probe_source(client, {'id': 'yc-product', 'kind': 'yc',
             'url': 'https://www.ycombinator.com/jobs/role/product-manager'}, '2026-10-18T00:00:00+00:00')
-    assert [job.job_id for job in jobs] == ['yc-product:3']
-    assert len(seen) == 2
-    assert 'details_skipped=2' in note
+    # half the stop (one page) stays in priority order, so the AI title is always read; the other page rotates
+    assert 'yc-product:3' in [job.job_id for job in jobs] and len(jobs) == 2
+    assert len(seen) == 3
+    assert 'details_skipped=1' in note
 
 
 def test_duplicates_across_sources_are_merged_and_counted():
@@ -403,7 +405,7 @@ def test_keyed_sources_make_one_request_each_and_deliver_through_the_shared_filt
     assert [(r.method, r.url.host) for r in seen] == [("GET", "jsearch.p.rapidapi.com"), ("POST", "jooble.org")]
     js, jb = seen
     assert dict(js.url.params) == {"query": "product manager in USA", "page": "1", "num_pages": "1",
-                                   "date_posted": "week"}
+                                   "date_posted": "month"}  # default 28-day window
     assert js.url.path == "/search-v2"
     assert js.headers["X-RapidAPI-Key"] == KEY and js.headers["X-RapidAPI-Host"] == "jsearch.p.rapidapi.com"
     assert jb.url.path == f"/api/{KEY}"
@@ -418,14 +420,13 @@ def test_keyed_sources_make_one_request_each_and_deliver_through_the_shared_filt
     assert payload["jobs"][0]["Salary"] == "150,000 - 190,000 USD YEAR"
 
 
-def test_keyed_sources_respect_the_per_source_limit(monkeypatch):
-    monkeypatch.setattr(probe, "PER_SOURCE_LIMIT", 1)
+def test_keyed_sources_deliver_every_match_without_a_per_source_cap():
     many = {"status": "OK", "data": [{**JSEARCH_BODY["data"][0], "job_id": f"js-{i}",
                                       "job_apply_link": f"https://acme.test/apply/{i}"} for i in range(3)]}
     payload = run_keyed(keyed_serve([], jsearch=lambda r: httpx.Response(200, json=many)), KEYED_ENV)
     by_id = {s["source_id"]: s for s in payload["sources"]}
-    assert by_id["jsearch"]["valid_jobs"] == 3 and by_id["jsearch"]["selected_for_m0"] == 1
-    assert [row["Source"] for row in payload["jobs"]] == ["jsearch", "jooble"]
+    assert by_id["jsearch"]["valid_jobs"] == 3 and by_id["jsearch"]["selected_for_m0"] == 3
+    assert [row["Source"] for row in payload["jobs"]].count("jsearch") == 3
 
 
 def test_keyed_sources_share_the_cross_source_dedupe_path():

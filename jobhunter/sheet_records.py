@@ -11,6 +11,9 @@ JOB_HEADERS = ('Job ID', 'Date found', 'Job title', 'Company', 'Salary', 'Locati
                'Brief description', 'Apply link', 'Source', 'Rank (prelim)', 'Fit',
                'Next step', 'Status', 'Notes', 'My rating', 'More details')
 USER_COLUMNS = frozenset({'Status', 'Notes', 'My rating'})
+# Size of ONE recoverable writer batch (its journal entry must fit in _State). A run with more jobs is split into
+# several batches by scripts.sheets_sync; this is a batch size, not a limit on how many jobs a run may deliver.
+JOB_BATCH_SIZE = 150
 
 
 @dataclass(frozen=True)
@@ -21,7 +24,7 @@ class CellWrite:
 
 
 def normalize_jobs(records):
-    if not isinstance(records, list) or len(records) > 150:
+    if not isinstance(records, list) or len(records) > JOB_BATCH_SIZE:
         raise ValueError('invalid_job_batch')
     unique = {}
     for record in records:

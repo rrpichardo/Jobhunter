@@ -6,6 +6,8 @@ is stored. Models do not choose any cell value on this path.
 """
 
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
+from email.utils import parsedate_to_datetime
 from html import unescape
 import hashlib
 import json
@@ -19,8 +21,9 @@ import feedparser
 from jobhunter.records import https_url
 from jobhunter.job_identity import canonical_key, verified_requisition
 
-PM_TITLE = re.compile(r"\b(product manager|product lead|group product manager|head of product|"
-                      r"director of product|vp of product|vp,? product|pm)\b", re.I)
+PM_TITLE_TERMS = (r"product manager|product lead|group product manager|head of product|"
+                  r"director of product|vp of product|vp,? product")
+PM_TITLE = re.compile(rf"\b({PM_TITLE_TERMS}|pm)\b", re.I)
 EXCLUDED_TITLE = re.compile(r"\b(intern|internship|summer associate|product marketing|"
                             r"product designer|product design|product communications|program manager|"
                             r"project manager)\b", re.I)
@@ -82,6 +85,7 @@ class Posting:
     salary: str = ""
     tag: str = "other"  # ai | bigtech | other, from the reviewed registry
     remote: bool = False  # explicit source metadata; False does not prove on-site
+    posted_at: str = ""  # ISO-8601 UTC from source metadata; empty when the source gives no usable date
 
     def __post_init__(self):
         for value in (self.job_id, self.source_id, self.company, self.title, self.text):
@@ -90,7 +94,8 @@ class Posting:
         if (not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9:._~-]{0,300}", self.job_id)
                 or not isinstance(self.location, str) or not isinstance(self.salary, str)
                 or self.tag not in {"ai", "bigtech", "other"} or type(self.remote) is not bool
-                or not https_url(self.apply_url)):
+                or not https_url(self.apply_url) or not isinstance(self.posted_at, str)
+                or (self.posted_at and parse_posted(self.posted_at) != self.posted_at)):
             raise ValueError("invalid_posting")
 
 
@@ -215,6 +220,13 @@ ROLE_FAMILIES = (
     ('Project management', re.compile(r'\bproject (?:manager|management lead|director)\b', re.I)),
 )
 
+# Free-text scan (Hacker News comments, social posts): the same families as above, built from ROLE_FAMILIES so
+# candidate selection and delivery cannot drift apart. The bare "PM" token is left out because in running text
+# it is mostly a time of day.
+ROLE_TEXT = re.compile("|".join(
+    rf"\b(?:{PM_TITLE_TERMS})\b" if family == "Product management" else pattern.pattern
+    for family, pattern in ROLE_FAMILIES), re.I)
+
 
 def role_family(title: str) -> str | None:
     if ROLE_EXCLUSIONS.search(title):
@@ -323,6 +335,43 @@ def collection_priority(posting: Posting) -> int:
 
 
 
+def parse_posted(value) -> str:
+    """ISO-8601 UTC (seconds) from a source date, or "" when absent or unreadable.
+
+    Accepts epoch seconds or milliseconds (int, float or digit string), ISO-8601 text and RFC 2822 text.
+    A time without a zone is read as UTC. Never guesses: anything else returns "".
+    """
+    if value is None or isinstance(value, bool) or not isinstance(value, (str, int, float)):
+        return ""
+    try:
+        if isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return ""
+            if re.fullmatch(r"\d{9,13}(?:\.\d+)?", text):
+                value = float(text)
+            else:
+                try:
+                    moment = datetime.fromisoformat(text.replace("Z", "+00:00"))
+                except ValueError:
+                    moment = parsedate_to_datetime(text)
+        if isinstance(value, (int, float)):
+            seconds = value / 1000 if value > 1e11 else value
+            moment = datetime.fromtimestamp(seconds, timezone.utc)
+        if moment.tzinfo is None:
+            moment = moment.replace(tzinfo=timezone.utc)
+        return moment.astimezone(timezone.utc).replace(microsecond=0).isoformat()
+    except (ValueError, TypeError, OverflowError, OSError, IndexError):
+        return ""
+
+
+def within_lookback(posting: "Posting", now: datetime, days: int) -> bool:
+    """True when the posting is inside the window, or its date is unknown (never dropped on missing data)."""
+    if not posting.posted_at:
+        return True
+    return datetime.fromisoformat(posting.posted_at) >= now - timedelta(days=days)
+
+
 def _digest(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()[:20]
 
@@ -360,7 +409,8 @@ def parse_greenhouse(data, ctx):
             raise ValueError
         return Posting(f"greenhouse:{ctx['board']}:{item['id']}", ctx["source_id"], ctx["company"],
                        plain(item.get("title")), plain(location.get("name")), clean_html(item.get("content")),
-                       item.get("absolute_url"), ctx["captured_at"], tag=ctx["tag"])
+                       item.get("absolute_url"), ctx["captured_at"], tag=ctx["tag"],
+                       posted_at=parse_posted(item.get("first_published")))
     return (*_collect(data["jobs"], build), len(data["jobs"]))
 
 
@@ -378,7 +428,8 @@ def parse_lever(data, ctx):
         return Posting(f"lever:{ctx['board']}:{item['id']}", ctx["source_id"], ctx["company"],
                        plain(item.get("text")), plain(categories.get("location") or ""),
                        text, item.get("hostedUrl"), ctx["captured_at"], tag=ctx["tag"],
-                       remote=plain(item.get('workplaceType')).casefold() == 'remote')
+                       remote=plain(item.get('workplaceType')).casefold() == 'remote',
+                       posted_at=parse_posted(item.get("createdAt")))
     return (*_collect(data, build), len(data))
 
 
@@ -392,7 +443,8 @@ def parse_ashby(data, ctx):
         text = plain(item.get("descriptionPlain")) or clean_html(item.get("descriptionHtml"))
         return Posting(f"ashby:{ctx['board']}:{item['id']}", ctx["source_id"], ctx["company"],
                        plain(item.get("title")), location, text, item.get("jobUrl"),
-                       ctx["captured_at"], tag=ctx["tag"], remote=item.get('isRemote') is True)
+                       ctx["captured_at"], tag=ctx["tag"], remote=item.get('isRemote') is True,
+                       posted_at=parse_posted(item.get("publishedAt")))
     return (*_collect(listed, build), len(listed))
 
 
@@ -404,7 +456,8 @@ def parse_remotive(data, ctx):
         return Posting(f"remotive:{item['id']}", ctx["source_id"], plain(item.get("company_name")),
                        plain(item.get("title")), plain(item.get("candidate_required_location")),
                        clean_html(item.get("description")), item.get("url"), ctx["captured_at"],
-                       salary=plain(item.get("salary")), tag="other", remote=True)
+                       salary=plain(item.get("salary")), tag="other", remote=True,
+                       posted_at=parse_posted(item.get("publication_date")))
     return (*_collect(data["jobs"], build), len(data["jobs"]))
 
 
@@ -418,7 +471,8 @@ def parse_remoteok(data, ctx):
                        plain(item.get("position")), plain(item.get("location")) or "Remote",
                        clean_html(item.get("description")), item.get("url") or item.get("apply_url"),
                        ctx["captured_at"], salary=_salary(item.get("salary_min"), item.get("salary_max")),
-                       tag="other", remote=True)
+                       tag="other", remote=True,
+                       posted_at=parse_posted(item.get("date") or item.get("epoch")))
     return (*_collect(jobs, build), len(jobs))
 
 
@@ -434,7 +488,8 @@ def parse_himalayas(data, ctx):
                        clean_html(item.get("description")) or plain(item.get("excerpt")),
                        item.get("applicationLink"), ctx["captured_at"],
                        salary=_salary(item.get("minSalary"), item.get("maxSalary"), item.get("currency"),
-                                      item.get("salaryPeriod")), tag="other", remote=True)
+                                      item.get("salaryPeriod")), tag="other", remote=True,
+                       posted_at=parse_posted(item.get("pubDate")))
     return (*_collect(data["jobs"], build), len(data["jobs"]))
 
 
@@ -449,7 +504,8 @@ def parse_jobicy(data, ctx):
                        clean_html(item.get("jobDescription")) or plain(item.get("jobExcerpt")),
                        item.get("url"), ctx["captured_at"],
                        salary=_salary(item.get("salaryMin"), item.get("salaryMax"),
-                                      item.get("salaryCurrency"), item.get("salaryPeriod")), tag="other", remote=True)
+                                      item.get("salaryCurrency"), item.get("salaryPeriod")), tag="other", remote=True,
+                       posted_at=parse_posted(item.get("pubDate")))
     return (*_collect(data["jobs"], build), len(data["jobs"]))
 
 
@@ -463,7 +519,8 @@ def parse_themuse(data, ctx):
         return Posting(f"themuse:{item['id']}", ctx["source_id"], plain(company.get("name")),
                        plain(item.get("name")), ", ".join(plain(loc.get("name")) for loc in locations),
                        clean_html(item.get("contents")), (item.get("refs") or {}).get("landing_page"),
-                       ctx["captured_at"], tag="other")
+                       ctx["captured_at"], tag="other",
+                       posted_at=parse_posted(item.get("publication_date")))
     return (*_collect(data["results"], build), len(data["results"]))
 
 
@@ -517,7 +574,8 @@ def parse_jsearch(data, ctx):
                        ctx["captured_at"],
                        salary=_salary(item.get("job_min_salary"), item.get("job_max_salary"),
                                       item.get("job_salary_currency"), item.get("job_salary_period")),
-                       tag="other", remote=remote)
+                       tag="other", remote=remote,
+                       posted_at=parse_posted(item.get("job_posted_at_datetime_utc")))
     # Non-US, non-Latin-American countries are skipped here (not counted as rejected items) because the
     # flattened location text alone cannot reliably exclude every foreign country.
     candidates = [item for item in jobs if not isinstance(item, dict) or _jsearch_country(item) is not None]
@@ -539,7 +597,8 @@ def parse_jooble(data, ctx):
         return Posting(f"jooble:{identity}", ctx["source_id"], plain(item.get("company")),
                        clean_html(item.get("title")), plain(item.get("location")),
                        clean_html(item.get("snippet")), link, ctx["captured_at"],
-                       salary=plain(item.get("salary")), tag="other")
+                       salary=plain(item.get("salary")), tag="other",
+                       posted_at=parse_posted(item.get("updated")))
     return (*_collect(data["jobs"], build), len(data["jobs"]))
 
 
@@ -554,7 +613,8 @@ def parse_wwr_rss(text, ctx):
         return Posting(f"wwr:{_digest(entry['link'])}", ctx["source_id"], company if role else "Unknown",
                        role or title, plain(entry.get("region")) or "Remote",
                        clean_html(entry.get("summary")), entry.get("link"), ctx["captured_at"],
-                       tag="other", remote=True)  # WWR's feed contains remote jobs only
+                       tag="other", remote=True,  # WWR's feed contains remote jobs only
+                       posted_at=parse_posted(entry.get("published")))
     return (*_collect(feed.entries, build), len(feed.entries))
 
 
@@ -577,7 +637,8 @@ def stubs_yc(text, ctx):
             stubs.append({"job_id": f"{ctx['source_id']}:{job['id']}", "company": _stub_text(job.get("companyName")),
                           "title": _stub_text(job.get("title")), "location": _stub_text(job.get("location")),
                           "url": absolute("https://www.ycombinator.com", job["url"]),
-                          "salary": _stub_text(job.get("salaryRange"))})
+                          "salary": _stub_text(job.get("salaryRange")),
+                          "posted_at": ""})  # the listing date is unverified; the job page's datePosted decides
         except (KeyError, TypeError, AttributeError):
             rejected += 1
     return stubs, rejected
@@ -602,7 +663,8 @@ def _job_posting(text):
 
 
 def detail_yc(text):
-    return {"text": clean_html(_job_posting(text).get("description"))}
+    job = _job_posting(text)
+    return {"text": clean_html(job.get("description")), "posted_at": parse_posted(job.get("datePosted"))}
 
 
 def stubs_builtin(text, ctx):
@@ -615,7 +677,7 @@ def stubs_builtin(text, ctx):
             try:
                 match = re.search(r"/job/[^/]+/(\d+)$", item["url"])
                 stubs.append({"job_id": f"{ctx['source_id']}:{match.group(1)}", "company": "", "location": "",
-                              "title": _stub_text(item.get("name")), "url": item["url"], "salary": ""})
+                              "title": _stub_text(item.get("name")), "url": item["url"], "salary": "", "posted_at": ""})
             except (KeyError, TypeError, AttributeError):
                 rejected += 1
     return stubs, rejected
@@ -638,7 +700,7 @@ def detail_builtin(text):
         parts.append(plain(requirement["name"]))
     base_salary = job.get('baseSalary') if isinstance(job.get('baseSalary'), dict) else {}
     salary = base_salary.get('value', {})
-    return {"text": clean_html(job.get("description")),
+    return {"text": clean_html(job.get("description")), "posted_at": parse_posted(job.get("datePosted")),
             "company": plain(org.get("name")) if isinstance(org, dict) else "",
             "location": "; ".join(parts),
             "salary": _salary(salary.get("minValue"), salary.get("maxValue"), plain(base_salary.get('currency')), salary.get("unitText"))
@@ -665,7 +727,8 @@ def stubs_getro(text, ctx):
             stubs.append({"job_id": f"{ctx['source_id']}:{job['id']}", "company": _stub_text(org.get("name")),
                           "title": _stub_text(job.get("title")),
                           "location": ", ".join(_stub_text(x) for x in locations if isinstance(x, str)),
-                          "url": f"{base}/companies/{org['slug']}/jobs/{job['slug']}", "salary": salary})
+                          "url": f"{base}/companies/{org['slug']}/jobs/{job['slug']}", "salary": salary,
+                          "posted_at": ""})  # the listing date is unverified
         except (KeyError, TypeError, AttributeError):
             rejected += 1
     return stubs, rejected
@@ -673,7 +736,7 @@ def stubs_getro(text, ctx):
 
 def detail_getro(text):
     job = _getro_state(text).get("currentJob") or {}
-    return {"text": clean_html(job.get("description"))}
+    return {"text": clean_html(job.get("description")), "posted_at": ""}  # no verified Getro date field yet
 
 
 def count_a16z(text, ctx):
@@ -751,6 +814,7 @@ def to_row(posting: Posting, note: str = "") -> dict:
     rank = {"ai": 1, "bigtech": 2, "other": 3}[posting.tag]
     details = (f"Source: {posting.apply_url}\nEvidence: {quote}"
                f"\nFirst seen by {posting.source_id}: {posting.captured_at}" + (f"\n{note}" if note else ""))
+    details += f'\nPosted: {posting.posted_at[:10]} (source metadata)' if posting.posted_at else '\nPosted: not provided by source'
     if posting.remote:
         details += '\nWork mode: Remote (source metadata)'
     preference, floor = salary_preference(posting)

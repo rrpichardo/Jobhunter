@@ -10,7 +10,7 @@ Reviewed-head JobHunterEnv tests and post-merge local tests each passed
 577 tests / 10 subtests. Earlier counts/checkpoints below are historical.
 
 Actual JobHunterEnv session:
-https://claude.ai/code/session_01Kydab84oh1GMjzuFahVswG . Codex expanded and
+(cloud session link not kept in Git) . Codex expanded and
 inspected command outputs, not just Claude's summary. The cloud checkout was
 clean, detached at the exact merge SHA, and contained the reviewed ancestor;
 `uv sync --locked` exited 0.
@@ -55,7 +55,7 @@ Exact-SHA evidence is in PR16 comments. Fresh current-head Claude review and CI
 remain required; no production Gmail adapter or scheduled delivery is verified.
 
 Actual Claude cloud session:
-https://claude.ai/code/session_01Kydab84oh1GMjzuFahVswG . A bounded read-only
+(cloud session link not kept in Git) . A bounded read-only
 check used the existing Gmail connector. Codex expanded the actual
 `mcp__Gmail__list_labels` result and confirmed `JobHunter` exists, type USER,
 with messagesTotal=0 and threadsTotal=0. No message-content tools or inbox
@@ -130,7 +130,7 @@ At implementation revision `e7c9c750e2f59f3e87e277fc0a39569337bcf873`:
   found no actionable findings. It inspected the diff; it did not reproduce tests
   or cloud UI checks. This review does not cover subsequent documentation changes.
 
-Live cloud evidence: the [bounded cloud session](https://claude.ai/code/session_015wZ8bZKVEjazvzsqciHokQ)
+Live cloud evidence: the bounded cloud session (session link not kept in Git)
 made one real Greenhouse request (HTTP 200, 655 jobs, one PM posting inspected).
 The underlying command/output was expanded in the UI and verified. See
 `CLOUD_CAPABILITIES.md` for the precise scope, runtime versions and unknowns.
@@ -159,7 +159,7 @@ Creation is setup evidence only; no application Sheet write has occurred.
 ### Actual cloud code-path test
 
 Tested revision `f913601f36b329fcc81f3e84f31542277cfcffe6` in the existing
-JobHunterEnv [cloud session](https://claude.ai/code/session_015wZ8bZKVEjazvzsqciHokQ).
+JobHunterEnv cloud session (session link not kept in Git).
 This was a manual test of the proposed revision, not a deployed/scheduled run.
 
 - Cloud installation used official uv 0.13.1 and Python 3.12.3. `uv sync --locked`
@@ -230,7 +230,7 @@ using only fresh hidden `_M0Test_` fixture tabs and the shared lock tab. This is
 **not** the real-posting write, not a scheduled run and not V0 deployment.
 
 Actual Claude cloud session
-https://claude.ai/code/session_01DsCkZnt2X9EtuQRVq6Gq5u (JobHunterEnv, branch
+(cloud session link not kept in Git) (JobHunterEnv, branch
 `claude/m0-sheet-sync`, HEAD `c5e2398`, clean tree). The container's uv was 0.11.32 and
 the repo pins 0.13.1; with the user's approval uv 0.13.1 was installed with pip into a
 scratch virtualenv outside the checkout. No tracked file or setting changed.
@@ -270,7 +270,7 @@ scratch virtualenv outside the checkout. No tracked file or setting changed.
 Scope: first application-level write to the real workbook tabs from the actual Claude
 cloud environment, plus an identical repeat. **Not** a scheduled run, the full V0
 source set, or a merge approval. Same cloud session as the harness run above
-(https://claude.ai/code/session_01DsCkZnt2X9EtuQRVq6Gq5u, code `c5e2398`).
+((cloud session link not kept in Git), code `c5e2398`).
 
 The earlier session's saved posting data was gone, so with the user's approval one new
 bounded public harvest was run (single Greenhouse board request, no social source).
@@ -315,7 +315,7 @@ Scope: one polite request to every non-login V0 source from the actual Claude cl
 environment, then delivery of the AI-PM matches and every source's status to the real
 workbook. This is a **source feasibility and first delivery**, not the scheduled daily run,
 not the 14-day trial, and not approval to merge. Same cloud session as above
-(https://claude.ai/code/session_01DsCkZnt2X9EtuQRVq6Gq5u), code `473d7d0` on
+((cloud session link not kept in Git)), code `473d7d0` on
 `claude/m1-source-coverage`, tree clean, `uv sync --locked` and **188 tests passed**.
 
 - `scripts.source_probe` (one GET each, no retries, no social, no login, no Google access):
@@ -404,3 +404,62 @@ Read-only readback: 167 Jobs rows, no duplicate Job IDs, earlier rows present on
 jooble Sources rows OK, one Run Log row for the run, lock released. Noted, not failures: one jsearch
 row with a blank location and an odd company string; 47 Sources rows for 46 registry sources (likely
 the old adzuna row); a transient Sheets read-quota 429 during readback.
+
+## First manual non-social pull in JobHunterEnv — October 18 to 19, 2026 (PARTIAL, not a pass)
+
+_Recorded by an earlier cloud session as historical evidence. It was not re-run during the Codex reviews of the later changes and is not proof the current code or environment works._
+
+Cloud session `(session id not kept in Git)`, detached at `4b9860e` (top of the PR #19 to #27 stack),
+uv 0.13.1, clean tree: **760 tests passed, 10 subtests**. Four-week window, safety stops raised
+(`--detail-safety-stop 1000 --page-safety-stop 200`).
+
+- **Hacker News:** 2 threads, 266 comments in the window, 28 role candidates, all 28 read; 18 facts proposed,
+  validate reported `valid=18 delivered=14 rejected=0` (the 4 not delivered were excluded by the collection
+  filter; the tool does not say which). The AI-queue commit did NOT run (see below), so these 28 comments
+  are still unread in the queue and will be read again.
+- **Collect:** 344 jobs from 46 sources, none failed or blocked. The Muse delivered 177 jobs (paging works),
+  Jooble 20, Jobicy 16, Getro Primary 15, Hacker News 14, JSearch 9. 8 sources stayed `needs setup`.
+- **Delivery to the real Sheet FAILED partway.** `sheets_sync` exited 2 with `sheet_http_429` (Google's
+  per-minute read quota; the 2-second pause between batches was far too short) and lock cleanup also
+  failed, so the writer lock (`_JobHunterLock`) was left behind. The single allowed retry printed
+  `writer_locked`. Batches `first-pull-20261018-b001` and `-b002` (150 jobs each) completed; the third
+  (about 44 jobs) did not. Neither run printed `sync_verified`. The repeat-safety step did not run.
+- **Read-only readback:** Jobs 420 rows, 0 duplicate Job IDs, 0 blank IDs; Sources 47 rows; Run Log 8 rows
+  (6 earlier plus the two batch rows); the lock is still held. Nothing was unlocked by the session.
+
+Not proven: a complete first pull, idempotent rerun of a batched run, the AI queue commit, lock release after a
+quota error. Fix on branch `claude/writer-quota-pacing`: 45 s between batches, a 429 now waits 20 s then 40 s, and
+lock reads retry through a quota error (creates and deletes still never repeat). The stuck lock needs an explicit
+operator decision before removal (runbook rule); see PENDING.md.
+
+## First manual non-social pull, rerun with the quota fix — October 19, 2026 (PASSED for the sources it covered)
+
+_Recorded by an earlier cloud session as historical evidence. It was not re-run during the Codex reviews of the later changes and is not proof the current code or environment works._
+
+Same cloud session, detached at `b03dcd4` (PR #28, CI green on Linux and Windows): **768 tests passed, 10
+subtests**. The user approved removing the leftover lock. The session first read the lock owner, started
+time and the Jobs/Sources/Run Log/_State row counts twice, 90 seconds apart; they matched exactly, so no writer
+was active. It then made one `drop_lock()` call and confirmed the lock was gone. A new run ID,
+`first-pull-20261019-r2`, was used because the old payload no longer existed and a changed payload under an old
+run ID is refused by design (`run_id_payload_conflict`).
+
+- Hacker News: the same 28 candidate comments, all read, 18 facts, `valid=18 delivered=14 rejected=0`;
+  `ai_queue commit` printed `marked_read=28`.
+- Collect: 322 jobs from 46 sources; one source failed (`getro-accel`, see below); 8 sources `needs setup`.
+- Sync: `sync_verified: run_id=first-pull-20261019-r2 batches=3 unique_jobs=322 sources=46 recovered_runs=1`
+  (exit 0). The recovered run was the earlier `first-pull-20261018` third batch (44 jobs), now `-b003`.
+  The identical repeat printed `recovered_runs=0` and exit 0.
+- Readback (read-only): Jobs 478 rows, 0 duplicate IDs, 0 blank IDs (themuse 178, jooble 29, jsearch 24,
+  getro-primary 17, stripe 16, jobicy 16, hacker news 14); Sources 47 rows (36 OK, 1 failed, 10 needs setup);
+  Run Log 12 rows, all complete or complete-with-source-failure; writer lock released; `_State` 118 data rows.
+- Not captured: the Jobs count immediately before the repeat sync, so "the repeat added nothing" rests on the
+  Run Log and the idempotent design, not a before/after count.
+
+**Defect found by this run, fixed on branch `claude/known-ids-all-delivered`:** `getro-accel` was recorded as
+failed (`invalid_items_quarantined`) because every good job was already in the Sheet (so none were fetched) and
+one malformed stub remained. A listing whose good jobs are all already delivered is now `OK-zero-jobs`.
+The Sources row stays `failed` in the workbook until the next run corrects it.
+
+Scope: this proves collection, paced batched delivery, recovery of an interrupted batch, the AI queue commit and
+the lock handling for the public sources. It does NOT prove LinkedIn, X, Gmail, Work at a Startup, school sites,
+the scheduled routine, or a second day's run that finds mostly known jobs.

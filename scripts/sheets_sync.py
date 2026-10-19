@@ -2,11 +2,18 @@
 
 import argparse
 import re
+import time
+import uuid
 
-from jobhunter.artifacts import read_artifact
+from jobhunter.artifacts import DEFAULT_MAX_BYTES, SYNC_MAX_BYTES, read_artifact
 from jobhunter.google_auth import open_workbook
 from jobhunter.sheet_io import GspreadStore
+from jobhunter.sheet_records import JOB_BATCH_SIZE
 from jobhunter.sheets import prepare_payload, quarantine_run, sync_jobs
+
+# Each batch reads and writes several tabs; pausing between batches keeps a large backfill under the
+# Sheets per-minute quota. A quota error is still retried and a rerun resumes at the first unfinished batch.
+BATCH_PAUSE_SECONDS = 45.0
 
 SAFE_ERRORS = frozenset('''invalid_sync_input invalid_pending_payload invalid_source_records
 invalid_source_counts invalid_source_coverage invalid_source_error invalid_job_batch
@@ -18,11 +25,11 @@ duplicate_existing_id writer_locked lock_acquisition_unconfirmed lock_identity_c
 ambiguous_existing_job_identity
 lock_release_unconfirmed lock_ownership_lost lock_acquisition_already_attempted too_many_pending_runs
 completed_run_changed sheet_write_verification_failed sheet_retry_delay_exceeds_budget sheet_write_too_large
-sheet_mutation_unconfirmed writer_lock_required writes_verified_lock_release_unconfirmed
+sheet_mutation_unconfirmed invalid_batch_pause writer_lock_required writes_verified_lock_release_unconfirmed
 sheet_request_failed sheet_tls_error sheet_transport_error invalid_sheet_response unapproved_tab
 invalid_google_configuration google_workbook_unavailable google_proxy_auth_missing google_workbook_not_found
 google_workbook_forbidden google_tls_error google_timeout google_transport_error invalid_json
-artifact_too_large artifact_must_be_outside_checkout invalid_extraction_delivery run_id_quarantined run_not_pending'''.split())
+artifact_too_large artifact_digest_mismatch artifact_must_be_outside_checkout invalid_extraction_delivery run_id_quarantined run_not_pending'''.split())
 
 
 def _deliver_many(args, payload, store):
@@ -49,12 +56,27 @@ def _deliver_many(args, payload, store):
             raise ValueError('invalid_extraction_delivery')
     if delivered:  # a job whose source has no record
         raise ValueError('invalid_extraction_delivery')
-    prepare_payload(jobs, sources)  # validate everything before opening a Google connection
+    # Every job is delivered. A large run is split into recoverable batches, each its own journaled run
+    # (<run id>-b001, -b002, ...) carrying the full source totals; one batch keeps the plain run id.
+    if not 0 <= args.batch_pause <= 60:
+        raise ValueError('invalid_batch_pause')
+    batches = [jobs[start:start + JOB_BATCH_SIZE] for start in range(0, len(jobs), JOB_BATCH_SIZE)] or [[]]
+    base = args.run_id or uuid.uuid4().hex
+    if len(batches) > 1 and len(base) > 75:  # leaves room for the -bNNN suffix within 80 characters
+        raise ValueError('invalid_run_id')
+    run_ids = [base] if len(batches) == 1 else [f'{base}-b{number:03d}' for number in range(1, len(batches) + 1)]
+    for batch in batches:  # validate everything before opening a Google connection
+        prepare_payload(batch, sources)
     backend = GspreadStore(open_workbook()) if store is None else store
-    result = sync_jobs(backend, jobs, sources, run_id=args.run_id, chunk_size=args.chunk_size)
+    results = []
+    for number, (batch, run_id) in enumerate(zip(batches, run_ids)):
+        if number:
+            time.sleep(args.batch_pause)
+        results.append(sync_jobs(backend, batch, sources, run_id=run_id, chunk_size=args.chunk_size))
     problems = sum(source['status'] in {'failed', 'blocked'} for source in sources)
-    print(f"sync_verified: run_id={result['run_id']} unique_jobs={result['unique_jobs']} "
-          f"sources={len(sources)} recovered_runs={result['recovered_runs']}")
+    print(f"sync_verified: run_id={base} batches={len(batches)} "
+          f"unique_jobs={sum(r['unique_jobs'] for r in results)} sources={len(sources)} "
+          f"recovered_runs={sum(r['recovered_runs'] for r in results)}")
     print(f'source_problems_recorded={problems}')
     return 0
 
@@ -62,10 +84,14 @@ def _deliver_many(args, payload, store):
 def main(argv=None, *, store=None):
     parser = argparse.ArgumentParser(description='M0 Python Sheet writer; no source collection.')
     parser.add_argument('--input')
+    parser.add_argument('--input-sha256', help='digest printed by source_probe (probe_sha256); only an input that '
+                        'matches it may be larger than the default artifact limit')
     parser.add_argument('--quarantine-run', metavar='RUN_ID',
                         help='operator only: move a poisoned pending run out of recovery, keeping its data')
     parser.add_argument('--run-id')
     parser.add_argument('--chunk-size', type=int, choices=range(1, 101), default=100)
+    parser.add_argument('--batch-pause', type=float, default=BATCH_PAUSE_SECONDS,
+                        help='seconds between writer batches of a large run (0 to 60)')
     args = parser.parse_args(argv)
     if (args.input is None) == (args.quarantine_run is None):
         parser.error('give exactly one of --input or --quarantine-run')
@@ -77,7 +103,10 @@ def main(argv=None, *, store=None):
                   'data kept under m0/quarantined/ in _State')
             return 0
         try:
-            payload = read_artifact(args.input)
+            # Only the producer's own collection artifact, proven by its digest, gets the larger limit; any other
+            # input (extraction files, unproven files) keeps the default and is never read past it.
+            limit = SYNC_MAX_BYTES if args.input_sha256 else DEFAULT_MAX_BYTES
+            payload = read_artifact(args.input, expected_sha256=args.input_sha256, max_bytes=limit)
         except (OSError, ValueError, RuntimeError) as exc:
             if isinstance(exc, ValueError) and str(exc) in SAFE_ERRORS:
                 raise  # retain specific JSON, size and checkout-path diagnostics

@@ -8,6 +8,48 @@ USD 70,000 annual minimum; LATAM on-site/hybrid scope remains Colombia and the
 Dominican Republic. This supersedes the earlier any-salary remote LATAM exception.
 Missing salary is unresolved, never evidence of meeting a minimum.
 
+Scope reminder from the latest user clarification: LinkedIn and X are additions
+within the full V0 source set, including Hacker News, YC public jobs and logged-in
+Work at a Startup, company/public/VC boards, newsletters/Gmail and configured
+APIs. Preserve unfinished integrations as explicit gaps. Current HN and a16z
+registry entries are listing-only, not completed job extraction/delivery.
+
+Decisions confirmed by the user on October 18 after a plain-language explanation:
+
+1. Keep every matching job found across ALL planned sources and deliver ready jobs
+   to the Sheet in recoverable batches. The old eight-per-source / 150-per-run
+   numbers are no longer a target. Searches stay bounded, and unknown eligibility
+   is never assumed. Implemented on branch
+   `claude/keep-every-match-batches` (PR pending review); main keeps the old caps
+   until that PR merges.
+2. The AI work runs INSIDE the daily 06:07 routine, not in a separate job, and
+   the goal is that EVERY collected job is processed in that run. Only jobs not
+   already processed are sent to AI, so after the first large run the daily
+   volume is small. The old M3 numbers (150 extractions, 40 fit scores, 45
+   minutes) were our own guesses, not Anthropic limits. Replace them with a
+   generous safety stop; if a run reaches it, the unprocessed jobs stay queued
+   (in `_State` and the Jobs lifecycle state, so a restart or missed day loses
+   nothing) and the Run Log records how many and how old. Set real limits after
+   measuring the first large run. Per Anthropic's routine documentation (checked
+   by the user, not re-verified here), routine runs draw on normal Pro usage with
+   no documented per-run time or item cap; documented rate limits are 100
+   scheduled runs per hour and 30 Run now per routine per hour. A launch blog
+   mentioned a Pro daily cap of 5 routine runs that the current docs do not list,
+   so treat it as unconfirmed; one daily run fits either way. Without usage
+   credits, a run that hits the Pro usage limit is rejected until the window
+   resets. AI uses the Claude Pro cloud session only: no paid API.
+3. First run = backfill. Collect jobs posted in the LAST 4 WEEKS that the user
+   should apply for, then run daily and process only NEW jobs. The backfill is
+   bounded and recoverable: it may take more than one run to drain, but it must
+   never drop jobs silently. Sources that cannot filter by posting date are
+   recorded as honest gaps (see docs/BACKFILL_WINDOWS.md).
+4. LinkedIn starts at five JOB searches plus five separate HIRING-POST searches
+   per daily run, ten in total (the 50-search alternative was declined for now).
+   Detail views stay at 50 or fewer and are a separate limit. X stays at 10
+   queries and 200 posts or fewer. Everything stays read-only with randomized
+   pauses; historical vendor guidance is not an official safe limit. No new
+   spending remains the standing restriction.
+
 This checklist records the user's pending decisions and setup assistance from the
 continuation conversation. Older setup tables below are historical; do not recreate
 resources already provisioned. Pending choices do not silently change current limits.
@@ -37,11 +79,29 @@ resources already provisioned. Pending choices do not silently change current li
 - [ ] Later, when the user asks, help stop/clean up old job-alert subscriptions in
   the main mailbox. No unsubscribe, archive or deletion is authorized by this
   checklist; the user expressly deferred that cleanup.
-- [ ] Resolve collection caps: the current probe selects at most eight jobs per
-  source and 150 total, and the writer accepts at most 150 per input batch. The user
-  questions these restrictions. Proposed direction: retain all matching jobs found,
-  deliver in safe batches, and budget AI processing separately. Agree the behavior,
-  then update collectors, writer/recovery and tests together; no cap change yet.
+- [ ] Collection behavior decided October 18 (retain all matching jobs, deliver
+  in recoverable batches, 4-week first-run backfill): the code is on branch
+  `claude/keep-every-match-batches` and awaits Codex review and merge. It removes
+  the eight-per-source and 150-total caps, splits large runs into 150-job writer
+  batches, adds `posted_at` and `--lookback-days`, and leaves the Gmail AI
+  extraction budget as a generous safety stop. Open: pagination gaps and
+  skip-already-delivered, both listed in docs/BACKFILL_WINDOWS.md. The saved AI
+  read-queue in `_State` (`jobhunter/ai_queue.py`, `scripts/ai_queue.py`) is on branch
+  `claude/ai-queue`; its counts are printed, not yet a Run Log column. LinkedIn starts at 5 job + 5 post searches per run.
+- [ ] Pending user-facing deliverables (docs/PENDING.md section E): a README that
+  explains every command; a basic front end to see the Run Log and source health and
+  to adjust parameters such as searches per day and the top amount per tool, so the
+  user does not need the terminal; and one config for every limit (docs/LIMITS.md).
+  Not built. The daily run stays cloud-only; the page must not become a local
+  production dependency or add a hosting service.
+- [ ] First pull (user direction, October 18): a one-off MANUAL four-week backfill
+  with safety stops relaxed where possible, not the scheduled routine; check the
+  Sheet the next morning; then the 06:07 routine runs daily. Everything that waits
+  on the user is listed in docs/PENDING.md.
+- [ ] Current user priority: implement LinkedIn hiring-post search in addition
+  to job listings, then X hiring-post search, then the real cloud test. Both
+  social sources were already in V0; this confirms execution order. See the
+  latest CLAUDE_HANDOFF.md checkpoint. No social collector is implemented yet.
 - [ ] Explain and settle the cloud collector approach for Work at a Startup,
   LinkedIn jobs/posts and X hiring posts in plain language. Dedicated cookies are
   provisioned per the handoff; actual cloud collection/restoration remains unproved.
@@ -214,7 +274,7 @@ LinkedIn or X remains a V0 blocker; delivering other sources alone does not comp
   leads beyond the main harvest/alerts, duplicate count, broken links, elapsed time, and errors. Record
   comparison as unavailable if Gmail or another baseline is not configured; never report it as zero.
 - **Read-only.** Search and view only: no connection requests, messages, posts, likes, follows, or applications.
-- **Starting limits (tune after the first run):** LinkedIn ≤ 5 searches and ≤ 50 detail views per run; X ≤ 10
+- **Starting limits (tune after the first run):** LinkedIn ≤ 5 job searches plus ≤ 5 hiring-post searches (10 total, user-confirmed October 18) and ≤ 50 detail views per run; X ≤ 10
   queries and ≤ 200 posts per run; randomized delays; at most one live collection per social source per
   America/New_York calendar day while testing. A manual Run now consumes that day's allowance. Persist the
   allowance in the Sheet `_State` tab so a restart or scheduled run cannot reset it.
@@ -465,8 +525,9 @@ eligibility, and ranking enhancements do not delay the V0 collection loop.
   do not wait for ranking or AI scoring. Run all collectors and browsers in the cloud. Source health in Sources tab;
   "0 jobs" vs "failed" distinguished; missing run detected by next run (gap in Daily Log).
 - **M3 — Extract:** Haiku fact sheet per job (fixed fields, quotes, evidence location); code verifies quotes and
-  derives IDs/dates/salary normalization; snapshot hash stored. Limits per run: ≤150 extractions, ≤40 fit scores,
-  ≤45 min; leftovers queued.
+  derives IDs/dates/salary normalization; snapshot hash stored. Process every new job each run; the former
+  ≤150 extractions / ≤40 fit scores / ≤45 min were guesses and become a generous
+  safety stop that queues leftovers visibly (see October 18 decision 2).
 - **M4 — Filter & eligibility:** §3 rules in code + tests.
 - **M5 — Rank:** §4 + Opus advice column.
 - **M6 — Sheet as CRM polish:** your columns, dropdowns, Check first / Watchlist tabs, daily summary row.

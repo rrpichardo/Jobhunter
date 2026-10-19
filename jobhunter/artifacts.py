@@ -7,6 +7,11 @@ from pathlib import Path
 import tempfile
 import re
 
+DEFAULT_MAX_BYTES = 5 * 1024 * 1024
+# The collection artifact holds every matching job of a backfill; the producer and the writer share this
+# ceiling so a run the producer writes is always one the writer can read.
+SYNC_MAX_BYTES = 64 * 1024 * 1024
+
 
 def artifact_path(value: str | Path) -> Path:
     path = Path(value).expanduser().resolve()
@@ -25,9 +30,11 @@ def new_artifact_path(path: str | Path) -> Path:
     return path
 
 
-def write_artifact(path: str | Path, payload: object) -> str:
+def write_artifact(path: str | Path, payload: object, *, max_bytes: int = DEFAULT_MAX_BYTES) -> str:
     path = new_artifact_path(path)
     content = (json.dumps(payload, ensure_ascii=True, allow_nan=False, indent=2) + "\n").encode("utf-8")
+    if len(content) > max_bytes:  # fail before publishing a file the reader would refuse
+        raise ValueError("artifact_too_large")
     # Publish a fully flushed file atomically, without replacing an existing name.
     # Private parent-directory permissions/ACLs are required, especially on Windows.
     fd, temporary = tempfile.mkstemp(prefix=".jobhunter-", dir=path.parent)
@@ -42,13 +49,13 @@ def write_artifact(path: str | Path, payload: object) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
-def read_artifact(path: str | Path, *, expected_sha256=None) -> object:
+def read_artifact(path: str | Path, *, expected_sha256=None, max_bytes: int = DEFAULT_MAX_BYTES) -> object:
     path = artifact_path(path)
-    if path.stat().st_size > 5 * 1024 * 1024:
+    if path.stat().st_size > max_bytes:
         raise ValueError("artifact_too_large")
     with path.open("rb") as stream:
-        data = stream.read(5 * 1024 * 1024 + 1)
-    if len(data) > 5 * 1024 * 1024:
+        data = stream.read(max_bytes + 1)
+    if len(data) > max_bytes:
         raise ValueError("artifact_too_large")
     if expected_sha256 is not None:
         if (not isinstance(expected_sha256, str) or not re.fullmatch("[a-f0-9]{64}", expected_sha256)
@@ -75,7 +82,9 @@ def safe_error_code(exc: Exception) -> str:
                "unknown_source_id", "duplicate_extraction", "unsupported_description_quote",
                "invalid_harvest_version", "invalid_harvest_jobs", "source_not_successful",
                "invalid_registry", "invalid_board", "invalid_source_id", "invalid_company_tag",
-               "invalid_source_text", "invalid_source_location_or_url", "invalid_capture_timestamp"}
+               "invalid_source_text", "invalid_source_location_or_url", "invalid_capture_timestamp",
+               "invalid_lookback_days", "invalid_hn_result", "invalid_board_response", "hn_no_threads",
+               "invalid_candidates", "invalid_safety_stop", "invalid_known_ids", "invalid_ai_result", "invalid_social_source", "invalid_extractions", "invalid_work_artifact"}
     if isinstance(exc, FileExistsError):
         return "artifact_exists"
     return str(exc) if str(exc) in allowed else "invalid_input_or_artifact"

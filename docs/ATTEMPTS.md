@@ -1,5 +1,34 @@
 # Implementation attempt log
 
+## October 19 Codex review rounds on the Claude-written stack (#19 to #30)
+
+- Round 1: Codex reviewed every Claude-written PR at its exact head and found seven problems (R1 to R7) in #19,
+  #21, #24, #25 and #26, plus the same lost-post bug in #27. Fixes were made as separate PRs on the reviewed
+  heads (#32 to #37), not on the original branches.
+- Round 2: Codex reviewed those fix PRs. #37 was clean; it found eight further problems in #32 to #36 (hard
+  cases the first fixes missed, such as numeric ids, the clock-change edge of the New York day, and a wrong
+  claim in the docs). All were fixed.
+- Round 3: #34, #35, #36 and #37 were approved. #33 had one new serious finding (a mistyped or invented id)
+  and #32 two small ones (the runbook did not pass the digest; a test was slow). Fixed.
+- Round 4: #33 and #32 approved. The shared validator change was carried into #37 and approved again.
+- The usual cap is three repair/review cycles per milestone. The user explicitly asked for as many rounds as
+  needed until Codex approves, so the cap was exceeded on #32 and #33 on purpose. Several Codex runs ended with
+  "unknown error" and were repeated; those are failed runs, not review cycles.
+- Everything above is offline test evidence. Nothing ran against the real workbook or in JobHunterEnv, and
+  none of these PRs is merged.
+
+## October 18 social continuation handoff — no live social attempt
+
+- User prioritized LinkedIn profile hiring-post search alongside job listings,
+  then X, then the real cloud test; then requested handoff before implementation.
+- Actual JobHunterEnv read-only preflight at `5200ac01773ee51f7ddf18ea6b13267ac7911ac6`
+  verified nonempty credential booleans and empty Chromium launch via image's
+  Node Playwright; no cookie injection, LinkedIn/X/Gmail requests or Sheet writes.
+  Python collector packages absent; no collector selected or implemented yet.
+  See latest CLAUDE_HANDOFF.md for exact outputs and continuation sequence.
+- This is not a new failed authentication attempt or consumed live daily allowance.
+  Existing blocker/review counters, including Gmail UI3/3, remain unchanged.
+
 ## October 18 milestone closure — PR #16
 
 - Cycle 9 Claude review of `110ea30d7cc4f97ac78a76ea6a05ea405db11632`
@@ -126,7 +155,7 @@
   exact assertions to the approved broader query, retaining request-count/key
   placement checks. `git diff --check` passed.
 - Actual cloud Gmail check used the existing connector in session
-  `session_01Kydab84oh1GMjzuFahVswG`. Expanded `mcp__Gmail__list_labels` output
+  `(session id not kept in Git)`. Expanded `mcp__Gmail__list_labels` output
   confirms exact `JobHunter` label, zero messages and threads. No message reads
   or inbox fallback. Local dedicated-account alert metadata search had no matches.
 - Gmail forwarding-checkbox blocker remains 3/3. Next: receive a real alert,
