@@ -20,12 +20,12 @@ NOT replace Codex.** Heads at the time of writing:
 | #40 | claude/social-collectors | main | 5ceb6cc | X collector (twscrape), shared candidate code; base of the stack below |
 | #41 | claude/docs-run-modes | #40 | 4c0fe90 | manual 28 days / daily 3 days, `scripts.run_window` guard |
 | #42 | claude/role-forward-deployed | main | b90c1d2 | Forward-Deployed / AI Deployment / AI Implementation Strategist roles (Codex finding on 62fc1be fixed here, then tightened after an independent review) |
-| #43 | claude/linkedin-posts | #40 | 0303164 | LinkedIn hiring-post collector (Playwright), card reader |
+| #43 | claude/linkedin-posts | #40 | 1c732a2 | LinkedIn hiring-post collector (Playwright), card reader |
 | #44 | claude/waas | main | 209efbc | Work at a Startup public pages (needs `Accept: text/html`) |
 | #45 | claude/a16z | main | e9d29ec | a16z portfolio jobs, four searches |
 | #46 | claude/handoff-oct19 | main | see PR | this status/handoff text, CLAUDE.md "what is pending" rule |
 | #47 | claude/newsletter-alirohde | #40 | 9400d18 | Ali Rohde Jobs weekly newsletter (jobs keyed by application link) |
-| #48 | claude/linkedin-jobs | #43 | 4e86e41 | LinkedIn job cards in the same session/allowance (contains #42's commit) |
+| #48 | claude/linkedin-jobs | #43 | 42d109d | LinkedIn job cards in the same session/allowance (contains #42's commit) |
 | #49 | claude/haiku-eval | main | c5535dc | Haiku-vs-Sonnet eval harness, bug fix and first result (100 of 100 agree; user's rule 3 open) |
 
 **Do next, in order:**
@@ -49,8 +49,8 @@ NOT replace Codex.** Heads at the time of writing:
 ### Merge plan, checked by a trial replay (October 19, about 22:00 UTC)
 
 Claude replayed every planned merge, in order, on a throwaway local branch that was never pushed, starting from `main` at `f71464f`.
-Heads used: #42 `b90c1d2`, #44 `209efbc`, #45 `e9d29ec`, #46 (this PR), #49 `c5535dc`, #40 `5ceb6cc`, #41 `4c0fe90`, #43 `0303164`,
-#47 `9400d18`, #48 `4e86e41`. Result: every conflict is additive (both sides add entries) and the fully combined result passes
+Heads used: #42 `b90c1d2`, #44 `209efbc`, #45 `e9d29ec`, #46 (this PR), #49 `c5535dc`, #40 `5ceb6cc`, #41 `4c0fe90`, #43 `1c732a2`,
+#47 `9400d18`, #48 `42d109d`. Result: every conflict is additive (both sides add entries) and the fully combined result passes
 **1,056 tests** with the social extra (re-checked with the newest heads of #42, #46 and #49). Heads move, so re-check before acting. Exact steps and resolutions:
 
 | Step | PR | Result in the replay | What to do |
@@ -74,8 +74,10 @@ cookies exit 4, print names only and write nothing; the real `BrowserSession` cl
 preinstalled Chromium 141 and closes cleanly (no network); the searches are 10 for X and 5 post searches for LinkedIn.
 **Gaps found:**
 1. Runbook step 4 (`scripts.run_window --mode manual`) fails with "No module named scripts.run_window" on #43, because that tool is in
-   **#41**. So #41 must be merged before the live test (A2 now says #40, #41 and #43). Also fix the runbook text when #43 is next touched.
-2. After #48 is merged, LinkedIn runs 10 searches (5 posts and 5 jobs), so the runbook's healthy line `queries_run=5` becomes 10.
+   **#41**. So #41 must be merged before the live test (A2 now says #40, #41 and #43). FIXED: the runbook now says so (commit `1c732a2` on #43).
+2. (Corrected: an earlier version of this note wrongly said `queries_run=5` becomes 10 after #48.) With #48 the collector keeps the post line
+   `linkedin_collected: queries_run=5 ...` and prints a SEPARATE `linkedin_jobs_collected: queries_run=5 jobs=N ...` line plus `kind=jobs` search
+   lines. FIXED: #48's runbook documents them (commit `42d109d`, checked against the collector's own output).
 3. This session has none of the cookies; the live test must run in a JobHunterEnv session. The unavoidable remaining risk is LinkedIn's
    live page layout, which only the real run can show (the card reader is tested on saved HTML only).
 
