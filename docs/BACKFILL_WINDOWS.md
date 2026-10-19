@@ -42,11 +42,11 @@ Safety stops, not targets (all reported, never silent):
   `source_probe --known-ids` skip Job IDs already in the Sheet (an already-delivered job is
   not refreshed later). That alone does not move past pages that were opened but not
   delivered (outside the window, rejected): they are never in the Sheet, so they would be
-  reopened first every day. When the stop is hit, the shortlist is therefore rotated by
-  capture date so each day's window starts where the previous one ended: the whole
-  shortlist is reached within `ceil(N / stop)` days. This is a stateless rotation, not a
-  stored cursor; an inspected-but-undelivered job is reopened once per cycle, and a retry
-  on the same date inspects the same pages. Title priority holds only within each window.
+  reopened first every day. When the stop is hit, half of it stays in title-priority order
+  and the other half is rotated by capture date so each day's rotation starts where the
+  previous one ended: the rest of the shortlist is reached within `ceil(N / (stop - stop // 2))`
+  days. This is a stateless rotation, not a stored cursor; an inspected-but-undelivered job
+  is reopened once per cycle, and a retry on the same date inspects the same pages.
 - `EXTRACTION_SAFETY_STOP = 1000` Gmail AI extractions per run.
 - One writer batch holds at most `JOB_BATCH_SIZE = 150` jobs (its recovery journal
   must fit in `_State`). Larger runs are split into `<run id>-b001`, `-b002`, ...

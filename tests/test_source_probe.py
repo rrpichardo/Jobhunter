@@ -285,7 +285,7 @@ def test_response_byte_limit_stops_reading_before_the_rest_of_the_body(monkeypat
 
 def test_detail_safety_stop_prioritizes_known_ai_titles_and_reports_skipped_candidates(monkeypatch):
     from html import escape
-    monkeypatch.setattr(probe, 'DETAIL_SAFETY_STOP', 1)
+    monkeypatch.setattr(probe, 'DETAIL_SAFETY_STOP', 2)
     listing = '<div data-page="' + escape(json.dumps({'props': {'jobPostings': [
         {'id': i, 'title': title, 'url': f'/companies/acme/jobs/{i}',
          'location': 'United States', 'companyName': 'Acme'}
@@ -299,9 +299,10 @@ def test_detail_safety_stop_prioritizes_known_ai_titles_and_reports_skipped_cand
     with httpx.Client(transport=httpx.MockTransport(serve)) as client:
         source, jobs, note = probe.probe_source(client, {'id': 'yc-product', 'kind': 'yc',
             'url': 'https://www.ycombinator.com/jobs/role/product-manager'}, '2026-10-18T00:00:00+00:00')
-    assert [job.job_id for job in jobs] == ['yc-product:3']
-    assert len(seen) == 2
-    assert 'details_skipped=2' in note
+    # half the stop (one page) stays in priority order, so the AI title is always read; the other page rotates
+    assert 'yc-product:3' in [job.job_id for job in jobs] and len(jobs) == 2
+    assert len(seen) == 3
+    assert 'details_skipped=1' in note
 
 
 def test_duplicates_across_sources_are_merged_and_counted():

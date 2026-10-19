@@ -97,7 +97,7 @@ routine's first scheduled run, which needs A3 and the code on `main` (Codex revi
   job pages for jobs already in the Sheet, so a big source is not reopened daily and
   its detail-page stop no longer starves the tail. Delivered IDs alone did not fix this for
   pages inspected but not delivered; a date-based rotation of the detail window now does
-  (see BACKFILL_WINDOWS.md).
+  (half the stop stays in priority order; see BACKFILL_WINDOWS.md).
 - A Run Log column for the AI queue counts (a Sheet schema change, done carefully).
 - DONE on branch `claude/social-allowance`: the daily allowance reservation in `_State`
   (`scripts.allowance reserve/finish/status`; exit 3 means spent, any other failure
