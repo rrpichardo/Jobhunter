@@ -17,11 +17,11 @@ development evidence only: retest in JobHunterEnv before relying on a row.
 | Greenhouse boards | `first_published` (checked). `updated_at` is ignored: it changes on every edit | none | Client-side filter. Complete board response, so no coverage gap |
 | Lever boards | `createdAt`, epoch ms (checked) | none | Client-side. Complete response |
 | Ashby boards | `publishedAt` (checked) | none | Client-side. Complete response |
-| Remotive | `publication_date`, no zone, read as UTC (checked) | none | Client-side. Registry asks for the product category; depth unverified |
-| Remote OK | `date` / `epoch` (checked) | none | Client-side. Feed returns about the 100 newest only: **GAP** for a full 4 weeks |
-| Himalayas | `pubDate`, epoch seconds (checked) | none known | Registry fetches `limit=50` of ALL categories, which may span only hours: **GAP**. Needs pagination (parameters not yet verified) |
-| Jobicy | `pubDate` (checked) | none used | `count=50` product tag: depth for 28 days unverified, **GAP** until measured |
-| The Muse | `publication_date` (checked) | none | Page 1 only (about 20 jobs): **GAP**. Needs a page loop (ordering not yet verified) |
+| Remotive | `publication_date`, no zone, read as UTC (checked) | none | Client-side. Checked October 18: the product category held only 12 jobs in total, so one request is complete. No gap |
+| Remote OK | `date` / `epoch` (checked) | none | Client-side. Checked October 18: the 99 jobs returned reached back to August 12, so the 28-day window is fully covered. No gap today; recheck if volume grows |
+| Himalayas | `pubDate`, epoch seconds (checked) | none known | **GAP, not fixable by paging.** Checked October 18: the page size is capped at 20 (`limit=50` returned 20), the feed holds about 128,000 jobs across all categories, and every sampled `pubDate` was October 18, so the date cannot be trusted for the window. A search endpoint exists (`/jobs/api/search?q=`, capped near 5000 results) but its dates looked equally refreshed. Treat Himalayas as undated and unreliable until a better route is found |
+| Jobicy | `pubDate` (checked) | none | Paged by cursor (`&cursor=`, verified October 18) newest first; paging stops when a page reaches the window edge, with a page safety stop. About 50 jobs a day appeared, so a 28-day pull is roughly 28 pages |
+| The Muse | `publication_date` (checked) | none | Fixed: the registry fetched page 1, which is the SECOND page (pages start at 0), so the newest 20 were skipped. Now every page from 0 to `page_count` (92 on October 18) is read; results are not date ordered, so paging never stops early |
 | We Work Remotely RSS | RSS `pubDate` | none | Feed depth unknown: **GAP** until measured |
 | JSearch | `job_posted_at_datetime_utc` | yes: `date_posted` today / 3days / week / month, chosen from the window | One request per run (200 requests a month free). A page holds about 10 jobs: **GAP**; more pages cost quota, so that needs your approval |
 | Jooble | `updated` | none verified | Client-side. Page 1 only: **GAP** |

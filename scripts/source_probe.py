@@ -15,6 +15,7 @@ import logging
 import os
 from pathlib import Path
 import time
+import re
 from urllib.parse import quote
 
 import httpx
@@ -24,13 +25,16 @@ from jobhunter.artifacts import read_artifact, safe_error_code, write_artifact
 from jobhunter.hn_hiring import postings_from_result
 from jobhunter.postings import (AI_TERMS, DETAIL_SOURCES, LISTING_ONLY, PARSERS, Posting, collection_match,
                                 collection_stub_match, collection_priority, collection_title_priority,
-                                dedupe, role_family, to_row, within_lookback)
+                                dedupe, parse_posted, role_family, to_row, within_lookback)
 
 USER_AGENT = "JobHunterBot/0.1 (personal job search; polite single requests)"
 MAX_BYTES = 40 * 1024 * 1024
 # Safety stop, not a target: at most this many job pages are opened per detail source per run (one polite request
 # each). Candidates beyond it are reported as details_skipped so a large source is visible, never silently cut.
 DETAIL_SAFETY_STOP = 300
+# Safety stop on extra pages fetched from one paged public API per run (reported in the source note).
+PAGE_SAFETY_STOP = 100
+PAGED_KINDS = {"themuse", "jobicy"}
 LOOKBACK_DAYS = 28  # first-run backfill and the default daily window; repeats are harmless (upsert by Job ID)
 BLOCKED = {401, 403, 406, 429}
 URLS = {"greenhouse": "https://boards-api.greenhouse.io/v1/boards/{board}/jobs?content=true",
@@ -116,6 +120,52 @@ def fetch_keyed(client, request):
         return None, None, "transport_error"
 
 
+def page_through(client, kind, url, first, cutoff, *, delay, sleep, page_stop):
+    """(merged data, pages fetched, stop reason) for the public APIs that page.
+
+    The Muse numbers pages from 0 and is not date ordered, so every page up to page_count is read. Jobicy is
+    newest first and pages by an opaque cursor, so paging stops once a page reaches the window edge. A failed
+    later page keeps what was already read and says why it stopped; it never fails the whole source.
+    """
+    pages, reason = 1, ""
+    if kind == "themuse":
+        total, key = first.get("page_count"), "results"
+        wanted = min(total, page_stop) if type(total) is int and total > 0 else 1
+        if type(total) is int and total > page_stop:
+            reason = "page_safety_stop"
+        for number in range(1, wanted):
+            sleep(delay)
+            status, body, error = fetch_once(client, re.sub(r"page=\d+", f"page={number}", url))
+            if error or status != 200:
+                return first, pages, error or f"http_{status}"
+            try:
+                first[key].extend(json.loads(body)[key])
+            except (ValueError, TypeError, KeyError, AttributeError, RecursionError):
+                return first, pages, "invalid_json"
+            pages += 1
+        return first, pages, reason
+    # Jobicy
+    while first.get("hasMore") is True and pages < page_stop:
+        cursor = first.get("nextCursor")
+        if not isinstance(cursor, str) or not re.fullmatch(r"[A-Za-z0-9_=+/-]{1,500}", cursor):
+            return first, pages, "invalid_cursor"
+        last = first["jobs"][-1].get("pubDate") if first.get("jobs") else None
+        if cutoff is not None and parse_posted(last) and datetime.fromisoformat(parse_posted(last)) < cutoff:
+            return first, pages, ""  # the window edge is behind us
+        sleep(delay)
+        status, body, error = fetch_once(client, f"{url}&cursor={quote(cursor, safe='')}")
+        if error or status != 200:
+            return first, pages, error or f"http_{status}"
+        try:
+            more = json.loads(body)
+            first["jobs"].extend(more["jobs"])
+            first["hasMore"], first["nextCursor"] = more.get("hasMore"), more.get("nextCursor")
+        except (ValueError, TypeError, KeyError, AttributeError, RecursionError):
+            return first, pages, "invalid_json"
+        pages += 1
+    return first, pages, "page_safety_stop" if first.get("hasMore") is True else ""
+
+
 def fetch_details(client, entry, stubs, stamp, *, delay, sleep):
     """Fetch shortlisted job pages and retain per-source response evidence."""
     postings, rejected, problem, attempts = [], 0, None, 0
@@ -144,7 +194,7 @@ def fetch_details(client, entry, stubs, stamp, *, delay, sleep):
 
 
 def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=None, lookback_days=None,
-                 detail_stop=None):
+                 detail_stop=None, page_stop=None):
     """Returns (source record or None for an unresponsive candidate, postings, note).
 
     lookback_days keeps postings whose source date is inside the window; a posting with no usable date is
@@ -177,6 +227,12 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
         return record(source_id, "failed", stamp, error="invalid_json", http=200), [], "invalid_json"
     problem, attempts, detail_skipped, outside = None, 1, 0, 0
     cutoff = None if lookback_days is None else datetime.fromisoformat(stamp) - timedelta(days=lookback_days)
+    paging_note = ''
+    if kind in PAGED_KINDS and isinstance(data, dict):
+        data, pages, stopped = page_through(client, kind, url, data, cutoff, delay=delay, sleep=sleep,
+                                            page_stop=PAGE_SAFETY_STOP if page_stop is None else page_stop)
+        attempts += pages - 1
+        paging_note = f'; pages_fetched={pages}' + (f'; paging_stopped={stopped}' if stopped else '')
     try:
         if kind in LISTING_ONLY:
             counts = LISTING_ONLY[kind](data, ctx)
@@ -208,12 +264,14 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
     undated = sum(not p.posted_at for p in postings)
     candidates = [p for p in postings if role_family(p.title)]
     selected = sorted((p for p in postings if collection_match(p)), key=collection_priority)
-    coverage = "complete-response" if entry.get("board") else "partial-response"
+    # A paged source is complete only when every page it offered (or every page inside the window) was read.
+    coverage = ("complete-response" if entry.get("board") or (paging_note and "paging_stopped" not in paging_note)
+                else "partial-response")
     if kind in DETAIL_SOURCES:
         candidates = shortlist
     if rejected:
         coverage += "-with-rejections"
-    skipped_note = f'; details_skipped={detail_skipped}' if detail_skipped else ''
+    skipped_note = (f'; details_skipped={detail_skipped}' if detail_skipped else '') + paging_note
     if cutoff is not None:
         skipped_note += f'; outside_window={outside}; date_unknown={undated}'
     if problem is not None:
@@ -257,7 +315,8 @@ def entries(registry):
 
 
 def run(registry, client, *, delay=1.0, sleep=time.sleep, environ=None, gmail_result=None, hn_result=None,
-        now=lambda: datetime.now(timezone.utc).isoformat(), lookback_days=LOOKBACK_DAYS, detail_stop=None):
+        now=lambda: datetime.now(timezone.utc).isoformat(), lookback_days=LOOKBACK_DAYS, detail_stop=None,
+        page_stop=None):
     environ = os.environ if environ is None else environ
     stamp = now()
     sources, jobs, notes = [], [], {}
@@ -265,7 +324,8 @@ def run(registry, client, *, delay=1.0, sleep=time.sleep, environ=None, gmail_re
         if hn_result is not None and entry['id'] == hn_result['source']['source_id']:
             continue  # the validated comment extraction replaces the listing-only count
         record_, selected, note = probe_source(client, entry, stamp, delay=delay, sleep=sleep,
-                                                    environ=environ, lookback_days=lookback_days, detail_stop=detail_stop)
+                                                    environ=environ, lookback_days=lookback_days, detail_stop=detail_stop,
+                                                    page_stop=page_stop)
         notes[entry["id"]] = note
         if record_ is not None:
             sources.append(record_)
@@ -323,6 +383,8 @@ def main(argv=None, *, client=None, sleep=time.sleep) -> int:
     parser.add_argument("--detail-safety-stop", type=int, default=DETAIL_SAFETY_STOP,
                         help="job pages opened per detail source (a guard, reported as details_skipped); "
                              "raise it for the one-off first pull")
+    parser.add_argument("--page-safety-stop", type=int, default=PAGE_SAFETY_STOP,
+                        help="pages fetched from one paged public API (The Muse, Jobicy); a guard reported in the note")
     parser.add_argument("--hn-result", help="validated Hacker News result from scripts.hn_hiring validate")
     parser.add_argument("--hn-result-sha256", help="digest printed when that result was written")
     args = parser.parse_args(argv)
@@ -332,16 +394,18 @@ def main(argv=None, *, client=None, sleep=time.sleep) -> int:
         registry = yaml.safe_load(Path(args.config).read_text(encoding="utf-8"))
         if not 1 <= args.lookback_days <= 365:
             raise ValueError('invalid_lookback_days')
+        if not 1 <= args.page_safety_stop <= 1000:
+            raise ValueError('invalid_safety_stop')
         if not 1 <= args.detail_safety_stop <= 100000:
             raise ValueError('invalid_safety_stop')
         print(f'limits: lookback_days={args.lookback_days} detail_safety_stop={args.detail_safety_stop} '
-              f'delay={args.delay}')
+              f'page_safety_stop={args.page_safety_stop} delay={args.delay}')
         hn_result = None
         if args.hn_result:
             source, found = postings_from_result(read_artifact(args.hn_result, expected_sha256=args.hn_result_sha256))
             hn_result = {'source': source, 'postings': found}
         payload = run(registry, client, delay=args.delay, sleep=sleep, lookback_days=args.lookback_days,
-                      hn_result=hn_result, detail_stop=args.detail_safety_stop)
+                      hn_result=hn_result, detail_stop=args.detail_safety_stop, page_stop=args.page_safety_stop)
         print(summary(payload))
         failed = sum(s["status"] in {"failed", "blocked"} for s in payload["sources"])
         digest = write_artifact(args.output, payload)

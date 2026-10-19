@@ -16,10 +16,11 @@ means set by another service. Today every number below is a constant in code or 
 | Detail pages opened per detail source per run | 300 (`source_probe --detail-safety-stop`, 1 to 100000) | safety stop (`details_skipped`) | `DETAIL_SAFETY_STOP` |
 | Polite delay between requests | 1.0 s (`--delay`) | target | `scripts/source_probe.py` |
 | Largest response accepted | 40 MB | safety stop | `MAX_BYTES` |
-| Remotive page | 50 jobs, product category | external, registry URL | `sources/v0_sources.yaml` |
-| Himalayas page | 50 jobs, all categories | external, registry URL | `sources/v0_sources.yaml` |
-| Jobicy page | 50 jobs, product tag | external, registry URL | `sources/v0_sources.yaml` |
-| The Muse | page 1 only (about 20 jobs) | gap | `sources/v0_sources.yaml` |
+| Remotive | whole product category (12 jobs on October 18) | external, complete | `sources/v0_sources.yaml` |
+| Himalayas | 20 per page (cap), all categories, dates unreliable | external, gap | `sources/v0_sources.yaml` |
+| Jobicy | 50 per page, cursor paging until the window edge | page safety stop below | `sources/v0_sources.yaml` |
+| The Muse | 20 per page, every page 0 to `page_count` | page safety stop below | `sources/v0_sources.yaml` |
+| Extra pages per paged API per run | 100 (`source_probe --page-safety-stop`, 1 to 1000) | safety stop (`paging_stopped`) | `PAGE_SAFETY_STOP` |
 | JSearch | 1 request, 1 page (about 10 jobs); free plan about 200 requests a month | external, no new spending | registry |
 | Jooble | 1 request, page 1 | gap | registry |
 

@@ -61,8 +61,10 @@ numbers: #18 docs, #19 keep-every-match and 4-week window, #20 Hacker News,
 - DONE on branch `claude/limit-flags`: per-run flags so the first manual pull can
   raise the safety stops (`--detail-safety-stop`, `--candidate-safety-stop`,
   `--batch-pause`, `ai_queue pull --limit`), recorded in LIMITS.md.
-- Pagination for Himalayas, The Muse, Jooble and Remote OK after the paging
-  parameters are checked with a few public requests. JSearch paging waits for A6.
+- DONE on branch `claude/paging`: The Muse (was skipping its first page) and Jobicy now
+  page; Remotive and Remote OK checked and already complete for 28 days. Himalayas
+  cannot be fixed by paging (20 per page, dates look refreshed daily). Jooble paging
+  and JSearch paging still wait on A6 and a quota decision.
 - Skip Job IDs already in the Sheet so a source that hits its detail-page stop does
   not starve its tail.
 - A Run Log column for the AI queue counts (a Sheet schema change, done carefully).
