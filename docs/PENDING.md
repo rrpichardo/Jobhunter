@@ -12,7 +12,8 @@ done, change its status here and in the PR that did it. Nothing below is a claim
 - **Open, each waiting for a Codex review of its exact head:** #40 X collector (twscrape; startup fixed after an
   independent review found it crashed against the real library), #41 run modes (manual 28 days, daily 3 days, refuses
   after a gap), #42 Forward-Deployed AI Strategist roles, #43 LinkedIn hiring-post collector, #44 Work at a Startup
-  public pages, #45 a16z portfolio jobs. #40 to #41 and #43 are stacked; #42, #44 and #45 are on `main`.
+  public pages, #45 a16z portfolio jobs, #47 Ali Rohde Jobs weekly newsletter (feed verified; Next Play's real feed
+  still unknown). #41, #43 and #47 are stacked on #40; #42, #44 and #45 are on `main`.
 - **Codex has reached its usage limit** (October 19, about 16:31 UTC): every `@codex review` since answers "You have
   reached your Codex usage limits". Reviews must be re-requested when the limit resets or is raised
   (https://chatgpt.com/codex/cloud/settings/usage). Nothing Claude wrote is merged without that review.
