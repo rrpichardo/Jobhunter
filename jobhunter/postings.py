@@ -649,7 +649,7 @@ def stubs_waas(text, ctx):
     stubs, rejected = [], 0
     for job in _page_json(text)["props"]["jobs"]:
         try:
-            stubs.append({"job_id": f"{ctx['source_id']}:{int(job['id'])}", "company": _stub_text(job.get("companyName")),
+            stubs.append({"job_id": f"waas:{int(job['id'])}", "company": _stub_text(job.get("companyName")),
                           "title": _stub_text(job.get("title")), "location": _stub_text(job.get("location")),
                           "url": f"https://www.workatastartup.com/jobs/{int(job['id'])}",
                           "salary": _stub_text(job.get("salary")), "posted_at": ""})  # the site shows no posting date
@@ -802,8 +802,12 @@ def dedupe(postings):
     def rank(posting):
         return SOURCE_PRIORITY.get(posting.source_id.split(":")[0], SOURCE_PRIORITY.get(posting.source_id, 2))
     ordered = sorted(postings, key=rank)  # stable: first-seen order inside a priority
-    kept, by_key, by_similar = [], {}, {}
+    kept, by_key, by_similar, by_id = [], {}, {}, {}
     for posting in ordered:
+        if posting.job_id in by_id:  # the very same job found again (e.g. by two searches of one board): one row
+            if by_id[posting.job_id]["posting"].source_id != posting.source_id:
+                by_id[posting.job_id]["also"].append(posting.source_id)
+            continue
         key = canonical_key(posting.apply_url)
         if (verified_requisition(key) and key in by_key
                 and by_key[key]["posting"].source_id != posting.source_id):
@@ -817,6 +821,7 @@ def dedupe(postings):
                  'shared': by_key[key]['posting'].job_id if not verified_requisition(key) and key in by_key else None}
         by_key.setdefault(key, entry)
         by_similar.setdefault(_similar(posting), posting.job_id)
+        by_id[posting.job_id] = entry
         kept.append(entry)
     notes = []
     for entry in kept:

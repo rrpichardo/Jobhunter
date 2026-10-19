@@ -28,7 +28,7 @@ DETAIL = page({'job': {'id': 11, 'title': 'Senior Product Manager, AI', 'locatio
 
 def test_listing_rows_come_from_the_page_data_and_a_row_without_an_id_is_rejected():
     stubs, rejected = p.stubs_waas(LISTING, {'source_id': 'waas-product'})
-    assert [s['job_id'] for s in stubs] == ['waas-product:11', 'waas-product:12'] and rejected == 1
+    assert [s['job_id'] for s in stubs] == ['waas:11', 'waas:12'] and rejected == 1
     assert stubs[0]['url'] == 'https://www.workatastartup.com/jobs/11' and stubs[0]['salary'] == '$180K - $240K'
 
 
@@ -53,7 +53,7 @@ def test_the_source_asks_for_html_and_delivers_only_the_matching_job():
         return httpx.Response(200, text=DETAIL if request.url.path == '/jobs/11' else LISTING)
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
         source, jobs, note = probe.probe_source(client, ENTRY, STAMP, lookback_days=28)
-    assert source['status'] == 'OK' and [j.job_id for j in jobs] == ['waas-product:11']
+    assert source['status'] == 'OK' and [j.job_id for j in jobs] == ['waas:11']
     assert jobs[0].company == 'Acme AI' and jobs[0].posted_at == '' and 'date_unknown=1' in note
     assert [url for url, _ in seen] == ['https://www.workatastartup.com/jobs/l/product-manager', 'https://www.workatastartup.com/jobs/11']
 
@@ -68,3 +68,11 @@ def test_the_registry_lists_both_public_pages():
     import yaml
     entries = yaml.safe_load(open('sources/v0_sources.yaml'))['detail_sources']
     assert {e['id'] for e in entries if e['kind'] == 'waas'} == {'waas-product', 'waas-operations'}
+
+
+def test_the_same_job_on_two_role_pages_is_one_row():
+    def mk(source):
+        return p.Posting('waas:11', source, 'Acme AI', 'Head of Product', 'Remote', 'text', 'https://www.workatastartup.com/jobs/11',
+                         STAMP)
+    kept = p.dedupe([mk('waas-product'), mk('waas-operations')])
+    assert len(kept) == 1 and 'Also listed by: waas-operations' in kept[0][1]
