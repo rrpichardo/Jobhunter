@@ -1,4 +1,4 @@
-"""Run modes: 28 days by hand, 2 days daily, and a daily run refused when it would leave a gap."""
+"""Run modes: 28 days by hand, 3 days daily, and a daily run refused when it would leave a gap."""
 
 from datetime import datetime, timedelta, timezone
 
@@ -12,9 +12,9 @@ HEADERS = ['Run ID', 'Started', 'Completed', 'Jobs input', 'Jobs unique', 'Statu
 NOW = datetime(2026, 10, 21, 10, 7, tzinfo=timezone.utc)
 
 
-def row(run, started, status='complete', done=True):
+def row(run, started, status='complete', done=True, jobs=10):
     finished = (started + timedelta(minutes=20)).isoformat() if done else ''
-    return [run, started.isoformat(), finished, 10, 10, status]
+    return [run, started.isoformat(), finished, jobs, jobs, status]
 
 
 def log(*rows):
@@ -84,10 +84,35 @@ def test_the_newest_complete_run_decides(capsys):
     assert code == 0
 
 
-def test_batch_rows_of_one_run_do_not_confuse_the_choice(capsys):
-    rows = [row('daily-1-b001', NOW - timedelta(days=4)), row('daily-1-b002', NOW - timedelta(days=4, minutes=-3))]
-    code, out = run('daily', log(*rows), capsys)
-    assert code == 3
+def batches(base, started, sizes, **kwargs):
+    return [row(f'{base}-b{number:03d}', started + timedelta(minutes=3 * number), jobs=size, **kwargs)
+            for number, size in enumerate(sizes, 1)]
+
+
+def test_a_fully_delivered_batched_run_counts_from_its_first_batch(capsys):
+    code, out = run('daily', log(*batches('d1', NOW - timedelta(hours=30), [150, 150, 44])), capsys)
+    assert code == 0 and 'window_days=3' in out
+
+
+def test_a_batched_run_stopped_after_the_first_batch_does_not_count(capsys):
+    code, out = run('daily', log(*batches('d1', NOW - timedelta(hours=30), [150])), capsys)  # more may have followed
+    assert code == 3 and 'no_complete_run' in out
+
+
+def test_a_batched_run_with_a_missing_or_unfinished_batch_does_not_count(capsys):
+    skipped = batches('d1', NOW - timedelta(hours=30), [150, 150, 44])
+    del skipped[1]  # b002 never delivered
+    unfinished = batches('d2', NOW - timedelta(hours=30), [150, 44])
+    unfinished[1] = row('d2-b002', NOW - timedelta(hours=29), status='pending', done=False, jobs=44)
+    for rows in (skipped, unfinished):
+        code, out = run('daily', log(*rows), capsys)
+        assert code == 3
+
+
+def test_an_older_whole_run_is_not_replaced_by_a_newer_partial_one(capsys):
+    old_whole = row('old', NOW - timedelta(hours=40))
+    code, out = run('daily', log(old_whole, *batches('new', NOW - timedelta(hours=5), [150])), capsys)
+    assert code == 0 and 'started ' + (NOW - timedelta(hours=40)).isoformat() in out
 
 
 def test_a_naive_timestamp_is_read_as_utc():

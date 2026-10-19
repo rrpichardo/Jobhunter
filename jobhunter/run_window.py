@@ -7,14 +7,16 @@ day is still covered and no posting can fall between two runs. Nothing here writ
 """
 
 from datetime import datetime, timedelta, timezone
+import re
 
-from jobhunter.sheet_records import table_index
+from jobhunter.sheet_records import JOB_BATCH_SIZE, table_index
 
 MANUAL_DAYS = 28
 DAILY_DAYS = 3
 MAX_GAP = timedelta(days=2, hours=6)  # two days, plus a little for the scheduler's drift
 CLOCK_SKEW = timedelta(minutes=5)  # a recorded time further in the future than this cannot be real
-RUN_LOG_HEADERS = ('Run ID', 'Started', 'Completed', 'Status')
+RUN_LOG_HEADERS = ('Run ID', 'Started', 'Completed', 'Jobs input', 'Status')
+BATCH_ID = re.compile(r'(.+)-b([0-9]{3})')
 COMPLETE = {'complete', 'complete-with-source-failure'}
 
 
@@ -36,24 +38,38 @@ def _moment(value):
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
 
 
-def last_complete_start(rows, now):
-    """Start time of the most recent complete run in the Run Log rows, or None.
+def _cell(values, headers, name):
+    return values[headers[name]] if headers[name] < len(values) else ''
 
-    A row only counts if its times make sense: started before it completed, and neither in the future. A corrupt
-    row therefore cannot make an old gap look recent.
+
+def last_complete_start(rows, now):
+    """Start time of the most recent fully delivered run in the Run Log rows, or None.
+
+    A row only counts if it is complete and its times make sense: started before it completed, and neither in the
+    future. A large run is written as batches (`<run>-b001`, `-b002`, ...); it counts only when batches 1..N are all
+    complete and the last one is short (a full batch might be followed by more), so a run stopped part way never
+    makes a gap look covered. A run whose last batch is exactly full is treated as unfinished: the safe direction.
     """
     if not rows:
         return None
     headers, identities = table_index(rows, RUN_LOG_HEADERS, 'Run ID')
-    best = None
-    for _, values in identities.values():
-        status = values[headers['Status']] if headers['Status'] < len(values) else ''
-        started = _moment(values[headers['Started']] if headers['Started'] < len(values) else '')
-        done = _moment(values[headers['Completed']] if headers['Completed'] < len(values) else '')
-        if (status in COMPLETE and started and done and started <= done <= now + CLOCK_SKEW
-                and (best is None or started > best)):
-            best = started
-    return best
+    whole, batched = [], {}
+    for run_id, (_, values) in identities.items():
+        started = _moment(_cell(values, headers, 'Started'))
+        done = _moment(_cell(values, headers, 'Completed'))
+        if not (_cell(values, headers, 'Status') in COMPLETE and started and done and started <= done <= now + CLOCK_SKEW):
+            continue
+        match = BATCH_ID.fullmatch(run_id) if isinstance(run_id, str) else None
+        if match is None:
+            whole.append(started)
+        else:
+            batched.setdefault(match[1], {})[int(match[2])] = (started, _cell(values, headers, 'Jobs input'))
+    for batches in batched.values():
+        last = max(batches)
+        size = batches[last][1]
+        if (sorted(batches) == list(range(1, last + 1)) and type(size) is int and 0 <= size < JOB_BATCH_SIZE):
+            whole.append(min(started for started, _ in batches.values()))
+    return max(whole, default=None)
 
 
 def window_days(mode, rows, now):

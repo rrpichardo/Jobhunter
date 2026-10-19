@@ -1,7 +1,7 @@
 """Print how many days back this run should look, and refuse a daily run that would leave a gap.
 
   uv run --locked python -m scripts.run_window --mode manual   # first run or catch-up: window_days=28
-  uv run --locked python -m scripts.run_window --mode daily    # routine: window_days=2, or exit 3
+  uv run --locked python -m scripts.run_window --mode daily    # routine: window_days=3, or exit 3
 
 Use the printed number as `--lookback-days` for `hn_hiring candidates` and `source_probe`. Exit 3 means the last
 complete run (Run Log) started more than two days ago, or there has never been one: stop and tell the user a manual
