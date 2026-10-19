@@ -94,7 +94,7 @@ def build_result(source_id, candidates, facts, captured_at, *, id_field, id_pref
     postings.sort(key=collection_priority)
     source['selected_for_m0'] = len(postings)
     if error:
-        source['status'] = 'failed'
+        source['status'] = 'blocked' if error in BLOCKED_ERRORS else 'failed'
     elif postings:
         source['status'] = 'OK'
     return {'source': source, 'postings': [asdict(posting) for posting in postings],
@@ -120,6 +120,10 @@ SOCIAL = {
                                           r'|posts/[A-Za-z0-9_%.\-]+-(?:activity|ugcPost|share)-(\d{5,25})-[A-Za-z0-9_]{1,10}/?)')},
 }
 MAX_POST_CHARS = 10000
+# Collector errors that mean the site refused us (logged out, restricted, rate limited), as opposed to a defect
+# in the collector; the Sources tab shows them as 'blocked'.
+BLOCKED_ERRORS = frozenset({'social_login_failed', 'social_rate_limited'})
+AUTHOR = re.compile(r'[^\x00-\x1f\x7f<>]{1,100}')
 
 
 def canonical_post(url, source_id):
@@ -150,6 +154,8 @@ def clean_social_candidates(source_id, items):
             created = parse_posted(item['created_at'])
             text = item['text']
             links = [link for link in item.get('links', []) if https_url(link)]
+            author = item.get('author')
+            author = author.strip() if isinstance(author, str) and AUTHOR.fullmatch(author.strip()) else ''
             if (not created or not isinstance(text, str) or not text.strip() or len(text) > MAX_POST_CHARS
                     or post_id in seen):
                 raise ValueError
@@ -157,7 +163,10 @@ def clean_social_candidates(source_id, items):
             unreadable += 1
             continue
         seen.add(post_id)
-        candidates.append({'item_id': post_id, 'url': url, 'created_at': created, 'text': text, 'links': links})
+        candidate = {'item_id': post_id, 'url': url, 'created_at': created, 'text': text, 'links': links}
+        if author:
+            candidate['author'] = author  # public handle or name, kept as evidence of who posted
+        candidates.append(candidate)
     return candidates, unreadable
 
 
