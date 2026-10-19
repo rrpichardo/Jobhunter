@@ -28,6 +28,19 @@ NOT replace Codex.** Heads at the time of writing:
 | #48 | claude/linkedin-jobs | #43 | 42d109d | LinkedIn job cards in the same session/allowance (contains #42's commit) |
 | #49 | claude/haiku-eval | main | 82bd0d4 | Haiku-vs-Sonnet eval harness, bug fix and first result (100 of 100 agree; user's rule 3 open) |
 
+**UPDATE, October 19 about 22:30 UTC (read this first):** the user decided to run the live test and the first manual run NOW with the
+code that exists, not after Codex; Haiku does the reading step; the old PRs #19 to #30 are closed; today's search limits stay for the
+first run. New files: `docs/PARAMETERS.md` (every setting explained for a non-technical reader), `docs/CODEX_REVIEW_QUEUE.md` (the PRs
+that still need a Codex review of their exact head, with ready-to-paste requests, for when credits return).
+**Waiting only for the user to say the Google Sheet is backed up ("copied", item A15 in `docs/PENDING.md`).** Then:
+1. Run branch: `claude/combined-live-run` = `main` + all ten open PRs with the conflict fixes in the Merge plan below (1,056 tests pass).
+   It is NOT for merging; re-create it if any PR head moved (the recipe is the Merge plan table).
+2. Start a JobHunterEnv session from that branch with `mcp__claude-code-remote__create_session` (`environment_id`
+   `env_01M9moVSWZBGvWAZYrqTm49s`, `source_url` the repository, `source_revision` `claude/combined-live-run`) and have it follow
+   `docs/FIRST_LIVE_TEST.md` exactly, reading posts with a Haiku subagent, never printing a cookie value, never retrying a spent day.
+3. If step 2 is clean, the same session runs the first manual run (`run_window --mode manual`, 28 days, the writer in paced
+   batches), then the user checks the Sheet the next morning, then decides A3 (create the daily routine).
+
 **Do next, in order:**
 1. No scheduled sweep exists. Codex answered a request on #42 at 20:11 UTC on October 19 (its limit has reset, at least for now): it
    reviewed `62fc1be`, found one real issue (fixed in `afedfb2`, then tightened in `b90c1d2` after an independent review), and #42 now needs a review of that head. The user asked Claude not to
