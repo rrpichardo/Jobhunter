@@ -12,6 +12,14 @@ dependencies = [
     "pyyaml>=6.0,<7",
 ]
 
+[project.optional-dependencies]
+# The logged-in social lane (docs/PLAN.md). Pinned exactly; installed only with `uv sync --extra social`.
+# twscrape sends anonymous usage counts from its command line; scripts/x_collect.py turns that off.
+social = [
+    "twscrape==0.20.1",
+    "playwright==1.64.0",
+]
+
 [dependency-groups]
 dev = ["pytest>=8.4,<10"]
 

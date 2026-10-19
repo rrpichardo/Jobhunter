@@ -66,12 +66,12 @@ routine's first scheduled run, which needs A3 and the code on `main` (A4: your g
 
 | ID | Decision | Why it is blocked | Status |
 | --- | --- | --- | --- |
-| A1 | Cloud collection method for Work at a Startup (headless browser, saved cookies, visible job cards only), LinkedIn (headless browser, `li_at`) and X (`twscrape`, `auth_token`/`ct0`). All read-only with random pauses. | The plan says to settle this in plain language first. Reading private requests from the logged-in tab was blocked earlier and must not be retried. | open |
+| A1 | APPROVED October 19. Cloud collection method for Work at a Startup (headless browser, saved cookies, visible job cards only), LinkedIn (headless browser, `li_at`) and X (`twscrape`, `auth_token`/`ct0`). All read-only with random pauses. | The plan says to settle this in plain language first. Reading private requests from the logged-in tab was blocked earlier and must not be retried. | approved (built offline; live test needs A2) |
 | A2 | Go-ahead for the first real social test (LinkedIn posts, then X). It spends that day's allowance for each source. | Live access to accounts that can be restricted. | open |
-| A3 | Create the `JobHunter Daily` routine (06:07 New York, repository `rrpichardo/Jobhunter`, environment `JobHunterEnv`). Claude can do the clicking. | Creating a standing scheduled job. `docs/ROUTINE_PROMPT.md` is a draft and is not installed. | open |
+| A3 | Create the `JobHunter Daily` routine (06:07 New York, repository `rrpichardo/Jobhunter`, environment `JobHunterEnv`). Claude can do the clicking. | Creating a standing scheduled job. `docs/ROUTINE_PROMPT.md` is a draft and is not installed. | DECIDED October 19: create it only after one manual run in JobHunterEnv has been checked |
 | A4 | Codex reviews: answered. They work through the GitHub app (see the top of this file). What is still open is your go-ahead to merge, in stack order. | Claude-written PRs merge only on your explicit direction. | go-ahead needed |
-| A5 | Whether company boards should get a window wider than 28 days. Greenhouse dates can be years old for a role that is still open, so old-but-open roles are currently dropped. | Follows the "last 4 weeks" decision; widening is a user choice. | open |
-| A6 | JSearch paging. The free plan allows about 200 requests a month and one page holds about 10 jobs. More pages for the first pull need approval. No new spending. | Quota, possible cost. | open |
+| A5 | Whether company boards should get a window wider than 28 days. Greenhouse dates can be years old for a role that is still open, so old-but-open roles are currently dropped. | Follows the "last 4 weeks" decision; widening is a user choice. | DECIDED October 19: keep 28 days. The window rolls forward every day; a job already in the Sheet stays there and is never re-added, so daily runs lose nothing. Only roles first published more than 28 days ago stay out. |
+| A6 | JSearch paging. The free plan allows about 200 requests a month and one page holds about 10 jobs. More pages for the first pull need approval. No new spending. | Quota, possible cost. | DECIDED October 19: no extra JSearch pages (stay inside the free plan) |
 | A7 | Which limits to tune and to what (LIMITS.md), for example "50 a day". | Includes the LinkedIn account-restriction risk. 50 searches a day was declined for now. | open |
 
 ## B. Only the user can do these
@@ -123,9 +123,11 @@ routine's first scheduled run, which needs A3 and the code on `main` (A4: your g
   hiring posts (`jobhunter/post_facts.py`, `scripts.social_posts validate`,
   `source_probe --social-result`): canonical post URLs, verbatim facts, code-derived
   Job IDs, the post URL as the lead link. Hacker News now shares that validator.
-- STILL TO BUILD, one PR each: the LinkedIn collector and the X collector that fetch
-  the posts (they need the approved method A1 and the pinned library or browser
-  setup, and a live run needs A2). No live access before then.
+- BUILT, not run live: the X collector (`scripts/x_collect.py`, offline tests only; the live run needs A2 and the
+  `X_AUTH_TOKEN`/`X_CT0` cookies). twscrape 0.20.1 can send anonymous usage counts from its own command line;
+  the collector turns that off and never calls that command line.
+- STILL TO BUILD, one PR each: the LinkedIn collector (headless browser, pinned `playwright` in the `social`
+  extra) and the Work at a Startup collector. A1 (the method) is approved; a live run still needs A2.
 - Keep requesting a Codex review of every new exact head and fix real findings. Merging is NOT part of
   this list: it stays blocked on A4 (the user's explicit go-ahead), however many reviews are clean.
 

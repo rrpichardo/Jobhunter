@@ -1,0 +1,13 @@
+# Starting search lists for the logged-in social lane (docs/PLAN.md). Read-only searches; the collector adds the
+# date window and drops replies. Tune after the first live run. Allowed characters are checked by the code.
+x-twscrape:
+  - 'hiring "AI product manager"'
+  - 'hiring "product manager" AI'
+  - 'hiring "senior product manager"'
+  - 'hiring "head of product"'
+  - 'hiring "chief of staff"'
+  - 'hiring "strategy and operations"'
+  - 'hiring "founder in residence" OR "entrepreneur in residence"'
+  - 'hiring "technical program manager" AI'
+  - 'hiring "product operations"'
+  - 'hiring "business operations" startup'

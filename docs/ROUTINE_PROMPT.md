@@ -134,11 +134,15 @@ is harmless because jobs collapse by Job ID.
 
 - Gmail alerts (the `JobHunter` label): live connector adapter, forwarding filter and
   alert rules are not finished.
-- LinkedIn jobs and hiring posts, X hiring posts: the collectors that fetch posts are not built. The
-  validation side exists (`scripts.social_posts validate`, `source_probe --social-result`, `ai_queue pull
-  --id-field item_id`) and will be added to this prompt with the collectors. (The daily
-  allowance command `scripts.allowance` exists and must succeed before any future live
-  request). Never log in or open these sites in this routine.
+- X hiring posts: the collector exists (`scripts/x_collect.py`; install with `uv sync --locked --extra social`)
+  but is NOT run by this routine until the user gives the go-ahead for the first live test (A2) and sets
+  `X_AUTH_TOKEN` and `X_CT0` in the environment settings. When approved, the steps are: `x_collect` (reserves
+  today's allowance first, searches, writes a candidate file), `ai_queue pull --id-field item_id`, Claude reads,
+  `social_posts validate`, then `source_probe --social-result`. Exit 3 means today's allowance is spent: collect
+  nothing. Exit 4 means the cookies are not set up. Never print or ask for cookie values.
+- LinkedIn jobs and hiring posts: the collector that fetches posts is not built. The validation side and the
+  daily allowance command (`scripts.allowance`, which must succeed before any live request) exist. Never log in
+  or open this site in this routine.
 - Work at a Startup (logged in), Cosign, school and MBA sites, Next Play and Ali
   Rohde feeds: not set up.
 - a16z: listing-only, delivers no jobs.
