@@ -49,8 +49,8 @@ def reserve(store, now, source=SRC, run='run1'):
     return a.reserve(store, source, run, now=lambda: now, sleep=lambda s: None, jitter=lambda: 0)
 
 
-def finish(store, now, outcome='ok', source=SRC, run='run1'):
-    return a.finish(store, source, run, outcome, now=lambda: now, sleep=lambda s: None, jitter=lambda: 0)
+def finish(store, now, outcome='ok', source=SRC, run='run1', day=None):
+    return a.finish(store, source, run, outcome, day=day, now=lambda: now, sleep=lambda s: None, jitter=lambda: 0)
 
 
 NOON = '2026-10-18T16:00:00+00:00'   # 12:00 in New York
@@ -168,3 +168,84 @@ def test_cli_any_other_failure_says_to_collect_nothing(capsys):
     assert cli.main(['reserve', '--source', SRC, '--run-id', 'r1'], store=store) == 2
     text = capsys.readouterr().out
     assert 'writer_locked' in text and 'collect nothing' in text
+
+
+# ---- a collection that crosses midnight in New York --------------------------------------------
+
+BEFORE_MIDNIGHT = '2026-10-20T03:59:59+00:00'   # 23:59:59 on October 19 in New York
+AFTER_MIDNIGHT = '2026-10-20T04:00:01+00:00'    # 00:00:01 on October 20
+
+
+def state_rows(store):
+    return {row[0]: json.loads(row[1]) for row in store.tables['_State'][1:]}
+
+
+def test_finish_closes_the_day_that_was_reserved_when_the_run_crosses_midnight():
+    store = MemoryStore()
+    day = reserve(store, BEFORE_MIDNIGHT)
+    assert day == '2026-10-19'
+    assert finish(store, AFTER_MIDNIGHT, 'ok', day=day) == '2026-10-19'
+    rows = state_rows(store)
+    assert list(rows) == [f'allowance/{SRC}/2026-10-19'] and rows[f'allowance/{SRC}/2026-10-19']['state'] == 'ok'
+    # the new day's allowance was neither consumed nor changed
+    assert reserve(store, AFTER_MIDNIGHT, run='run2') == '2026-10-20'
+
+
+def test_finish_without_a_day_finds_the_reservation_by_run_id_across_midnight():
+    store = MemoryStore()
+    reserve(store, BEFORE_MIDNIGHT)
+    assert finish(store, AFTER_MIDNIGHT, 'zero') == '2026-10-19'
+    assert state_rows(store)[f'allowance/{SRC}/2026-10-19']['state'] == 'zero'
+    assert f'allowance/{SRC}/2026-10-20' not in state_rows(store)
+
+
+def test_finish_never_writes_a_row_that_belongs_to_another_run():
+    store = MemoryStore()
+    reserve(store, BEFORE_MIDNIGHT, run='run1')
+    reserve(store, AFTER_MIDNIGHT, run='run2')
+    with pytest.raises(ValueError, match='allowance_not_reserved'):
+        finish(store, AFTER_MIDNIGHT, run='run3')
+    with pytest.raises(ValueError, match='allowance_not_reserved'):
+        finish(store, AFTER_MIDNIGHT, run='run1', day='2026-10-20')  # that day belongs to run2
+    assert finish(store, AFTER_MIDNIGHT, run='run2') == '2026-10-20'
+    assert state_rows(store)[f'allowance/{SRC}/2026-10-19']['state'] == 'reserved'
+
+
+@pytest.mark.parametrize('day', ['today', '2026-1-1', '2026-10-19; drop', 5, '2026-02-30', '2026-99-99', '2026-00-10',
+                                 '2025-02-29', '0000-01-01'])
+def test_a_malformed_day_is_refused_before_any_write(day):
+    store = MemoryStore()
+    reserve(store, NOON)
+    writes = len(store.writes)
+    with pytest.raises(ValueError, match='invalid_allowance_day'):
+        finish(store, NOON, day=day)
+    assert len(store.writes) == writes
+
+
+def test_cli_finish_takes_the_reserved_day(capsys):
+    store = MemoryStore()
+    assert cli.main(['reserve', '--source', SRC, '--run-id', 'r1'], store=store) == 0
+    day = capsys.readouterr().out.split('day=')[1].split()[0]
+    assert cli.main(['finish', '--source', SRC, '--run-id', 'r1', '--outcome', 'ok', '--day', day], store=store) == 0
+    assert f'day={day}' in capsys.readouterr().out
+    assert cli.main(['finish', '--source', SRC, '--run-id', 'r1', '--outcome', 'ok', '--day', 'bad'], store=store) == 2
+    assert 'invalid_allowance_day' in capsys.readouterr().out
+
+
+# 2026-03-08 is the spring-forward day in New York (the clocks jump at 02:00 local)
+SPRING_BEFORE = '2026-03-09T03:59:59+00:00'   # 23:59:59 on March 8 (EDT)
+SPRING_AFTER = '2026-03-09T04:00:01+00:00'    # 00:00:01 on March 9
+
+
+def test_finish_without_a_day_finds_the_reservation_across_the_spring_clock_change():
+    store = MemoryStore()
+    assert reserve(store, SPRING_BEFORE) == '2026-03-08'
+    assert finish(store, SPRING_AFTER, 'ok') == '2026-03-08'
+    assert state_rows(store)[f'allowance/{SRC}/2026-03-08']['state'] == 'ok'
+
+
+def test_finish_without_a_day_finds_the_reservation_across_the_fall_clock_change():
+    # 2026-11-01 is the fall-back day: that New York date is 25 hours long
+    store = MemoryStore()
+    assert reserve(store, '2026-11-02T04:59:59+00:00') == '2026-11-01'   # 23:59:59 EST
+    assert finish(store, '2026-11-02T05:00:01+00:00', 'zero') == '2026-11-01'
