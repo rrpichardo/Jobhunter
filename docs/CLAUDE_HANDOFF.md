@@ -26,7 +26,7 @@ NOT replace Codex.** Heads at the time of writing:
 | #46 | claude/handoff-oct19 | main | see PR | this status/handoff text, CLAUDE.md "what is pending" rule |
 | #47 | claude/newsletter-alirohde | #40 | 9400d18 | Ali Rohde Jobs weekly newsletter (jobs keyed by application link) |
 | #48 | claude/linkedin-jobs | #43 | 42d109d | LinkedIn job cards in the same session/allowance (contains #42's commit) |
-| #49 | claude/haiku-eval | main | c5535dc | Haiku-vs-Sonnet eval harness, bug fix and first result (100 of 100 agree; user's rule 3 open) |
+| #49 | claude/haiku-eval | main | 82bd0d4 | Haiku-vs-Sonnet eval harness, bug fix and first result (100 of 100 agree; user's rule 3 open) |
 
 **Do next, in order:**
 1. No scheduled sweep exists. Codex answered a request on #42 at 20:11 UTC on October 19 (its limit has reset, at least for now): it
@@ -49,7 +49,7 @@ NOT replace Codex.** Heads at the time of writing:
 ### Merge plan, checked by a trial replay (October 19, about 22:00 UTC)
 
 Claude replayed every planned merge, in order, on a throwaway local branch that was never pushed, starting from `main` at `f71464f`.
-Heads used: #42 `b90c1d2`, #44 `209efbc`, #45 `e9d29ec`, #46 (this PR), #49 `c5535dc`, #40 `5ceb6cc`, #41 `4c0fe90`, #43 `1c732a2`,
+Heads used: #42 `b90c1d2`, #44 `209efbc`, #45 `e9d29ec`, #46 (this PR), #49 `82bd0d4`, #40 `5ceb6cc`, #41 `4c0fe90`, #43 `1c732a2`,
 #47 `9400d18`, #48 `42d109d`. Result: every conflict is additive (both sides add entries) and the fully combined result passes
 **1,056 tests** with the social extra (re-checked with the newest heads of #42, #46 and #49). Heads move, so re-check before acting. Exact steps and resolutions:
 

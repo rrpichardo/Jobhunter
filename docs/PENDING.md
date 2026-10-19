@@ -44,15 +44,15 @@ comment that says Codex still has to review it.
 
 | PR | Plain name | Needs |
 | --- | --- | --- |
-| #40 | X (Twitter) hiring-post collector | Codex review; base of #41, #43, #47 |
-| #41 | Run modes: 28 days by hand, 3 days daily, refuses after a gap | Codex review (after #40) |
+| #40 | X (Twitter) hiring-post collector | Codex review of the current head (Codex answered seven rounds on earlier heads before its limit; all findings were fixed; the interim review on the PR names the current head `5ceb6cc`); base of #41, #43, #47 |
+| #41 | Run modes: 28 days by hand, 3 days daily, refuses after a gap | Codex review of the current head (three earlier Codex rounds were fixed; its interim review covers the current code, because the only later change is six documentation lines); after #40 |
 | #42 | Forward-Deployed / AI Deployment / AI Implementation Strategist roles | Codex reviewed `62fc1be` and found 1 issue (fixed in `afedfb2`, thread resolved); an independent review of that fix found bare `FDE` titles still passing (fixed in `b90c1d2`); needs Codex review of `b90c1d2` |
 | #43 | LinkedIn hiring-post collector | Codex review (after #40) |
 | #44 | Work at a Startup public pages | Codex review |
 | #45 | a16z portfolio jobs | Codex review |
 | #46 | This status document | Codex review |
 | #47 | Ali Rohde Jobs weekly newsletter | Codex review (after #40) |
-| #49 | Haiku-vs-Sonnet eval harness, a bug fix, the first result and the fixes from an independent review (head `c5535dc`) | Codex review |
+| #49 | Haiku-vs-Sonnet eval harness, a bug fix, the first result and the fixes from an independent review (head `82bd0d4`; it now also holds a run record of what the two helper agents did) | Codex review |
 | #48 | LinkedIn job listings (same session as the posts) | Codex review (after #43) |
 
 **Haiku vs Sonnet eval: RUN once on October 19, 2026 (Hacker News only). Verdict: not yet (your rule 3 is open, A11).**
