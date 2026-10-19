@@ -47,7 +47,6 @@ Safety stops, not targets (all reported, never silent):
   and rerunning the same run ID with the identical artifact file finishes the remaining
   batches without duplicates. A regenerated collection needs a new run ID (the writer
   refuses to reuse an ID for different bytes); pending journaled runs are still recovered.
-  The collection artifact limit is `SYNC_MAX_BYTES` (64 MiB), shared by producer and writer.
 
 Design notes from the October 18 self-review:
 
