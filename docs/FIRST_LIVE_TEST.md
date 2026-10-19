@@ -52,7 +52,10 @@ the usual options, `sheets_sync --input-sha256 <probe digest> --run-id $RUN`, an
 
 ## What to look at afterwards
 
-- Sources tab: `x-hiring-posts` and `linkedin-logged-in` show OK, OK-zero-jobs, blocked (account refused) or failed.
+- Sources tab: `x-twscrape` and `linkedin-login` show OK, OK-zero-jobs, blocked (account refused) or failed. Once a result is
+  delivered they replace the "needs setup" placeholders `x-hiring-posts` and `linkedin-logged-in`, so those two names are NOT
+  what to look for (they stay visible only for a source whose result was not delivered). Checked on October 19 by driving the
+  collect, queue, validate, probe and Sheet-writer steps offline with stand-in pages and an in-memory sheet.
 - Jobs tab: rows whose Job ID starts with `x:` or `linkedin-post:` are leads with the post URL; check three by hand.
 - `_State` tab: `allowance/x-twscrape/<date>` and `allowance/linkedin-login/<date>` hold ok, zero, blocked or failed.
 
