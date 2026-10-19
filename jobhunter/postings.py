@@ -739,9 +739,64 @@ def detail_getro(text):
     return {"text": clean_html(job.get("description")), "posted_at": ""}  # no verified Getro date field yet
 
 
-def count_a16z(text, ctx):
-    links = set(re.findall(r'href="(/jobs/[a-z0-9-]+/[0-9a-z]+-[^"]+)"', text))
-    return {"listed": len(links), "pm_titles": sum(bool(re.search(r"product-manager", link)) for link in links)}
+A16Z_JOB = re.compile(r"^/jobs/([a-z0-9-]+)/([0-9a-z][0-9a-z-]*?)--[a-z0-9-]*$")
+
+
+def stubs_a16z(text, ctx):
+    """a16z portfolio board search page: the first page (about 25 jobs) of one search. Title from the link text;
+    company, place, pay and date come from each job's own page."""
+    stubs, seen, rejected = [], set(), 0
+    for anchor in BeautifulSoup(text, "html.parser").find_all("a", href=A16Z_JOB):
+        match = A16Z_JOB.match(anchor["href"])
+        title = _stub_text(anchor.get_text(" "))
+        if match[2] in seen:
+            continue
+        seen.add(match[2])
+        if not title:
+            rejected += 1
+            continue
+        stubs.append({"job_id": f"{ctx['source_id']}:{match[2]}", "company": match[1].replace("-", " ").title(),
+                      "title": title, "location": "", "url": absolute("https://jobs.a16z.com", anchor["href"]),
+                      "salary": "", "posted_at": ""})
+    if not stubs and not rejected:
+        raise ValueError("invalid_board_response")  # a search page always lists jobs or says so; silence means a new layout
+    return stubs, rejected
+
+
+def _term(soup, label):
+    """The text of the <dd> that follows a <dt> with this label (semantic tags, not class names)."""
+    for term in soup.find_all("dt"):
+        if _stub_text(term.get_text(" ")).casefold() == label:
+            value = term.find_next_sibling("dd")
+            if value is not None:
+                return _stub_text(value.get_text(" "))
+    return ""
+
+
+def detail_a16z(text):
+    soup = BeautifulSoup(text, "html.parser")
+    heading = soup.find("h1")
+    about = next((h for h in soup.find_all("h2") if _stub_text(h.get_text(" ")).casefold() == "about the role"), None)
+    if heading is None or about is None:
+        raise ValueError("invalid_board_response")
+    body = next((a for a in about.parents if heading in a.descendants), None)  # smallest block holding both
+    description = clean_html(str(body)) if body is not None else ""
+    if not description:
+        raise ValueError("invalid_board_response")
+    company = ""
+    for block in _json_ld_blocks(text):
+        if block.get("@type") == "BreadcrumbList":
+            items = block.get("itemListElement") or []
+            if len(items) >= 2 and isinstance(items[1], dict):
+                company = _stub_text(items[1].get("name"))
+    posted = re.search(r"\bPosted\s+([A-Z][a-z]{2})[a-z]*\s+(\d{1,2}),\s*(\d{4})", soup.get_text(" "))
+    try:
+        posted_at = (datetime.strptime(f"{posted[1]} {posted[2]} {posted[3]}", "%b %d %Y").replace(tzinfo=timezone.utc).isoformat()
+                     if posted else "")
+    except ValueError:
+        posted_at = ""
+    return {"text": description, "company": company, "location": _term(soup, "location"),
+            "salary": _term(soup, "compensation"), "posted_at": posted_at}
 
 
 def count_hn(data, ctx):
@@ -756,9 +811,9 @@ PARSERS = {"greenhouse": parse_greenhouse, "lever": parse_lever, "ashby": parse_
            "remotive": parse_remotive, "remoteok": parse_remoteok, "himalayas": parse_himalayas,
            "jobicy": parse_jobicy, "themuse": parse_themuse, "wwr": parse_wwr_rss,
            "jsearch": parse_jsearch, "jooble": parse_jooble}
-LISTING_ONLY = {"a16z": count_a16z, "hn": count_hn}
+LISTING_ONLY = {"hn": count_hn}
 DETAIL_SOURCES = {"yc": (stubs_yc, detail_yc), "getro": (stubs_getro, detail_getro),
-                  "builtin": (stubs_builtin, detail_builtin)}
+                  "builtin": (stubs_builtin, detail_builtin), "a16z": (stubs_a16z, detail_a16z)}
 
 
 SOURCE_PRIORITY = {"greenhouse": 0, "lever": 0, "ashby": 0, "yc-product": 1, "getro-accel": 1, "getro-primary": 1,
