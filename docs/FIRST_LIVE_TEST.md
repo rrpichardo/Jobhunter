@@ -10,7 +10,10 @@ routine, and never twice in a day.
 1. The environment settings hold `X_AUTH_TOKEN` and `X_CT0` (X) and `LINKEDIN_LI_AT` (LinkedIn; `LI_AT` also works).
 2. Copy the spreadsheet first (File > Make a copy), so a surprise can be undone.
 3. `uv sync --locked --extra social` (installs twscrape 0.20.1 and playwright 1.56.0; Chromium 1194 is preinstalled).
-4. `uv run --locked python -m scripts.run_window --mode manual` prints `window_days=28`.
+4. `uv run --locked python -m scripts.run_window --mode manual` prints `window_days=28`. This tool is added by PR #41, so it
+   only exists once #41 is merged (without it the command stops with `No module named scripts.run_window`). The live test
+   therefore waits for #40, #41 and #43 to be merged. If you must run before #41, skip this check: step 1 passes
+   `--lookback-days 28` explicitly.
 5. A private run folder outside the checkout: `DIR=$(mktemp -d)`; `RUN=live-$(TZ=America/New_York date +%Y%m%d-%H%M%S)-$(openssl rand -hex 3)`.
 
 ## Step 1: collect only (writes `_State` allowance rows, nothing else in the Sheet)
