@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 import re
 
 from jobhunter import post_facts
-from jobhunter.postings import clean_html, parse_posted
+from jobhunter.postings import ROLE_TEXT, clean_html, parse_posted
 from jobhunter.records import https_url
 
 SOURCE_ID = 'hn-who-is-hiring'
@@ -22,16 +22,10 @@ ITEM_URL = 'https://hn.algolia.com/api/v1/items/{id}'
 PERMALINK = 'https://news.ycombinator.com/item?id={id}'
 THREAD_TITLE = re.compile(r'^Ask HN: Who is hiring\? \((?:January|February|March|April|May|June|July|August|'
                           r'September|October|November|December) \d{4}\)$')
-ROLE_WORDS = re.compile(r'\b(?:product (?:manager|management|lead|owner|director|leader)|head of product|'
-                        r'director of product|vp(?: of)?,? product|chief of staff|strategy|'
-                        r'(?:entrepreneur|founder)s? in residence|project manager|'
-                        r'leadership (?:development )?program)\b', re.I)
+ROLE_WORDS = ROLE_TEXT  # the delivery filter's own role families, so nothing is sent to Claude that cannot be delivered
 MAX_COMMENT_CHARS = 20000
 # Safety stop on candidate comments handed to the AI in one run (a thread has a few hundred; two are read).
 CANDIDATE_SAFETY_STOP = 1500
-# The candidate file must stay under the 5 MiB artifact limit (a comment can be 20,000 characters), so a byte
-# stop applies as well and is reported as truncated.
-CANDIDATE_BYTE_STOP = 3 * 1024 * 1024
 
 
 def select_threads(search, now, lookback_days):
