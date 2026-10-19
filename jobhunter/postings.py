@@ -222,8 +222,12 @@ ROLE_FAMILIES = (
     # one title, in either order ("AI Strategist, Forward Deployed"), plus "AI Deployment Strategist" and "AI
     # Implementation Strategist" (the user's other names for it) and the bare "Deployment Strategist". Forward-deployed
     # ENGINEER titles do not match.
-    ('Forward-deployed strategy', re.compile(r'\b(?:forward[- ]?deployed|FDE)\b[^,;|\n]{0,40}?\bstrateg(?:ist|y)\b|'
-                                             r'\bstrateg(?:ist|y)\b[^;|\n]{0,40}?\b(?:forward[- ]?deployed|FDE)\b|'
+    # "FDE" is itself short for forward deployed ENGINEER, so next to it only the noun "strategist" counts ("FDE Strategist"),
+    # never the bare word "strategy" ("FDE - AI Strategy" is an engineering title).
+    ('Forward-deployed strategy', re.compile(r'\bforward[- ]?deployed\b[^,;|\n]{0,40}?\bstrateg(?:ist|y)\b|'
+                                             r'\bFDE\b[^,;|\n]{0,40}?\bstrategist\b|'
+                                             r'\bstrateg(?:ist|y)\b[^;|\n]{0,40}?\bforward[- ]?deployed\b|'
+                                             r'\bstrategist\b[^;|\n]{0,40}?\bFDE\b|'
                                              r'\b(?:(?:AI|GenAI|applied AI)\s+(?:deployment|implementation)|deployment)\s+strategist\b', re.I)),
 )
 
@@ -237,7 +241,7 @@ ROLE_TEXT = re.compile("|".join(
 
 # A title that names an engineer or developer is an engineering role, even when "strategy" sits within 40 characters of
 # "forward deployed" ("Forward-Deployed Engineer - AI Strategy"), so it never counts as the strategist family.
-FORWARD_DEPLOYED_ENGINEER = re.compile(r'\b(?:engineer(?:s|ing)?|developer|SWE)\b', re.I)
+FORWARD_DEPLOYED_ENGINEER = re.compile(r'\b(?:engineers?|engineering|engr?|developers?|dev|SWEs?|SDEs?)\b|\bsoftware development\b', re.I)
 
 
 def role_family(title: str) -> str | None:
