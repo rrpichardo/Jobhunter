@@ -21,7 +21,7 @@ from urllib.parse import quote
 import httpx
 import yaml
 
-from jobhunter.artifacts import read_artifact, safe_error_code, write_artifact
+from jobhunter.artifacts import SYNC_MAX_BYTES, read_artifact, safe_error_code, write_artifact
 from jobhunter.post_facts import SOCIAL, postings_from_result
 from jobhunter.postings import (AI_TERMS, DETAIL_SOURCES, LISTING_ONLY, PARSERS, Posting, collection_match,
                                 collection_stub_match, collection_priority, collection_title_priority,
@@ -435,7 +435,7 @@ def main(argv=None, *, client=None, sleep=time.sleep) -> int:
                       hn_result=hn_result, ai_results=ai_results, detail_stop=args.detail_safety_stop, page_stop=args.page_safety_stop, known_ids=known)
         print(summary(payload))
         failed = sum(s["status"] in {"failed", "blocked"} for s in payload["sources"])
-        digest = write_artifact(args.output, payload)
+        digest = write_artifact(args.output, payload, max_bytes=SYNC_MAX_BYTES)
         print(f"sources={len(payload['sources'])} delivered_jobs={len(payload['jobs'])} failed_or_blocked={failed}")
         print(f"probe_sha256={digest}")
         return 0
