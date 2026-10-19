@@ -86,6 +86,6 @@ All of them end with: `Review only: do not implement fixes. Read AGENTS.md and d
 
 ## Not a Codex task
 
-A **combined run branch** (`claude/combined-live-run`, all ten PRs and #50 merged with the documented conflict fixes, 1,071 tests passing) exists
+A **combined run branch** (`claude/combined-live-run`, all ten PRs and #50 merged with the documented conflict fixes, 1,074 tests passing) exists
 only so the live test and first manual run can happen before these reviews. It is never merged to `main`; the individual PRs
 above are what get reviewed and merged. Running unreviewed code against real accounts was your decision on October 19.
