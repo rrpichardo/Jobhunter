@@ -313,11 +313,20 @@ def collection_stub_match(title: str, location: str, salary: str) -> bool:
                 and (amount is None or amount >= (70_000 if region == 'unresolved' else floor)))
 
 
+def collection_reason(posting: Posting) -> str:
+    """Why the collection filter drops a posting (a fixed code), or "" when it is collected."""
+    if not role_family(posting.title):
+        return 'role_not_in_scope'
+    if collection_region(posting.location, remote=posting.remote) is None:
+        return 'place_excluded'
+    if salary_preference(posting)[0] == 'below floor':
+        return 'pay_below_floor'
+    return ''
+
+
 def collection_match(posting: Posting) -> bool:
     """Collect approved roles; retain unresolved requirements without asserting eligibility."""
-    return bool(role_family(posting.title)
-                and collection_region(posting.location, remote=posting.remote) is not None
-                and salary_preference(posting)[0] != 'below floor')
+    return not collection_reason(posting)
 
 
 def collection_title_priority(title: str, tag: str = 'other', text: str = '') -> int:
