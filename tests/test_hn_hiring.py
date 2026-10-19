@@ -244,3 +244,51 @@ def test_malformed_extractions_fail_closed_and_write_nothing(tmp_path, capsys, e
     code, out = validate_with(tmp_path, capsys, extractions)
     assert code == 2 and not out.exists()
     assert 'hn_failed: invalid_extractions' in capsys.readouterr().out
+
+
+def test_a_comment_with_a_rejected_fact_is_not_marked_read(tmp_path, capsys):
+    # 2001 gets an invented company (rejected); 2003 is read cleanly with no matching role.
+    code, out = validate_with(tmp_path, capsys, {'processed': ['2001', '2003'], 'facts': [fact(company='Not Acme')]})
+    result = json.loads(out.read_text())
+    assert code == 0 and result['postings'] == [] and result['source']['rejected_items'] == 1
+    assert result['rejected_comment_ids'] == ['2001']
+    assert result['processed_ids'] == ['2003']  # 2001 stays queued, so the job is retried tomorrow
+    assert 'held_for_retry=1' in capsys.readouterr().out
+
+
+def test_one_rejected_fact_holds_a_comment_even_when_another_fact_in_it_was_accepted(tmp_path, capsys):
+    good = fact()
+    bad = fact(title='Product Manager, Robots')  # same comment, second role not in its text
+    code, out = validate_with(tmp_path, capsys, {'processed': ['2001'], 'facts': [good, bad]})
+    result = json.loads(out.read_text())
+    assert code == 0 and len(result['postings']) == 1  # the supported role is still delivered
+    assert result['processed_ids'] == []  # but the comment is read again until every fact in it validates
+
+
+def test_a_fact_for_a_real_comment_not_reported_as_read_holds_nothing(tmp_path, capsys):
+    # 2003 exists but is not in processed: it simply stays unread; the read comment 2001 is not affected
+    code, out = validate_with(tmp_path, capsys, {'processed': ['2001'], 'facts': [fact(comment_id='2003'), fact(comment_id=2003)]})
+    result = json.loads(out.read_text())
+    assert code == 0 and result['rejected_comment_ids'] == [] and result['processed_ids'] == ['2001']
+
+
+@pytest.mark.parametrize('claimed', ['200l', '9999', 9999, '', ' 2001'])
+def test_a_mistyped_or_invented_comment_id_holds_every_comment_that_was_read(tmp_path, capsys, claimed):
+    code, out = validate_with(tmp_path, capsys, {'processed': ['2001'], 'facts': [fact(comment_id=claimed)]})
+    assert code == 0 and json.loads(out.read_text())['processed_ids'] == []
+
+
+def test_a_numeric_comment_id_in_a_rejected_fact_still_holds_its_comment(tmp_path, capsys):
+    # the AI wrote the id as a JSON number: the fact is rejected, and the comment must still be held
+    code, out = validate_with(tmp_path, capsys, {'processed': ['2001', '2003'], 'facts': [fact(comment_id=2001)]})
+    result = json.loads(out.read_text())
+    assert code == 0 and result['postings'] == [] and result['rejected_comment_ids'] == ['2001']
+    assert result['processed_ids'] == ['2003']
+
+
+@pytest.mark.parametrize('junk', ['not a fact', {'title': 'no id at all'}, {'comment_id': None}, {'comment_id': True},
+                                  {'comment_id': ['2001']}])
+def test_a_rejected_fact_that_names_no_comment_holds_every_comment_that_was_read(tmp_path, capsys, junk):
+    code, out = validate_with(tmp_path, capsys, {'processed': ['2001', '2003'], 'facts': [junk]})
+    result = json.loads(out.read_text())
+    assert code == 0 and result['processed_ids'] == []  # nothing can be called read; all are tried again tomorrow
