@@ -243,8 +243,28 @@ def install_fake_twscrape(monkeypatch, tweets=(), search_error=None, init_error=
     def parse_tweets(obj, limit=-1):
         return iter(obj if limit < 0 else obj[:limit])
 
+    class Logger:
+        """The few loguru calls the adapter uses: sinks receive every message at or above their level."""
+        def __init__(self):
+            self.sinks = {}
+            self.next_id = 0
+
+        def add(self, sink, level='DEBUG', format='{message}'):
+            self.next_id += 1
+            self.sinks[self.next_id] = sink
+            return self.next_id
+
+        def remove(self, sink_id):
+            del self.sinks[sink_id]
+
+        def emit(self, text):
+            for sink in list(self.sinks.values()):
+                sink(text + '\n')
+
+    log.logger = Logger()
     module = types.SimpleNamespace(API=API, HttpStatusError=HttpStatusError, NoAccountError=NoAccountError,
                                    models=types.SimpleNamespace(parse_tweets=parse_tweets),
+                                   logger=types.SimpleNamespace(logger=log.logger),
                                    set_log_level=lambda level: setattr(log, 'level', level))
     monkeypatch.setitem(sys.modules, 'twscrape', module)
     return log, module
@@ -269,7 +289,7 @@ def test_the_adapter_uses_a_private_temporary_database_turns_telemetry_off_and_c
 
 
 @pytest.mark.parametrize('error,expected', [
-    (lambda log: sys.modules['twscrape'].NoAccountError('x'), sc.FetchBlocked),
+    (lambda log: sys.modules['twscrape'].NoAccountError('x'), x.CollectorFailure),  # active account, no rate-limit evidence
     (lambda log: sys.modules['twscrape'].HttpStatusError(403), sc.FetchBlocked),
     (lambda log: sys.modules['twscrape'].HttpStatusError(401), sc.FetchBlocked),
     (lambda log: sys.modules['twscrape'].HttpStatusError(429), sc.FetchRateLimited),
@@ -358,11 +378,17 @@ def test_no_response_at_all_is_a_refusal_not_a_healthy_empty_result(monkeypatch)
         fetcher.close()
 
 
-@pytest.mark.parametrize('account,expected', [('banned', sc.FetchBlocked), ('missing', sc.FetchBlocked),
-                                              ('cooling', sc.FetchRateLimited), ('naive-lock', sc.FetchRateLimited),
-                                              ('expired-lock', sc.FetchBlocked), ('active', sc.FetchBlocked)])
-def test_no_available_account_is_told_apart_a_rejected_session_or_a_cooling_down_one(monkeypatch, account, expected):
+@pytest.mark.parametrize('account,said_rate_limited,expected', [
+    ('banned', False, sc.FetchBlocked), ('missing', False, sc.FetchBlocked), ('banned', True, sc.FetchBlocked),
+    ('cooling', True, sc.FetchRateLimited),           # X said "Rate limited" and the account is cooling down
+    ('cooling', False, x.CollectorFailure),           # locked after a network/unknown error: not a rate limit
+    ('naive-lock', False, x.CollectorFailure), ('expired-lock', False, x.CollectorFailure),
+    ('active', False, x.CollectorFailure), ('active', True, sc.FetchRateLimited)])
+def test_no_available_account_is_told_apart_rejected_session_rate_limit_or_collector_defect(
+        monkeypatch, account, said_rate_limited, expected):
     def raise_no_account(log):
+        if said_rate_limited:
+            log.logger.emit('Rate limited: 200 - req - OK')
         return sys.modules['twscrape'].NoAccountError('x')
     install_fake_twscrape(monkeypatch, search_error=raise_no_account, account=account)
     fetcher = x.TwscrapeFetcher('tok', 'ct')
@@ -371,6 +397,26 @@ def test_no_available_account_is_told_apart_a_rejected_session_or_a_cooling_down
             fetcher.search('q', 5)
     finally:
         fetcher.close()
+
+
+def test_only_a_yes_or_no_is_kept_from_twscrapes_log_and_the_watcher_is_removed(monkeypatch):
+    log, _ = install_fake_twscrape(monkeypatch)
+    fetcher = x.TwscrapeFetcher('tok', 'ct')
+    assert len(log.logger.sinks) == 1
+    log.logger.emit('Rate limited: 200 - req-id-123 - (88) secret-looking-text')
+    assert fetcher._rate_limit_seen is True
+    assert 'secret-looking-text' not in repr(vars(fetcher))  # the message itself is never stored
+    fetcher.close()
+    assert log.logger.sinks == {}
+
+
+def test_other_log_lines_do_not_count_as_a_rate_limit(monkeypatch):
+    log, _ = install_fake_twscrape(monkeypatch)
+    fetcher = x.TwscrapeFetcher('tok', 'ct')
+    log.logger.emit('Unhandled API response code: 500 - req')
+    log.logger.emit('Blocked by Cloudflare: 403')
+    assert fetcher._rate_limit_seen is False
+    fetcher.close()
 
 
 def test_a_blocked_first_search_stops_the_run_records_blocked_and_spends_the_day(monkeypatch, tmp_path):
