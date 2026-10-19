@@ -17,13 +17,16 @@ def job(**changes):
 
 @pytest.mark.parametrize('title', ['Product Manager, Billing', 'Senior Product Manager',
     'Group Product Manager', 'Product Lead', 'Chief of Staff', 'MBA Leadership Development Program',
-    'Strategy Manager', 'Director of Strategy', 'Entrepreneur in Residence', 'Project Manager'])
+    'Strategy Manager', 'Director of Strategy', 'Entrepreneur in Residence', 'Project Manager',
+    'Forward-Deployed AI Strategist', 'Forward Deployed Strategist', 'Senior Forward Deployed AI Strategist - Public Sector',
+    'AI Strategist, Forward Deployed', 'AI Strategist (Forward-Deployed)', 'FDE Strategist', 'Forward Deployed Strategy Lead'])
 def test_non_ai_role_families_are_collection_candidates(title):
     assert p.collection_match(job(title=title))
 
 
 @pytest.mark.parametrize('title', ['Software Engineer', 'Product Marketing Manager', 'Program Manager',
-    'Project Manager Intern', 'Summer Associate, Strategy', 'Product Designer', 'Strategy Analyst'])
+    'Project Manager Intern', 'Summer Associate, Strategy', 'Product Designer', 'Strategy Analyst',
+    'Forward Deployed Engineer', 'Forward-Deployed Software Engineer, Strategy Platform'])
 def test_unapproved_or_intern_titles_are_not_candidates(title):
     assert not p.collection_match(job(title=title))
 

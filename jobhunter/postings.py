@@ -218,6 +218,10 @@ ROLE_FAMILIES = (
                            r'(?:manager|director|head|vp) (?:of )?(?:corporate |business )?strategy)\b', re.I)),
     ('Entrepreneurship', re.compile(r'\b(?:entrepreneur|founder) in residence\b', re.I)),
     ('Project management', re.compile(r'\bproject (?:manager|management lead|director)\b', re.I)),
+    # "Forward-Deployed AI Strategist" and its variants: forward deployed / FDE next to strategist or strategy within
+    # one title, in either order ("AI Strategist, Forward Deployed"). Forward-deployed ENGINEER titles do not match.
+    ('Forward-deployed strategy', re.compile(r'\b(?:forward[- ]?deployed|FDE)\b[^,;|\n]{0,40}?\bstrateg(?:ist|y)\b|'
+                                             r'\bstrateg(?:ist|y)\b[^;|\n]{0,40}?\b(?:forward[- ]?deployed|FDE)\b', re.I)),
 )
 
 # Free-text scan (Hacker News comments, social posts): the same families as above, built from ROLE_FAMILIES so
