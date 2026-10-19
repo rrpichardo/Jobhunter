@@ -19,28 +19,31 @@ NOT replace Codex.** Heads at the time of writing:
 | --- | --- | --- | --- | --- |
 | #40 | claude/social-collectors | main | 5ceb6cc | X collector (twscrape), shared candidate code; base of the stack below |
 | #41 | claude/docs-run-modes | #40 | 4c0fe90 | manual 28 days / daily 3 days, `scripts.run_window` guard |
-| #42 | claude/role-forward-deployed | main | 62fc1be | Forward-Deployed / AI Deployment / AI Implementation Strategist roles |
+| #42 | claude/role-forward-deployed | main | afedfb2 | Forward-Deployed / AI Deployment / AI Implementation Strategist roles (Codex finding on 62fc1be fixed here) |
 | #43 | claude/linkedin-posts | #40 | 0303164 | LinkedIn hiring-post collector (Playwright), card reader |
 | #44 | claude/waas | main | 209efbc | Work at a Startup public pages (needs `Accept: text/html`) |
 | #45 | claude/a16z | main | e9d29ec | a16z portfolio jobs, four searches |
 | #46 | claude/handoff-oct19 | main | see PR | this status/handoff text, CLAUDE.md "what is pending" rule |
 | #47 | claude/newsletter-alirohde | #40 | 9400d18 | Ali Rohde Jobs weekly newsletter (jobs keyed by application link) |
 | #48 | claude/linkedin-jobs | #43 | 4e86e41 | LinkedIn job cards in the same session/allowance (contains #42's commit) |
-| #49 | claude/haiku-eval | main | 7241da6 | Haiku-vs-Sonnet eval harness and plan (NOT run) |
+| #49 | claude/haiku-eval | main | 6cbc3ec | Haiku-vs-Sonnet eval harness, bug fix and first result (100 of 100 agree; user's rule 3 open) |
 
 **Do next, in order:**
-1. A scheduled sweep (trigger "Codex re-review sweep") re-requests Codex reviews; if you are a new session, do it by hand:
-   comment `@codex review <full head SHA>` on each open PR (heads move: re-read them). Fix real findings in NEW commits,
-   never rewrite history. Merge only with a Codex approval at the exact head plus green CI.
+1. No scheduled sweep exists. Codex answered a request on #42 at 20:11 UTC on October 19 (its limit has reset, at least for now): it
+   reviewed `62fc1be`, found one real issue (fixed in `afedfb2`), and #42 now needs a review of that head. The user asked Claude not to
+   try Codex while it was thought unavailable, so ask the user for a "go", then comment `@codex review <full head SHA>` on one PR at a
+   time (heads move: re-read them). Fix real findings in NEW commits, never rewrite history. Merge only with a Codex approval at the
+   exact head plus green CI.
 2. Merge order: #42, #44, #45 (the second of #44/#45 needs a trivial conflict fix in `dedupe`/the registry), #46, #49,
-   then #40, and after it retarget #41, #43, #47 to `main` (merge `main` into each first), then #48 after #43.
+   then #40, and after it retarget #41, #43, #47 to `main` (merge `main` into each first), then #48 after #43. #48 carries #42's older commits, so merge `main` into it after #42 lands to pick up `afedfb2`.
 3. First live X and LinkedIn test: `docs/FIRST_LIVE_TEST.md`. The user said yes (A2) for after Codex approves #40 and #43. It
    runs in the JobHunterEnv environment (the cookies live there: `X_AUTH_TOKEN`, `X_CT0`, `LINKEDIN_LI_AT`, also
    `WAAS_SESSION_COOKIE`, `JSEARCH_API_KEY`, `JOOBLE_API_KEY`; names verified, values never printed). Use
    `mcp__claude-code-remote__create_session` with `environment_id` for JobHunterEnv (`env_01M9moVSWZBGvWAZYrqTm49s`). The user must
    copy the spreadsheet first. Each source spends one allowance per New York day; never retry a spent day.
-4. The Haiku eval (`docs/evals/HAIKU_READING_EVAL.md`): the user is unsure about Haiku; run it on 100 real items, show them the
-   items and the agreement percentage, switch ONLY above 90% (and the two extra conditions in that file).
+4. The Haiku eval (`docs/evals/HAIKU_READING_EVAL.md`) RAN once on October 19 (Hacker News only): 100 of 100 posts agree and both
+   models found the same 15 jobs (`docs/evals/results/haiku_reading_2026-10-19.md`, PR #49). The user's rule 3 (read the posts and the
+   4 wording differences) is open, so the reading stays on Sonnet. Repeat on X and LinkedIn posts after the live test.
 5. Then a first manual run (`run_window --mode manual`), then the user decides A3 (create the daily routine).
 
 **Gotchas learned:** the pinned uv is 0.13.1 (`python3 -m venv ~/uvvenv && ~/uvvenv/bin/pip install uv==0.13.1`; run tests with

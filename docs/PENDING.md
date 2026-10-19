@@ -6,7 +6,7 @@ done, change its status here and in the PR that did it. Nothing below is a claim
 
 ## 0. At a glance (the one place to look; Claude updates it in every change)
 
-Last updated October 19, 2026, 17:40 UTC (Codex still at its usage limit when last checked, 17:26 UTC). When the user asks "what is pending", "what do you need from me" or
+Last updated October 19, 2026, 21:15 UTC (Codex answered a request on #42 at 20:11 UTC, so its limit has reset at least for now; see A12 and C). When the user asks "what is pending", "what do you need from me" or
 "where are we", Claude reads THIS section first, checks it against GitHub, answers in plain language, and fixes
 this section if it is out of date.
 
@@ -19,6 +19,8 @@ this section if it is out of date.
 | A4 Merging | You said (October 19) to merge what Codex approves and to use the `engineering:code-review` check in the meantime. |
 | A10 NEW: close the old stack PRs #21 to #30 | Their content already landed on `main` through #39, so they are stale duplicates (they still show as open). Closing them is housekeeping; Claude will not close anything without your OK. |
 | A7 Limits | 5 LinkedIn post searches, 5 LinkedIn job searches, 10 X searches a day. Say so if you want them changed. |
+| A11 NEW: Haiku decision (rule 3) | The first Haiku-vs-Sonnet run is done (Hacker News only): 100 of 100 posts agree and both models found the same 15 jobs, so the 90% rules pass. The reading stays on Sonnet until YOU read the posts and the 4 wording differences (two location texts, one salary text, one company name) and say whether Haiku is acceptable. Claude gave you an interactive page and an Excel workbook in chat; the saved result is `docs/evals/results/haiku_reading_2026-10-19.md` (PR #49). |
+| A12 NEW: Codex is answering again | Claude sent ONE request (#42, 20:09 UTC) before you said not to try. Codex reviewed the exact head at 20:11 UTC and found one real problem (an engineer title that mentions "strategy" matched the new role family). Claude fixed it in `afedfb2`, replied and resolved the thread. #42 now needs a Codex review of that new head. Claude has NOT sent it, because you asked it not to try Codex. Say "go" and Claude re-requests exact-head reviews one PR at a time, #42 first. |
 
 **B. Your tasks** (only you can do them; details in section B below)
 
@@ -29,11 +31,12 @@ this section if it is out of date.
 5. B4 Gmail connector permissions to "Needs approval".
 6. B8 Optional: rotate the Google service-account key.
 7. Before the live test: copy the spreadsheet (File > Make a copy).
+8. B10 NEW (optional, only for the logged-in Work at a Startup lists): the saved `WAAS_SESSION_COOKIE` is a bare value with no cookie name, so Claude cannot tell which cookie it is. Re-save it as `name=value` (the browser's cookie name, an equals sign, then the value) or tell Claude the cookie's name. Never paste the value in chat.
 
-**C. Waiting on Codex (usage limit reached about 16:31 UTC on October 19)**
+**C. Waiting on Codex (usage limit reached about 16:31 UTC on October 19; one request at 20:09 UTC was answered at 20:11 UTC)**
 
-Check or raise the limit at https://chatgpt.com/codex/cloud/settings/usage. Claude re-requests every review when it
-resets (a scheduled sweep does it) and fixes what Codex finds. Until then each open PR carries an interim review in the style of the
+Check or raise the limit at https://chatgpt.com/codex/cloud/settings/usage. No scheduled sweep exists any more, so Claude re-requests
+reviews by hand (one PR at a time) once you say "go" (A12), and fixes what Codex finds. Until then each open PR carries an interim review in the style of the
 `engineering:code-review` skill (done by independent reviewers, October 19; their findings were fixed), posted as a PR
 comment that says Codex still has to review it.
 
@@ -41,23 +44,23 @@ comment that says Codex still has to review it.
 | --- | --- | --- |
 | #40 | X (Twitter) hiring-post collector | Codex review; base of #41, #43, #47 |
 | #41 | Run modes: 28 days by hand, 3 days daily, refuses after a gap | Codex review (after #40) |
-| #42 | Forward-Deployed / AI Deployment / AI Implementation Strategist roles | Codex review |
+| #42 | Forward-Deployed / AI Deployment / AI Implementation Strategist roles | Codex reviewed `62fc1be` and found 1 issue (fixed in `afedfb2`, thread resolved); needs Codex review of `afedfb2` |
 | #43 | LinkedIn hiring-post collector | Codex review (after #40) |
 | #44 | Work at a Startup public pages | Codex review |
 | #45 | a16z portfolio jobs | Codex review |
 | #46 | This status document | Codex review |
 | #47 | Ali Rohde Jobs weekly newsletter | Codex review (after #40) |
-| #49 | Haiku-vs-Sonnet eval harness and plan (not run) | Codex review |
+| #49 | Haiku-vs-Sonnet eval harness, a bug fix and the first result (head `6cbc3ec`) | Codex review |
 | #48 | LinkedIn job listings (same session as the posts) | Codex review (after #43) |
 
-**Claude's TODO (user request, October 19; tokens are limited, so it is queued, not done): Haiku vs Sonnet eval.**
-The user is NOT sure the cheaper Haiku should do the reading step. Run `docs/evals/HAIKU_READING_EVAL.md` on 100 real
-items (harness: `scripts/eval_reading.py`, PR #49; real items come from the first live runs' work files). Show the user the
-100 examples, both models' outputs and the agreement percentage. Switch to Haiku ONLY if agreement is over 90% (and Haiku
-finds at least 90% of Sonnet's jobs and the user has read the disagreements). Until then the reading stays on Sonnet. The
-eval file is saved so the user can learn how it was done.
+**Haiku vs Sonnet eval: RUN once on October 19, 2026 (Hacker News only). Verdict: not yet (your rule 3 is open, A11).**
+On 100 real posts (15 name a collected role, 85 do not) both models gave the same answer on all 100 and found the same 15 jobs; neither
+had a value rejected for not being in the post. The score looks only at title and company, so four facts that differ in location, salary or
+company wording are listed separately. The run also exposed a bug in the test tool (fixed, with a test, in PR #49). Not yet tested: X,
+LinkedIn and newsletter posts. Details: `docs/evals/results/haiku_reading_2026-10-19.md`; the plan is `docs/evals/HAIKU_READING_EVAL.md`.
+Until you answer A11 the reading stays on Sonnet.
 
-**E. Possible later add-on:** `WAAS_SESSION_COOKIE` is already saved, so the logged-in Work at a Startup lists (about 240 product and 1,400 operations jobs instead of the first ~25) can be built when you want them.
+**E. Possible later add-on (Work at a Startup logged-in lists).** A read-only probe on October 19 found that the public product page shows 24 of 241 jobs and has no paging. It could not test the logged-in lists, because the saved `WAAS_SESSION_COOKIE` has no cookie name (B10). Once that is fixed, Claude retests and, if the logged-in lists show more, builds them (A1 is approved, read-only).
 
 **D. Claude's next steps:** when Codex is back: review, fix, merge in order (#42, #44, #45, #46, then #40 and the PRs
 stacked on it). Then the live X and LinkedIn test, then a first manual run, then A3.
@@ -65,7 +68,7 @@ stacked on it). Then the live X and LinkedIn test, then a first manual run, then
 **Decisions already made (do not ask again):** A1 build LinkedIn, X and Work at a Startup (read-only); A3 only after
 a checked manual run; A5 keep 28 days; A6 no extra JSearch pages; A8 BizOps stays out, and the Forward-Deployed /
 AI Deployment / AI Implementation Strategist titles are in; first manual run 28 days, daily routine 3 days; the
-the reading step stays on Sonnet UNLESS the Haiku eval shows over 90% agreement (you are not sure about Haiku); old commits keep their "Claude-Session" line (see below).
+the reading step stays on Sonnet UNLESS the Haiku eval shows over 90% agreement and you have read the posts (the first run shows 100%, your reading is open, A11); old commits keep their "Claude-Session" line (see below).
 
 **About the old "Claude-Session" lines.** Some of Claude's older commits end with a line linking to the chat session
 that wrote them. They were left in on purpose: removing them would mean re-creating those commits, which voids every
@@ -156,6 +159,7 @@ routine's first scheduled run, which needs A3 and the code on `main` (A4: your g
 | B7 | Later, when you ask: clean up old alert subscriptions in your main mailbox. Not authorized now. | deferred |
 | B8 | Optional: rotate the Google service-account key. Recommended, not required. | optional |
 | B9 | Tell Claude the web address of the Next Play newsletter you read (the `nextplay.substack.com` feed is a 2021 publication, not it). Claude then builds its reader like the Ali Rohde one (#47). | open |
+| B10 | Only for the logged-in Work at a Startup lists: the saved `WAAS_SESSION_COOKIE` has no cookie name. Re-save it as `name=value` or tell Claude the name. Never paste the value in chat. | optional |
 
 ## C. Work Claude cannot finish until A or B is done
 
