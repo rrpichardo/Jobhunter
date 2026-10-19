@@ -1,6 +1,6 @@
 # Eval: can the cheap model (Haiku) do the reading step as well as Sonnet?
 
-Status: NOT RUN. Written October 19, 2026 at the user's request; the user wants to see the 100 examples and the
+Status: RUN ONCE on October 19, 2026 (Hacker News only; see Result). Written at the user's request; the user wants to see the 100 examples and the
 agreement percentage before anything is switched. Until this passes, the reading step stays on the routine session's own
 model (Sonnet) and `docs/ROUTINE_PROMPT.md` says so.
 
@@ -47,5 +47,13 @@ Switch only when ALL of these hold; otherwise stay on Sonnet and report why:
 
 ## Result
 
-Not run yet. When run: date, items, agreement percent, jobs (Sonnet / Haiku / in both), rejected facts per model, the user's
-verdict on the disagreements, and the decision (switch or stay).
+First run, October 19, 2026, on 100 real Hacker News "Who is hiring?" posts (15 name a collected role, 85 do not):
+**100 of 100 posts agree**, Sonnet and Haiku each delivered the same **15 jobs**, and neither had a value rejected for
+not being in the post. Rules 1 and 2 pass. **Rule 3 (the user reads the posts and differences) is open, so the verdict is
+"not yet" and the reading stays on Sonnet.** Four facts differ in location, salary or company wording; the score cannot see
+those, and they are listed in the results file. Running it also exposed a bug in this tool (a fact with an empty apply link was
+wrongly rejected for Hacker News items), fixed in the same branch with a test.
+
+Full detail, the differences, how to repeat it and the saved inputs:
+[`results/haiku_reading_2026-10-19.md`](results/haiku_reading_2026-10-19.md) (report: `results/haiku_reading_2026-10-19.json`).
+Not yet tested: X posts, LinkedIn posts and newsletters (the live test comes first).
