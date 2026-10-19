@@ -23,7 +23,7 @@ DETAIL = ('<html><head><script type="application/ld+json">{"@type":"BreadcrumbLi
 
 def test_listing_rows_use_link_text_dedupe_by_id_and_skip_non_job_links():
     stubs, rejected = p.stubs_a16z(LISTING, {'source_id': 'a16z-product'})
-    assert [s['job_id'] for s in stubs] == ['a16z-product:8176254', 'a16z-product:1f473f3b-437d-4781-b0b4-83480f22c739']
+    assert [s['job_id'] for s in stubs] == ['a16z:8176254', 'a16z:1f473f3b-437d-4781-b0b4-83480f22c739']
     assert stubs[0]['title'] == 'Product Manager, Startup Products' and stubs[0]['company'] == 'Stripe'
     assert stubs[0]['url'] == 'https://jobs.a16z.com/jobs/stripe/8176254--product-manager-startup-products'
     assert rejected == 1  # the link with no text
@@ -52,7 +52,7 @@ def test_the_source_delivers_the_matching_job_with_its_own_date():
         return httpx.Response(200, text=DETAIL if '--product-manager' in request.url.path else LISTING)
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
         source, jobs, note = probe.probe_source(client, ENTRY, STAMP, lookback_days=60)
-    assert source['status'] == 'OK' and [j.job_id for j in jobs] == ['a16z-product:8176254']
+    assert source['status'] == 'OK' and [j.job_id for j in jobs] == ['a16z:8176254']
     assert jobs[0].company == 'Stripe' and jobs[0].posted_at.startswith('2026-09-11') and 'outside_window=0' in note
 
 
@@ -70,3 +70,11 @@ def test_the_registry_has_the_four_searches_and_no_listing_only_entry_for_a16z()
     assert {e['id'] for e in registry['detail_sources'] if e['kind'] == 'a16z'} == {
         'a16z-product', 'a16z-chief-of-staff', 'a16z-strategy', 'a16z-founder-in-residence'}
     assert all(e['kind'] != 'a16z' for e in registry['listing_only'])
+
+
+def test_the_same_job_found_by_two_searches_is_one_row():
+    def mk(source):
+        return p.Posting('a16z:1', source, 'Acme', 'Product Manager', 'Remote', 'text',
+                         'https://jobs.a16z.com/jobs/acme/1--pm', STAMP)
+    kept = p.dedupe([mk('a16z-product'), mk('a16z-strategy')])
+    assert len(kept) == 1 and 'Also listed by: a16z-strategy' in kept[0][1]

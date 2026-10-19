@@ -755,7 +755,7 @@ def stubs_a16z(text, ctx):
         if not title:
             rejected += 1
             continue
-        stubs.append({"job_id": f"{ctx['source_id']}:{match[2]}", "company": match[1].replace("-", " ").title(),
+        stubs.append({"job_id": f"a16z:{match[2]}", "company": match[1].replace("-", " ").title(),
                       "title": title, "location": "", "url": absolute("https://jobs.a16z.com", anchor["href"]),
                       "salary": "", "posted_at": ""})
     if not stubs and not rejected:
@@ -833,8 +833,12 @@ def dedupe(postings):
     def rank(posting):
         return SOURCE_PRIORITY.get(posting.source_id.split(":")[0], SOURCE_PRIORITY.get(posting.source_id, 2))
     ordered = sorted(postings, key=rank)  # stable: first-seen order inside a priority
-    kept, by_key, by_similar = [], {}, {}
+    kept, by_key, by_similar, by_id = [], {}, {}, {}
     for posting in ordered:
+        if posting.job_id in by_id:  # the very same job found again (e.g. by two searches of one board): one row
+            if by_id[posting.job_id]["posting"].source_id != posting.source_id:
+                by_id[posting.job_id]["also"].append(posting.source_id)
+            continue
         key = canonical_key(posting.apply_url)
         if (verified_requisition(key) and key in by_key
                 and by_key[key]["posting"].source_id != posting.source_id):
@@ -848,6 +852,7 @@ def dedupe(postings):
                  'shared': by_key[key]['posting'].job_id if not verified_requisition(key) and key in by_key else None}
         by_key.setdefault(key, entry)
         by_similar.setdefault(_similar(posting), posting.job_id)
+        by_id[posting.job_id] = entry
         kept.append(entry)
     notes = []
     for entry in kept:
