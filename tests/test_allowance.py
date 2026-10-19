@@ -211,7 +211,8 @@ def test_finish_never_writes_a_row_that_belongs_to_another_run():
     assert state_rows(store)[f'allowance/{SRC}/2026-10-19']['state'] == 'reserved'
 
 
-@pytest.mark.parametrize('day', ['today', '2026-1-1', '2026-10-19; drop', 5])
+@pytest.mark.parametrize('day', ['today', '2026-1-1', '2026-10-19; drop', 5, '2026-02-30', '2026-99-99', '2026-00-10',
+                                 '2025-02-29', '0000-01-01'])
 def test_a_malformed_day_is_refused_before_any_write(day):
     store = MemoryStore()
     reserve(store, NOON)
@@ -229,3 +230,22 @@ def test_cli_finish_takes_the_reserved_day(capsys):
     assert f'day={day}' in capsys.readouterr().out
     assert cli.main(['finish', '--source', SRC, '--run-id', 'r1', '--outcome', 'ok', '--day', 'bad'], store=store) == 2
     assert 'invalid_allowance_day' in capsys.readouterr().out
+
+
+# 2026-03-08 is the spring-forward day in New York (the clocks jump at 02:00 local)
+SPRING_BEFORE = '2026-03-09T03:59:59+00:00'   # 23:59:59 on March 8 (EDT)
+SPRING_AFTER = '2026-03-09T04:00:01+00:00'    # 00:00:01 on March 9
+
+
+def test_finish_without_a_day_finds_the_reservation_across_the_spring_clock_change():
+    store = MemoryStore()
+    assert reserve(store, SPRING_BEFORE) == '2026-03-08'
+    assert finish(store, SPRING_AFTER, 'ok') == '2026-03-08'
+    assert state_rows(store)[f'allowance/{SRC}/2026-03-08']['state'] == 'ok'
+
+
+def test_finish_without_a_day_finds_the_reservation_across_the_fall_clock_change():
+    # 2026-11-01 is the fall-back day: that New York date is 25 hours long
+    store = MemoryStore()
+    assert reserve(store, '2026-11-02T04:59:59+00:00') == '2026-11-01'   # 23:59:59 EST
+    assert finish(store, '2026-11-02T05:00:01+00:00', 'zero') == '2026-11-01'

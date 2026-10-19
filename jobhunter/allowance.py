@@ -16,7 +16,7 @@ The New York day comes from US daylight-saving rules (second Sunday in March to 
 at 02:00 local) so no time-zone database is needed on any platform.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 import json
 import random
 import re
@@ -53,6 +53,16 @@ def new_york_day(moment):
     ends = _nth_sunday(utc.year, 11, 1) + timedelta(hours=6)     # 02:00 EDT
     offset = -4 if starts <= utc < ends else -5
     return (utc + timedelta(hours=offset)).date().isoformat()
+
+
+def _real_day(day):
+    """True only for a real calendar date written exactly as YYYY-MM-DD."""
+    if not isinstance(day, str) or not DAY.fullmatch(day):
+        return False
+    try:
+        return date.fromisoformat(day).isoformat() == day
+    except ValueError:
+        return False
 
 
 def _key(source, day):
@@ -135,7 +145,7 @@ def finish(store, source, run_id, outcome, *, day=None, now=lambda: datetime.now
     _check(source, run_id)
     if outcome not in OUTCOMES:
         raise ValueError('invalid_allowance_outcome')
-    if day is not None and (not isinstance(day, str) or not DAY.fullmatch(day)):
+    if day is not None and not _real_day(day):
         raise ValueError('invalid_allowance_day')
 
     def operation(stamp):
@@ -144,7 +154,8 @@ def finish(store, source, run_id, outcome, *, day=None, now=lambda: datetime.now
         if day is not None:
             candidates = [day]
         else:
-            candidates = [new_york_day(moment), new_york_day(moment - timedelta(days=1))]
+            today = new_york_day(moment)  # yesterday is the previous calendar date, not 24 hours earlier
+            candidates = [today, (date.fromisoformat(today) - timedelta(days=1)).isoformat()]
         found = [d for d in dict.fromkeys(candidates)
                  if (existing := _state(rows, _key(source, d))) is not None and existing['run'] == run_id]
         if not found:
