@@ -190,3 +190,17 @@ def test_probe_social_result_options_must_pair_up(tmp_path, capsys):
     out = tmp_path.parent / (tmp_path.name + '_pair.json')
     assert probe.main(['--output', str(out), '--social-result', 'a.json']) == 2
     assert 'invalid_ai_result' in capsys.readouterr().out and not out.exists()
+
+
+def test_a_post_with_a_rejected_fact_is_not_marked_read(tmp_path, capsys):
+    path, digest = candidates_file(tmp_path, name='_c4.json')
+    facts = tmp_path.parent / (tmp_path.name + '_f4.json')
+    both = ['1850000000000000001', '1850000000000000002']
+    facts.write_text(json.dumps({'processed': both, 'facts': [fact(company='Not Acme')]}))  # invented company
+    result = tmp_path.parent / (tmp_path.name + '_r4.json')
+    assert cli.main(['validate', '--source', X, '--candidates', str(path), '--candidates-sha256', digest,
+                     '--extractions', str(facts), '--output', str(result)]) == 0
+    payload = json.loads(result.read_text())
+    assert payload['postings'] == [] and payload['rejected_item_ids'] == ['1850000000000000001']
+    assert payload['processed_ids'] == ['1850000000000000002']  # the bad post stays queued for tomorrow
+    assert 'held_for_retry=1' in capsys.readouterr().out

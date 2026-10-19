@@ -45,7 +45,10 @@ Safety stops, not targets (all reported, never silent):
 - `EXTRACTION_SAFETY_STOP = 1000` Gmail AI extractions per run.
 - One writer batch holds at most `JOB_BATCH_SIZE = 150` jobs (its recovery journal
   must fit in `_State`). Larger runs are split into `<run id>-b001`, `-b002`, ...
-  and rerunning the same run ID finishes the remaining batches without duplicates.
+  and rerunning the same run ID with the identical artifact file finishes the remaining
+  batches without duplicates. A regenerated collection needs a new run ID (the writer
+  refuses to reuse an ID for different bytes); pending journaled runs are still recovered.
+  The collection artifact limit is `SYNC_MAX_BYTES` (64 MiB), shared by producer and writer.
 
 Design notes from the October 18 self-review:
 

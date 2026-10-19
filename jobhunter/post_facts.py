@@ -54,13 +54,16 @@ def build_result(source_id, candidates, facts, captured_at, *, id_field, id_pref
               'jobs_fetched': listed, 'valid_jobs': 0, 'rejected_items': stats.get('unreadable', 0),
               'pm_candidates': 0, 'selected_for_m0': 0, 'attempts': attempts, 'http_status': 200,
               'retry_after_seconds': None, 'coverage': 'partial-response', 'error': error}
-    postings, seen = [], set()
+    postings, seen, rejected_ids = [], set(), set()
     for fact in facts:
         try:
             posting = _posting(fact, by_id, captured_at, source_id=source_id, id_field=id_field,
                                id_prefix=id_prefix, permalink=permalink)
         except (ValueError, TypeError, AttributeError):
             source['rejected_items'] += 1
+            item_id = fact.get(id_field) if isinstance(fact, dict) else None
+            if isinstance(item_id, str) and item_id in by_id:
+                rejected_ids.add(item_id)  # an item with a rejected fact was not read successfully
             continue
         if posting.job_id in seen:
             continue
@@ -75,7 +78,8 @@ def build_result(source_id, candidates, facts, captured_at, *, id_field, id_pref
         source['status'] = 'failed'
     elif postings:
         source['status'] = 'OK'
-    return {'source': source, 'postings': [asdict(posting) for posting in postings]}
+    return {'source': source, 'postings': [asdict(posting) for posting in postings],
+            'rejected_item_ids': sorted(rejected_ids)}
 
 
 def postings_from_result(result):
