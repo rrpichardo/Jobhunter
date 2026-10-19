@@ -53,3 +53,14 @@ def test_the_command_line_writes_a_report_and_lists_disagreements(tmp_path, caps
     assert ev.main(['compare', '--candidates', candidates, '--a', a, '--b', b, '--output', str(out)]) == 0
     text = capsys.readouterr().out
     assert 'agreement_percent=95.0' in text and 'DISAGREE 19' in text
+
+
+def test_a_hacker_news_fact_with_no_apply_link_is_delivered_with_the_comment_link_as_its_fallback():
+    items = [{'comment_id': str(n), 'story_id': '1', 'created_at': '2026-10-15T12:00:00+00:00', 'text': TEXT, 'links': []}
+             for n in range(1, 4)]  # Hacker News comments have no `url`; the real pipeline falls back to their permalink
+    facts = {'processed': [i['comment_id'] for i in items], 'facts': [{**fact(i['comment_id']), 'comment_id': i['comment_id']}
+                                                                       for i in items]}
+    for row in facts['facts']:
+        del row['item_id']
+    report = ev.compare(items, 'comment_id', facts, facts, ('sonnet', 'haiku'))
+    assert report['rejected_facts'] == {'sonnet': 0, 'haiku': 0} and report['jobs']['sonnet'] == 3

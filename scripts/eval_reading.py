@@ -18,6 +18,7 @@ import random
 import re
 
 from jobhunter.artifacts import new_artifact_path, read_artifact, safe_error_code, write_artifact
+from jobhunter.hn_hiring import PERMALINK as HN_PERMALINK
 from jobhunter.post_facts import build_result
 
 ID_FIELDS = ('item_id', 'comment_id')
@@ -67,8 +68,8 @@ def delivered(items, field, facts):
         raise ValueError('invalid_extractions')
     read = [i for i in items if i[field] in set(processed)]
     result = build_result('eval', read, listed, '2026-01-01T00:00:00+00:00', id_field=field, id_prefix='eval',
-                          permalink=lambda c: c.get('url', ''), listed=len(items), stats={}, attempts=1,
-                          known_ids={i[field] for i in items})
+                          permalink=lambda c: c.get('url') or HN_PERMALINK.format(id=c[field]), listed=len(items), stats={},
+                          attempts=1, known_ids={i[field] for i in items})
     by_id = {i[field]: set() for i in items}
     for posting in result['postings']:
         item_id = posting['job_id'].split(':')[1]
