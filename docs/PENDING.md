@@ -2,9 +2,31 @@
 
 Created October 18, 2026 from the working session; review status updated October 19. When something is
 done, change its status here and in the PR that did it. Nothing below is a claim that the work exists;
-`Status` says what is true. The PRs form one stack, each on top of the one before it, and NONE is merged.
+`Status` says what is true.
 
-**Codex reviews now work** (GitHub app, `@codex review` on a PR; it sometimes answers "unknown error", which
+## Status at the end of October 19, 2026 (read this first)
+
+- **Landed:** the whole earlier stack (#18 to #30 plus the Codex fix PRs #32 to #38) is on `main` through PR #39
+  (Codex-approved at `c6e5f30`, merged). Nothing has run against the real workbook since; the first manual run is
+  still ahead.
+- **Open, each waiting for a Codex review of its exact head:** #40 X collector (twscrape; startup fixed after an
+  independent review found it crashed against the real library), #41 run modes (manual 28 days, daily 3 days, refuses
+  after a gap), #42 Forward-Deployed AI Strategist roles, #43 LinkedIn hiring-post collector, #44 Work at a Startup
+  public pages, #45 a16z portfolio jobs. #40 to #41 and #43 are stacked; #42, #44 and #45 are on `main`.
+- **Codex has reached its usage limit** (October 19, about 16:31 UTC): every `@codex review` since answers "You have
+  reached your Codex usage limits". Reviews must be re-requested when the limit resets or is raised
+  (https://chatgpt.com/codex/cloud/settings/usage). Nothing Claude wrote is merged without that review.
+- **Decisions recorded October 19:** A1 approved (LinkedIn, X, Work at a Startup); A3 only after a manual run is
+  checked; A5 keep 28 days (the daily routine overlaps, see below); A6 no extra JSearch pages; A8 keep BizOps out but
+  ADD "Forward-Deployed AI Strategist" and variants (#42). Run modes: first manual run 28 days, daily routine 3 days and
+  it refuses (exit 3) when the last fully delivered run is more than about 2 days old.
+- **Findings from today's reads (no login needed):** workatastartup.com answers 406 only when the request does not say
+  it accepts HTML; the public role pages list the first ~25 jobs (the full lists need a logged-in session, optional).
+  a16z lists ~25 jobs per search and each job page carries pay and date.
+- **Next:** first live X and LinkedIn test from `docs/FIRST_LIVE_TEST.md` (needs A2); then LinkedIn job listings, whose
+  page layout is learned from the post test's numbers-only diagnostics instead of guessed.
+
+**Codex reviews work** (history of the earlier round) (GitHub app, `@codex review` on a PR; it sometimes answers "unknown error", which
 is a failed run and not a verdict, so the request is simply repeated). On October 19 Codex reviewed every
 Claude-written PR and found seven real problems in five of them. Each fix is its own PR on the exact head
 Codex reviewed, and Codex has approved all six at the heads below:
@@ -70,8 +92,8 @@ routine's first scheduled run, which needs A3 and the code on `main` (A4: your g
 | A2 | Go-ahead for the first real social test (LinkedIn posts, then X). It spends that day's allowance for each source. | Live access to accounts that can be restricted. | open |
 | A3 | Create the `JobHunter Daily` routine (06:07 New York, repository `rrpichardo/Jobhunter`, environment `JobHunterEnv`). Claude can do the clicking. | Creating a standing scheduled job. `docs/ROUTINE_PROMPT.md` is a draft and is not installed. | open |
 | A4 | Codex reviews: answered. They work through the GitHub app (see the top of this file). What is still open is your go-ahead to merge, in stack order. | Claude-written PRs merge only on your explicit direction. | go-ahead needed |
-| A5 | Whether company boards should get a window wider than 28 days. Greenhouse dates can be years old for a role that is still open, so old-but-open roles are currently dropped. | Follows the "last 4 weeks" decision; widening is a user choice. | open |
-| A8 | Should "business operations" / BizOps become a collected role family? Today it is not one: the delivery filter has no such family, so Hacker News no longer sends those comments to Claude and the routine does not ask for them. Adding it changes what every source delivers. | Scope change for all sources. | open |
+| A5 | Whether company boards should get a window wider than 28 days. Greenhouse dates can be years old for a role that is still open, so old-but-open roles are currently dropped. | Follows the "last 4 weeks" decision; widening is a user choice. | decided: keep 28 days |
+| A8 | DECIDED October 19: keep BizOps out; add Forward-Deployed AI Strategist (#42). Original question: should "business operations" / BizOps become a collected role family? Today it is not one: the delivery filter has no such family, so Hacker News no longer sends those comments to Claude and the routine does not ask for them. Adding it changes what every source delivers. | Scope change for all sources. | decided (keep out) |
 | A6 | JSearch paging. The free plan allows about 200 requests a month and one page holds about 10 jobs. More pages for the first pull need approval. No new spending. | Quota, possible cost. | open |
 | A7 | Which limits to tune and to what (LIMITS.md), for example "50 a day". | Includes the LinkedIn account-restriction risk. 50 searches a day was declined for now. | open |
 
