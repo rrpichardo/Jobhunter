@@ -6,7 +6,7 @@ done, change its status here and in the PR that did it. Nothing below is a claim
 
 ## 0. At a glance (the one place to look; Claude updates it in every change)
 
-Last updated October 19, 2026, 21:15 UTC (Codex answered a request on #42 at 20:11 UTC, so its limit has reset at least for now; see A12 and C). When the user asks "what is pending", "what do you need from me" or
+Last updated October 19, 2026, 22:25 UTC (you decided: Haiku reads, old PRs closed, run the live test now from a combined branch, keep today's limits for the first run; see A2, A7, A10, A11). When the user asks "what is pending", "what do you need from me" or
 "where are we", Claude reads THIS section first, checks it against GitHub, answers in plain language, and fixes
 this section if it is out of date.
 
@@ -14,12 +14,13 @@ this section if it is out of date.
 
 | What | Where it stands |
 | --- | --- |
-| A2 First live X and LinkedIn test | You said yes (October 19): run it after #40, #41 and #43 are Codex-approved and merged (#41 is needed because the runbook's step 4, `run_window`, lives there; found by an offline rehearsal on October 19). Cookie names CHECKED in JobHunterEnv (names only, October 19): `X_AUTH_TOKEN`, `X_CT0` and `LINKEDIN_LI_AT` are set; `WAAS_SESSION_COOKIE`, `JSEARCH_API_KEY`, `JOOBLE_API_KEY` and the spreadsheet id are set too. The collector tests (91) pass in that environment with the social extra. Runbook: `docs/FIRST_LIVE_TEST.md`. You do not need to do anything for it except copy the spreadsheet first. |
+| A2 First live X and LinkedIn test, then the first manual run | **You decided (October 19): do it now with the code we have, not after Codex.** Claude built a combined run branch, `claude/combined-live-run` (all ten PRs merged with the documented conflict fixes; 1,056 tests pass; it is never merged to `main`), and runs `docs/FIRST_LIVE_TEST.md` from it in a JobHunterEnv session, then a first 28-day manual run, reading with Haiku. **Waiting only for you to say the spreadsheet is copied (A15).** Cookie names CHECKED in JobHunterEnv (names only, October 19): `X_AUTH_TOKEN`, `X_CT0` and `LINKEDIN_LI_AT` are set; `WAAS_SESSION_COOKIE`, `JSEARCH_API_KEY`, `JOOBLE_API_KEY` and the spreadsheet id are set too. Each of X and LinkedIn spends one allowance per New York day, so a failed run is never retried the same day. |
+| A15 NEW: say "copied" | Make a backup copy of the Google Sheet (File > Make a copy), then tell Claude. The live test starts right after. Note that the run writes to the ORIGINAL Sheet (the environment points at its ID); the copy is only your undo. |
 | A3 Create the daily routine | Only after a manual run is checked. |
 | A4 Merging | You said (October 19) to merge what Codex approves and to use the `engineering:code-review` check in the meantime. |
-| A10 NEW: close the old stack PRs #19 to #30 (twelve) | Their content already landed on `main` through #39, so they are stale duplicates (they still show as open). Checked October 19: every one of the twelve heads is already an ancestor of `main` (an earlier version of this row said #21 to #30 and missed #19 and #20). Closing them is housekeeping; Claude will not close anything without your OK. |
-| A7 Limits | 5 LinkedIn post searches, 5 LinkedIn job searches, 10 X searches a day. Say so if you want them changed. |
-| A11 NEW: Haiku decision (rule 3) | The first Haiku-vs-Sonnet run is done (Hacker News only): 100 of 100 posts agree and both models found the same 15 jobs, so the 90% rules pass. Note that 85 of the 100 posts name no role, so the real test is the 15 role posts (all agreed). The reading stays on Sonnet until YOU read the posts and the 4 wording differences and say whether Haiku is acceptable: on post 3 Sonnet's location is right (Haiku added New York from a company-wide header), on post 12 Haiku's is right (the PM line says UTC-3 to UTC+3; Sonnet copied a header the checker reads as US), the other two are harmless. Claude gave you an interactive page and an Excel workbook in chat; the saved result is `docs/evals/results/haiku_reading_2026-10-19.md` (PR #49). An independent review found errors in the first write-up (fixed). |
+| A10 DONE: old stack PRs #19 to #30 closed | Closed on October 19 at your request. All twelve heads were already inside `main` (checked), so nothing was lost. |
+| A7 Search limits | **Decided October 19: keep today's numbers for the first live run** (X 10 searches; LinkedIn 5 post + 5 job searches; one session per source per day), then revise from its results. Every limit and setting is explained in plain language in `docs/PARAMETERS.md`. One editable file that the program reads for all numbers is planned as a separate PR after the first run (E3; section 13 of that file). |
+| A11 DECIDED: Haiku does the reading | You said "haiku is good to go" (October 19). Evidence: `docs/evals/results/haiku_reading_2026-10-19.md` (100 of 100 posts agreed; on the 15 role posts both found the same 15 jobs; the location differences on posts 3 and 12 favour different models). The live test and manual run read with Haiku. To do when the routine is created (A3): name Haiku for the reading step in `docs/ROUTINE_PROMPT.md`. |
 | A14 NEW: optional history rewrite (two cosmetic problems) | (a) The first commit of #49's branch (`6cbc3ec`) still holds 29 third-party email addresses copied from public posts; they are removed from the current files. (b) Claude made a mistake: a temporary git identity set for a throwaway test branch leaked into the shared settings, so SIX commits pushed afterwards show the author "trial merge (never pushed) <trial@example.invalid>" instead of Claude (`b90c1d2` on #42, `c5535dc` on #49, `c6abe19` `1fd2384` `793c515` on #46, `1c732a2` on #43). The settings are fixed and later commits are correct. The commit messages still carry the Claude co-author line, and the placeholder address is not a real person. Fixing either means rewriting history on open PR branches, which the handoff says never to do without your word, and it would void any Codex review tied to those commits. Say "rewrite" if you want both fixed; otherwise Claude leaves them. |
 | A13 NEW: plural job titles | The title filter drops a post titled "Product Managers" (plural; the singular "Product Manager" is collected). The Haiku test found it: PlantingSpace's "Product Managers and Business Development" opening was proposed by both models and dropped by the filter. Should plural titles count? It changes what every source delivers, so Claude has not touched it. |
 | A12 NEW: Codex is answering again | Claude sent ONE request (#42, 20:09 UTC) before you said not to try. Codex reviewed the exact head at 20:11 UTC and found one real problem (an engineer title that mentions "strategy" matched the new role family). Claude fixed it in `afedfb2`, replied and resolved the thread; a second independent review then tightened it further in `b90c1d2`. #42 now needs a Codex review of that new head. Claude has NOT sent it, because you asked it not to try Codex. Say "go" and Claude re-requests exact-head reviews one PR at a time, #42 first. |
@@ -37,7 +38,7 @@ this section if it is out of date.
 
 **C. Waiting on Codex (usage limit reached about 16:31 UTC on October 19; one request at 20:09 UTC was answered at 20:11 UTC)**
 
-Check or raise the limit at https://chatgpt.com/codex/cloud/settings/usage. No scheduled sweep exists any more, so Claude re-requests
+Check or raise the limit at https://chatgpt.com/codex/cloud/settings/usage. The full list of what to review, each PR's exact head, what Codex has already done on it and a ready-to-paste request for each is in `docs/CODEX_REVIEW_QUEUE.md`. No scheduled sweep exists any more, so Claude re-requests
 reviews by hand (one PR at a time) once you say "go" (A12), and fixes what Codex finds. Until then each open PR carries an interim review in the style of the
 `engineering:code-review` skill (done by independent reviewers, October 19; their findings were fixed), posted as a PR
 comment that says Codex still has to review it.
@@ -68,10 +69,13 @@ Until you answer A11 the reading stays on Sonnet.
 **D. Claude's next steps:** the merge order and the exact conflict fixes were checked by a trial replay (all ten PRs combined pass 1,056 tests; see the "Merge plan" table in `docs/CLAUDE_HANDOFF.md`). When Codex is back: review, fix, merge in order (#42, #44, #45, #46, then #40 and the PRs
 stacked on it). Then the live X and LinkedIn test, then a first manual run, then A3.
 
-**Decisions already made (do not ask again):** A1 build LinkedIn, X and Work at a Startup (read-only); A3 only after
-a checked manual run; A5 keep 28 days; A6 no extra JSearch pages; A8 BizOps stays out, and the Forward-Deployed /
-AI Deployment / AI Implementation Strategist titles are in; first manual run 28 days, daily routine 3 days; the
-a bigger Haiku test was offered and declined ("with 100 we are good"); the reading step stays on Sonnet UNLESS the Haiku eval shows over 90% agreement and you have read the posts (the first run shows 100%, your reading is open, A11); old commits keep their "Claude-Session" line (see below).
+**Decisions already made (do not ask again):** A1 build LinkedIn, X and Work at a Startup (read-only); A3 create the daily
+routine only after a checked manual run; A5 keep 28 days; A6 no extra JSearch pages; A7 keep today's search limits for the first
+live run and revise afterwards; A8 BizOps stays out, and the Forward-Deployed / AI Deployment / AI Implementation Strategist
+titles are in; A10 the old PRs #19 to #30 are closed; A11 Haiku does the reading step (a bigger Haiku test was offered and
+declined: "with 100 we are good"); first manual run 28 days, daily routine 3 days; **the first live test and manual run happen
+now from the combined run branch without waiting for Codex (October 19), but nothing is merged to `main` without a Codex review
+of its exact head and green CI**; old commits keep their "Claude-Session" line (see below).
 
 **About the old "Claude-Session" lines.** Some of Claude's older commits end with a line linking to the chat session
 that wrote them. They were left in on purpose: removing them would mean re-creating those commits, which voids every
