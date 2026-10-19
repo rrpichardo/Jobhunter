@@ -25,7 +25,29 @@ keys or tokens. Do not call any paid service.
    `mktemp -d`. Every artifact below is written there as a NEW file (the tools
    refuse to overwrite). Delete the directory when the run ends, but only after
    step 3 has exited 0 or you have reported its failure.
-3. Set a NEW run label for every collection, for example
+3. Choose the look-back window by running the guard, never by guessing:
+
+   ```
+   uv run --locked python -m scripts.run_window --mode daily     # the scheduled routine
+   uv run --locked python -m scripts.run_window --mode manual    # first manual run, or a catch-up by hand
+   ```
+
+   It prints `window_days=N`; use that N as `$WINDOW` below. The user decided on October 19: the first manual run
+   and any catch-up look back **28** days; the scheduled daily routine looks back **3** days (so one missed day is
+   still covered, with a full day of room for run time). The daily mode reads the Run Log (read-only) and REFUSES,
+   exit 3 `catch_up_needed`, when there has never been a complete run or the last complete run started more than
+   about two days ago (2 days plus 6 hours of drift). On exit 3 do nothing else: report that a manual 28-day catch-up
+   run is needed first, otherwise postings from the gap would never be collected. Repeats are harmless: jobs already
+   in the Sheet keep their Status, Notes and My rating. The guard checks that a run was delivered, not that every source
+   worked: if one source failed for several days (for example an expired cookie), fix it and then run `--mode manual` to
+   backfill that source, because the 3-day window will not reach back that far.
+   Two further limits: (1) X and LinkedIn each allow ONE live collection per New York day, so after the daily routine has
+   used a day's allowance a 28-day social catch-up the same day is refused (exit 3); the social lanes cannot be backfilled
+   beyond the daily window unless the routine's social step is skipped that day and the manual run takes the allowance.
+   (2) Shortening the window from 28 to 3 days also shortens how long an unread or held queue item stays retrievable:
+   older ones are cleared as expired (`ai_queue pull` prints the count). A fully delivered run whose last batch is
+   exactly 150 jobs is treated as unfinished and asks for a manual run (the safe direction).
+4. Set a NEW run label for every collection, for example
    `RUN=daily-$(TZ=America/New_York date +%Y%m%d-%H%M%S)-$(openssl rand -hex 3)`
    (the random part keeps two collections started in the same second apart). The writer
    binds a run label to the jobs and source records it was first given, so a label may be
@@ -40,7 +62,7 @@ keys or tokens. Do not call any paid service.
 Run, saving each printed digest:
 
 ```
-uv run --locked python -m scripts.hn_hiring candidates --output $DIR/hn_cand.json
+uv run --locked python -m scripts.hn_hiring candidates --output $DIR/hn_cand.json --lookback-days $WINDOW
 uv run --locked python -m scripts.ai_queue pull --source hn-who-is-hiring \
     --candidates $DIR/hn_cand.json --candidates-sha256 <candidates_sha256> --output $DIR/hn_work.json
 ```
@@ -94,12 +116,13 @@ Then:
 
 ```
 uv run --locked python -m scripts.source_probe --output $DIR/probe.json \
+    --lookback-days $WINDOW \
     --known-ids $DIR/known.json --known-ids-sha256 <known_ids_sha256> \
     --hn-result $DIR/hn_result.json --hn-result-sha256 <hn_result_sha256>
 ```
 
-(Omit the two `--hn-` options if step 1 was skipped. If `known_ids` fails, run without `--known-ids`: it only saves requests.) The default window is the last
-28 days, which is also the first-run backfill. Boards, public job sites, YC and
+(Omit the two `--hn-` options if step 1 was skipped. If `known_ids` fails, run without `--known-ids`: it only saves requests.) The window is
+`$WINDOW` days (28 for the first run, 3 for the daily routine). Boards, public job sites, YC and
 Built In, Getro, JSearch and Jooble are fetched here. Sources without a key or an
 account are recorded `needs setup` by the tool; do not try to work around that.
 
@@ -136,7 +159,7 @@ is harmless because jobs collapse by Job ID.
   alert rules are not finished.
 - X hiring posts: the collector exists (`scripts/x_collect.py`; install with `uv sync --locked --extra social`)
   but is NOT run by this routine until the user gives the go-ahead for the first live test (A2) and sets
-  `X_AUTH_TOKEN` and `X_CT0` in the environment settings. When approved, the steps are: `x_collect` (reserves
+  `X_AUTH_TOKEN` and `X_CT0` in the environment settings. When approved, the steps are: `x_collect ... --lookback-days $WINDOW` (reserves
   today's allowance first, searches, writes a candidate file), `ai_queue pull --id-field item_id`, Claude reads,
   `social_posts validate`, then `source_probe --social-result`, step 3 (delivery) and, only after step 3 exited 0,
   `ai_queue commit --source x-twscrape --result <validated file> --result-sha256 <digest>` so the same posts are not

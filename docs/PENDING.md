@@ -125,6 +125,19 @@ reviews, and it is not proof that the current code or environment works. Still t
 the scheduled routine have NOT been run; nothing is merged. The next gate is the next-morning check of the
 routine's first scheduled run, which needs A3 and the code on `main` (A4: your go-ahead to merge; Codex has reviewed the fix PRs).
 
+## Run modes (user decision, October 19)
+
+| Run | Window | When |
+| --- | --- | --- |
+| First manual run | `--lookback-days 28` | once, by hand, before the routine exists (A3) |
+| Daily routine | `--lookback-days 3` | 06:07 America/New_York, every day |
+| Catch-up | `--lookback-days 28` | by hand, whenever the last complete Run Log row is more than about 2 days old |
+
+`scripts/run_window.py` enforces this with one simple rule: the daily routine looks back 3 days and refuses to run
+(exit 3, `catch_up_needed`) when the last complete run started more than about 2 days ago (2 days plus 6 hours of scheduler
+drift) or there has never been one; `--mode manual` prints 28. Three days against a two-day limit leaves a full extra
+day of room for run time, so one missed day is covered and nothing falls between two runs. Read-only, offline-tested. Overlap never duplicates jobs.
+
 ## How the first run and the daily runs work (user direction, October 18)
 
 1. **First pull is a one-off manual run, not the scheduled routine.** It looks back
