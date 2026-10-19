@@ -4,28 +4,61 @@ Created October 18, 2026 from the working session; review status updated October
 done, change its status here and in the PR that did it. Nothing below is a claim that the work exists;
 `Status` says what is true.
 
-## Status at the end of October 19, 2026 (read this first)
+## 0. At a glance (the one place to look; Claude updates it in every change)
 
-- **Landed:** the whole earlier stack (#18 to #30 plus the Codex fix PRs #32 to #38) is on `main` through PR #39
-  (Codex-approved at `c6e5f30`, merged). Nothing has run against the real workbook since; the first manual run is
-  still ahead.
-- **Open, each waiting for a Codex review of its exact head:** #40 X collector (twscrape; startup fixed after an
-  independent review found it crashed against the real library), #41 run modes (manual 28 days, daily 3 days, refuses
-  after a gap), #42 Forward-Deployed AI Strategist roles, #43 LinkedIn hiring-post collector, #44 Work at a Startup
-  public pages, #45 a16z portfolio jobs, #47 Ali Rohde Jobs weekly newsletter (feed verified; Next Play's real feed
-  still unknown). #41, #43 and #47 are stacked on #40; #42, #44 and #45 are on `main`.
-- **Codex has reached its usage limit** (October 19, about 16:31 UTC): every `@codex review` since answers "You have
-  reached your Codex usage limits". Reviews must be re-requested when the limit resets or is raised
-  (https://chatgpt.com/codex/cloud/settings/usage). Nothing Claude wrote is merged without that review.
-- **Decisions recorded October 19:** A1 approved (LinkedIn, X, Work at a Startup); A3 only after a manual run is
-  checked; A5 keep 28 days (the daily routine overlaps, see below); A6 no extra JSearch pages; A8 keep BizOps out but
-  ADD "Forward-Deployed AI Strategist" and variants (#42). Run modes: first manual run 28 days, daily routine 3 days and
-  it refuses (exit 3) when the last fully delivered run is more than about 2 days old.
-- **Findings from today's reads (no login needed):** workatastartup.com answers 406 only when the request does not say
-  it accepts HTML; the public role pages list the first ~25 jobs (the full lists need a logged-in session, optional).
-  a16z lists ~25 jobs per search and each job page carries pay and date.
-- **Next:** first live X and LinkedIn test from `docs/FIRST_LIVE_TEST.md` (needs A2); then LinkedIn job listings, whose
-  page layout is learned from the post test's numbers-only diagnostics instead of guessed.
+Last updated October 19, 2026, evening. When the user asks "what is pending", "what do you need from me" or
+"where are we", Claude reads THIS section first, checks it against GitHub, answers in plain language, and fixes
+this section if it is out of date.
+
+**A. Waiting for your approval or answer**
+
+| What | Where it stands |
+| --- | --- |
+| A2 First live X and LinkedIn test | You said yes (October 19): run it after Codex's limit resets and #40 and #43 are approved and merged. Cookie names assumed: `X_AUTH_TOKEN`, `X_CT0`, `LINKEDIN_LI_AT`. Runbook: `docs/FIRST_LIVE_TEST.md`. You do not need to do anything for it except copy the spreadsheet first. |
+| A3 Create the daily routine | Only after a manual run is checked. |
+| A4 Merging | You said (October 19) to merge what Codex approves and to use the `engineering:code-review` check in the meantime. |
+| A7 Limits | 5 LinkedIn post searches, 5 LinkedIn job searches, 10 X searches a day. Say so if you want them changed. |
+
+**B. Your tasks** (only you can do them; details in section B below)
+
+1. B9 NEW: tell Claude the address (web link) of the Next Play newsletter you actually read. The link Claude found, `nextplay.substack.com`, is a 2021 publication and is not it.
+2. B1 Gmail forwarding filter (the Gmail alerts reader waits on it).
+3. B2 Turn on alerts from Indeed, Glassdoor, Lenny's/TrueUp.
+4. B3 School/MBA job sites and the correct Cosign link.
+5. B4 Gmail connector permissions to "Needs approval".
+6. B8 Optional: rotate the Google service-account key.
+7. Before the live test: copy the spreadsheet (File > Make a copy).
+
+**C. Waiting on Codex (usage limit reached about 16:31 UTC on October 19)**
+
+Check or raise the limit at https://chatgpt.com/codex/cloud/settings/usage. Claude re-requests every review when it
+resets (a scheduled sweep does it) and fixes what Codex finds. Until then each open PR carries an interim review by the
+`engineering:code-review` skill, posted as a PR comment that says Codex still has to review it.
+
+| PR | Plain name | Needs |
+| --- | --- | --- |
+| #40 | X (Twitter) hiring-post collector | Codex review; base of #41, #43, #47 |
+| #41 | Run modes: 28 days by hand, 3 days daily, refuses after a gap | Codex review (after #40) |
+| #42 | Forward-Deployed / AI Deployment / AI Implementation Strategist roles | Codex review |
+| #43 | LinkedIn hiring-post collector | Codex review (after #40) |
+| #44 | Work at a Startup public pages | Codex review |
+| #45 | a16z portfolio jobs | Codex review |
+| #46 | This status document | Codex review |
+| #47 | Ali Rohde Jobs weekly newsletter | Codex review (after #40) |
+| #48 | LinkedIn job listings (same session as the posts) | Codex review (after #43) |
+
+**D. Claude's next steps:** when Codex is back: review, fix, merge in order (#42, #44, #45, #46, then #40 and the PRs
+stacked on it). Then the live X and LinkedIn test, then a first manual run, then A3.
+
+**Decisions already made (do not ask again):** A1 build LinkedIn, X and Work at a Startup (read-only); A3 only after
+a checked manual run; A5 keep 28 days; A6 no extra JSearch pages; A8 BizOps stays out, and the Forward-Deployed /
+AI Deployment / AI Implementation Strategist titles are in; first manual run 28 days, daily routine 3 days; the
+reading step uses a cheap model (Haiku subagent, untested); old commits keep their "Claude-Session" line (see below).
+
+**About the old "Claude-Session" lines.** Some of Claude's older commits end with a line linking to the chat session
+that wrote them. They were left in on purpose: removing them would mean re-creating those commits, which voids every
+Codex approval tied to them and forces all reviews again. The link only opens for the account owner and carries no
+secret. Newer commits omit it. This note is the explanation; nothing is hidden.
 
 **Codex reviews work** (history of the earlier round) (GitHub app, `@codex review` on a PR; it sometimes answers "unknown error", which
 is a failed run and not a verdict, so the request is simply repeated). On October 19 Codex reviewed every
@@ -90,7 +123,7 @@ routine's first scheduled run, which needs A3 and the code on `main` (A4: your g
 | ID | Decision | Why it is blocked | Status |
 | --- | --- | --- | --- |
 | A1 | Cloud collection method for Work at a Startup (headless browser, saved cookies, visible job cards only), LinkedIn (headless browser, `li_at`) and X (`twscrape`, `auth_token`/`ct0`). All read-only with random pauses. | The plan says to settle this in plain language first. Reading private requests from the logged-in tab was blocked earlier and must not be retried. | open |
-| A2 | Go-ahead for the first real social test (LinkedIn posts, then X). It spends that day's allowance for each source. | Live access to accounts that can be restricted. | open |
+| A2 | Go-ahead for the first real social test (LinkedIn posts, then X). It spends that day's allowance for each source. | Live access to accounts that can be restricted. | GIVEN October 19: run after Codex approves and #40 and #43 merge |
 | A3 | Create the `JobHunter Daily` routine (06:07 New York, repository `rrpichardo/Jobhunter`, environment `JobHunterEnv`). Claude can do the clicking. | Creating a standing scheduled job. `docs/ROUTINE_PROMPT.md` is a draft and is not installed. | open |
 | A4 | Codex reviews: answered. They work through the GitHub app (see the top of this file). What is still open is your go-ahead to merge, in stack order. | Claude-written PRs merge only on your explicit direction. | go-ahead needed |
 | A5 | Whether company boards should get a window wider than 28 days. Greenhouse dates can be years old for a role that is still open, so old-but-open roles are currently dropped. | Follows the "last 4 weeks" decision; widening is a user choice. | decided: keep 28 days |
@@ -110,6 +143,7 @@ routine's first scheduled run, which needs A3 and the code on `main` (A4: your g
 | B6 | After the routine is live: rate leads in the Sheet and join the day-7 and day-14 reviews. | later |
 | B7 | Later, when you ask: clean up old alert subscriptions in your main mailbox. Not authorized now. | deferred |
 | B8 | Optional: rotate the Google service-account key. Recommended, not required. | optional |
+| B9 | Tell Claude the web address of the Next Play newsletter you read (the `nextplay.substack.com` feed is a 2021 publication, not it). Claude then builds its reader like the Ali Rohde one (#47). | open |
 
 ## C. Work Claude cannot finish until A or B is done
 

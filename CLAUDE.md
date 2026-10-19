@@ -8,6 +8,13 @@ For implementation continuation, read [docs/CLAUDE_HANDOFF.md](docs/CLAUDE_HANDO
 first for current commits, setup state, counters and exact next actions. Preserve
 the distinction between local review, manual cloud proof and scheduled production.
 
+## What is pending (keep this consistent)
+
+When the user asks what is pending, what Claude needs from them, or where things stand, read section 0 of
+`docs/PENDING.md` first, check it against GitHub (open PRs, Codex replies), answer in plain, non-technical language,
+and correct that section if it is out of date. Update section 0 in the same change whenever a decision, a task, a PR
+or a review state changes. Do not keep a second list anywhere else.
+
 ## Review instructions
 
 When reviewing a pull request:
