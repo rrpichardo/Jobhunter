@@ -117,8 +117,9 @@ is harmless because jobs collapse by Job ID.
 
 - Gmail alerts (the `JobHunter` label): live connector adapter, forwarding filter and
   alert rules are not finished.
-- LinkedIn jobs and hiring posts, X hiring posts: collectors and the daily allowance
-  reservation are not built. Never log in or open these sites in this routine.
+- LinkedIn jobs and hiring posts, X hiring posts: the collectors are not built (the daily
+  allowance command `scripts.allowance` exists and must succeed before any future live
+  request). Never log in or open these sites in this routine.
 - Work at a Startup (logged in), Cosign, school and MBA sites, Next Play and Ali
   Rohde feeds: not set up.
 - a16z: listing-only, delivers no jobs.

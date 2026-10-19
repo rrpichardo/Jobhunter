@@ -69,8 +69,11 @@ numbers: #18 docs, #19 keep-every-match and 4-week window, #20 Hacker News,
   job pages for jobs already in the Sheet, so a big source is not reopened daily and
   its detail-page stop no longer starves the tail.
 - A Run Log column for the AI queue counts (a Sheet schema change, done carefully).
-- LinkedIn and X collector code with offline tests, and the daily allowance
-  reservation in `_State`, both PRs of their own. No live access before A1 and A2.
+- DONE on branch `claude/social-allowance`: the daily allowance reservation in `_State`
+  (`scripts.allowance reserve/finish/status`; exit 3 means spent, any other failure
+  means collect nothing).
+- LinkedIn and X collector code with offline tests, each a PR of its own. No live
+  access before A1 and A2.
 - Retry Codex reviews when the limit resets, fix real findings, then merge in order.
 
 ## E. Pending deliverables the user asked for (not built)
