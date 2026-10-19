@@ -26,7 +26,7 @@ NOT replace Codex.** Heads at the time of writing:
 | #46 | claude/handoff-oct19 | main | see PR | this status/handoff text, CLAUDE.md "what is pending" rule |
 | #47 | claude/newsletter-alirohde | #40 | 9400d18 | Ali Rohde Jobs weekly newsletter (jobs keyed by application link) |
 | #48 | claude/linkedin-jobs | #43 | 42d109d | LinkedIn job cards in the same session/allowance (contains #42's commit) |
-| #50 | claude/trace-rejections | main | da48dae | E4: reason codes and a printed `trace:` for every rejected fact and filter drop; docs/TRACEABILITY.md (opened after the first live run; needs Codex) |
+| #50 | claude/trace-rejections | main | 40729d7 | E4: reason codes and a printed `trace:` for every rejected fact and filter drop; docs/TRACEABILITY.md (opened after the first live run; needs Codex) |
 | #49 | claude/haiku-eval | main | 82bd0d4 | Haiku-vs-Sonnet eval harness, bug fix and first result (100 of 100 agree; user's rule 3 open) |
 
 **UPDATE, October 19 about 22:30 UTC (read this first):** the user decided to run the live test and the first manual run NOW with the
@@ -34,7 +34,7 @@ code that exists, not after Codex; Haiku does the reading step; the old PRs #19 
 first run. New files: `docs/PARAMETERS.md` (every setting explained for a non-technical reader), `docs/CODEX_REVIEW_QUEUE.md` (the PRs
 that still need a Codex review of their exact head, with ready-to-paste requests, for when credits return).
 **RESULT (October 19, 22:17 to 22:36 UTC): the user said "copied" and the live test plus the first manual run were run from `claude/combined-live-run` (commit `846f3be`) in session `session_015VLCYtHCKyG9e468TSVkUg`.** X, the Ali Rohde newsletter, a16z and the other sources worked and 505 unique jobs from 51 sources were written to the Sheet (readback verified). **LinkedIn was refused at login (`social_login_failed`) on its first search, its allowance for the day is spent, and the tool exited 0 anyway; the user must refresh `LINKEDIN_LI_AT` (PENDING B5), and the next LinkedIn try is tomorrow (New York date).** The numbers are in PENDING A2. The rejected X facts (39 facts from 34 posts, plus 3 unreadable posts = the printed `rejected=42`) all had an EMPTY company; see PENDING E8 (a decision for the user). Rejection reasons are now printed by PR #50 (E4). The steps below are how it was done; keep them for the next run. Original text:
-1. Run branch: `claude/combined-live-run` = `main` + all ten open PRs + #50 (E4) with the conflict fixes in the Merge plan below (1,074 tests pass).
+1. Run branch: `claude/combined-live-run` = `main` + all ten open PRs + #50 (E4) with the conflict fixes in the Merge plan below (1,075 tests pass).
    It is NOT for merging; re-create it if any PR head moved (the recipe is the Merge plan table).
 2. Start a JobHunterEnv session from that branch with `mcp__claude-code-remote__create_session` (`environment_id`
    `env_01M9moVSWZBGvWAZYrqTm49s`, `source_url` the repository, `source_revision` `claude/combined-live-run`) and have it follow
