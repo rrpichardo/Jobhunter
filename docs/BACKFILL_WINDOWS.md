@@ -45,3 +45,16 @@ Safety stops, not targets (all reported, never silent):
 - One writer batch holds at most `JOB_BATCH_SIZE = 150` jobs (its recovery journal
   must fit in `_State`). Larger runs are split into `<run id>-b001`, `-b002`, ...
   and rerunning the same run ID finishes the remaining batches without duplicates.
+
+Design notes from the October 18 self-review:
+
+- Old-but-open roles are excluded by design. Greenhouse `first_published` can be
+  years old for a role that is still open, so the 28-day window drops it. That
+  follows the user's "last 4 weeks" decision; widening it for company boards is a
+  user choice, not an oversight.
+- `More details` carries "First seen by <source>: <run time>", which the writer
+  refreshes on every run. With a 28-day window that rewrites that machine-owned
+  column for every in-window job each day. It was already true for board jobs; the
+  window makes it more rows. A stable first-seen time needs a separate follow-up.
+- Writer batches pause `BATCH_PAUSE_SECONDS = 2.0` between each other to stay under
+  the Sheets quota. A 3,000-job first run is about 20 batches; it is untested live.

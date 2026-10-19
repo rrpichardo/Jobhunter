@@ -2,6 +2,7 @@
 
 import argparse
 import re
+import time
 import uuid
 
 from jobhunter.artifacts import read_artifact
@@ -9,6 +10,10 @@ from jobhunter.google_auth import open_workbook
 from jobhunter.sheet_io import GspreadStore
 from jobhunter.sheet_records import JOB_BATCH_SIZE
 from jobhunter.sheets import prepare_payload, quarantine_run, sync_jobs
+
+# Each batch reads and writes several tabs; pausing between batches keeps a large backfill under the
+# Sheets per-minute quota. A quota error is still retried and a rerun resumes at the first unfinished batch.
+BATCH_PAUSE_SECONDS = 2.0
 
 SAFE_ERRORS = frozenset('''invalid_sync_input invalid_pending_payload invalid_source_records
 invalid_source_counts invalid_source_coverage invalid_source_error invalid_job_batch
@@ -55,14 +60,17 @@ def _deliver_many(args, payload, store):
     # (<run id>-b001, -b002, ...) carrying the full source totals; one batch keeps the plain run id.
     batches = [jobs[start:start + JOB_BATCH_SIZE] for start in range(0, len(jobs), JOB_BATCH_SIZE)] or [[]]
     base = args.run_id or uuid.uuid4().hex
-    if len(batches) > 1 and len(base) > 70:
+    if len(batches) > 1 and len(base) > 75:  # leaves room for the -bNNN suffix within 80 characters
         raise ValueError('invalid_run_id')
     run_ids = [base] if len(batches) == 1 else [f'{base}-b{number:03d}' for number in range(1, len(batches) + 1)]
     for batch in batches:  # validate everything before opening a Google connection
         prepare_payload(batch, sources)
     backend = GspreadStore(open_workbook()) if store is None else store
-    results = [sync_jobs(backend, batch, sources, run_id=run_id, chunk_size=args.chunk_size)
-               for batch, run_id in zip(batches, run_ids)]
+    results = []
+    for number, (batch, run_id) in enumerate(zip(batches, run_ids)):
+        if number:
+            time.sleep(BATCH_PAUSE_SECONDS)
+        results.append(sync_jobs(backend, batch, sources, run_id=run_id, chunk_size=args.chunk_size))
     problems = sum(source['status'] in {'failed', 'blocked'} for source in sources)
     print(f"sync_verified: run_id={base} batches={len(batches)} "
           f"unique_jobs={sum(r['unique_jobs'] for r in results)} sources={len(sources)} "
