@@ -74,7 +74,11 @@ def delivered(items, field, facts):
     listed = facts.get('facts') if isinstance(facts, dict) else None
     if not isinstance(processed, list) or not isinstance(listed, list):
         raise ValueError('invalid_extractions')
-    read = [i for i in items if i[field] in set(processed)]
+    # An omitted item is unread, not an agreed empty result. Reject incomplete comparisons before scoring.
+    if (any(not isinstance(value, str) for value in processed) or len(set(processed)) != len(processed)
+            or set(processed) != {i[field] for i in items}):
+        raise ValueError('incomplete_eval_reading')
+    read = list(items)
     result = build_result('eval', read, listed, '2026-01-01T00:00:00+00:00', id_field=field, id_prefix='eval',
                           permalink=permalink_for(field), listed=len(items), stats={},
                           attempts=1, known_ids={i[field] for i in items})

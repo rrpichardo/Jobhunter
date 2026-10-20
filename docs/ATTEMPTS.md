@@ -959,3 +959,24 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
   (the user's step), so they remain `needs setup`, not a completed test. This consumes no
   attempt from the social-auth blocker counter.
 - Gmail: connector `list_labels` shows no `JobHunter` label; forwarding/label setup is open.
+
+### Codex repairs of the October 19 exact-head reviews
+
+- User authorized the eleven Codex reviews, then explicitly authorized Codex to implement the ten findings and open a PR
+  for Claude review while Claude is unavailable. One implementation owner: Codex. Historical milestone/review counters
+  above are retained; this explicit direction authorizes this additional repair round, not a reset of any prior limit.
+- Repair attempt 1/3 for each newly reported root cause: startup cleanup, same-ID discovery time, pinned run tooling,
+  incomplete eval coverage, unknown-ID trace privacy, newsletter identity/reconciliation, and aliased output paths.
+  No new runtime/social-auth/Sheet/network blocker attempt is consumed. No live source or workbook mutation is authorized here.
+- Starting combined-run revision e3eef3f: 1,074 passed, 1 local browser test skipped, 10 subtests passed. Four startup-cleanup
+  regressions failed for the expected retained-resource reason before the fixes; targeted verification follows in this round.
+- Required next gate: Claude review of the pushed final repair SHA and green CI. No same-agent approval or merge is claimed.
+- Newsletter reconciliation attempt 1 exposed an idempotency defect in the new alias check: refreshing Apply link
+  invalidated a check against its old raw-link hash. Attempt 2/3 recognizes the legacy ID schema, matches only the same
+  canonical URL, only for verified requisitions. Generic links retain separate rows flagged for review, even when company/title agree;
+  those fields never prove identity. Repeated-sync preservation is tested explicitly.
+- Final offline verification for the repair bundle: `uv run --locked --extra social python -m pytest -q` —
+  1,093 passed, 1 local browser skip, 10 subtests passed. Clean `uv sync --locked` followed by the CI command
+  `uv run --locked python -m pytest -q` — 1,092 passed, 2 optional-dependency/browser skips, 10 subtests passed.
+  Nineteen new regression cases cover the fixes. The saved Haiku report replays byte-identically (100/100, 15 jobs each).
+  `git diff --check` passed. No live integration or scheduled proof was attempted. Claude review remains pending.

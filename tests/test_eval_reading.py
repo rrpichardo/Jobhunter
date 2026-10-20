@@ -40,8 +40,8 @@ def test_models_agree_when_the_checker_delivers_the_same_jobs_and_disagree_when_
 
 def test_an_invented_value_is_rejected_by_the_checker_so_it_counts_as_a_miss_not_a_job():
     odd = [i['item_id'] for i in ITEMS if i['text'] == TEXT]
-    a = {'processed': odd, 'facts': [fact(i) for i in odd]}
-    b = {'processed': odd, 'facts': [fact(i, company='Gamma') for i in odd]}  # "Gamma" is not in the text
+    a = {'processed': [i['item_id'] for i in ITEMS], 'facts': [fact(i) for i in odd]}
+    b = {'processed': [i['item_id'] for i in ITEMS], 'facts': [fact(i, company='Gamma') for i in odd]}  # "Gamma" is not in the text
     report = ev.compare(ITEMS, 'item_id', a, b, ('sonnet', 'haiku'))
     assert report['rejected_facts']['haiku'] == len(odd) and report['jobs']['haiku'] == 0 and report['agreement_percent'] == 50.0
 
@@ -49,8 +49,8 @@ def test_an_invented_value_is_rejected_by_the_checker_so_it_counts_as_a_miss_not
 def test_the_command_line_writes_a_report_and_lists_disagreements(tmp_path, capsys):
     odd = [i['item_id'] for i in ITEMS if i['text'] == TEXT]
     candidates = write(tmp_path, 'c.json', {'candidates': ITEMS})
-    a = write(tmp_path, 'a.json', {'processed': odd, 'facts': [fact(i) for i in odd]})
-    b = write(tmp_path, 'b.json', {'processed': odd, 'facts': [fact(i) for i in odd[:-1]]})
+    a = write(tmp_path, 'a.json', {'processed': [i['item_id'] for i in ITEMS], 'facts': [fact(i) for i in odd]})
+    b = write(tmp_path, 'b.json', {'processed': [i['item_id'] for i in ITEMS], 'facts': [fact(i) for i in odd[:-1]]})
     out = tmp_path.parent / (tmp_path.name + '_report.json')
     assert ev.main(['compare', '--candidates', candidates, '--a', a, '--b', b, '--output', str(out)]) == 0
     text = capsys.readouterr().out

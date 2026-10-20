@@ -33,6 +33,10 @@ Switch only when ALL of these hold; otherwise stay on Sonnet and report why:
 - **A seed makes it repeatable.** The sample is deterministic (`--seed`), so the same 100 items can be re-run after any change
   to the prompt.
 
+Both outputs must list every sampled ID exactly once in `processed`, including items with no jobs. Missing, duplicate
+or unrecognized IDs fail with `incomplete_eval_reading` before any agreement is scored or report written. This guards
+against an interrupted read looking like agreement. The recorded complete result still reproduces unchanged.
+
 ## How to run it (a manual session in JobHunterEnv, or here with candidate files from a real run)
 
 1. Get real candidate/work files from real runs (the HN, X, LinkedIn and newsletter steps each write one; use the work files

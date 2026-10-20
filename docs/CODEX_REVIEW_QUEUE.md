@@ -1,4 +1,9 @@
-# Codex review queue: the PRs waiting for a review when credits return
+# Codex review queue: original requests and current repair handoff
+
+Current status: the eleven reviews below were completed in Codex at the listed heads. Ten findings across nine PRs
+are implemented on `codex/repair-review-findings` and await **Claude** review. See `docs/PENDING.md` section 0 and
+`docs/REVIEW_REPAIRS.md`; do not request same-agent approval of these Codex repairs. The material below is the original
+review-request snapshot, retained for criteria and history.
 
 Written October 19, 2026. These are the open PRs that still need a **Codex review of their exact current head** before they
 may be merged (the project rule in `docs/REVIEW_WORKFLOW.md`: Claude builds, Codex reviews; only a completed review of
