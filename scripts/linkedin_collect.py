@@ -208,13 +208,12 @@ def main(argv=None, *, store=None, fetcher=None, environ=None, now=None, sleep=t
     try:
         if not 1 <= args.lookback_days <= 365:
             raise ValueError('invalid_lookback_days')
-        new_artifact_path(args.output)  # a doomed output path must not spend the day's allowance
+        output_path = new_artifact_path(args.output)  # compare resolved paths before spending the day's allowance
         queries = load_queries(args.queries, SOURCE)
         job_queries = []
         if args.jobs_output:
-            if args.jobs_output == args.output:
+            if new_artifact_path(args.jobs_output) == output_path:
                 raise ValueError('invalid_output_paths')
-            new_artifact_path(args.jobs_output)
             job_queries = load_queries(args.queries, JOBS_QUERY_KEY, limit=LIMITS[SOURCE]['job_searches'])
         # A pasted value often carries a trailing newline, spaces or quotes; a clean value is what the browser needs.
         cookie_name = next((name for name in COOKIE_VARIABLES if environ.get(name, '').strip().strip('"\'').strip()), None)
@@ -241,59 +240,60 @@ def main(argv=None, *, store=None, fetcher=None, environ=None, now=None, sleep=t
                       'installed and that the cookie was pasted without quotes or spaces). Nothing was collected and '
                       'no allowance was spent.')
                 return EXIT_NEEDS_SETUP
-        if store is None:
-            from jobhunter.google_auth import open_workbook
-            from jobhunter.sheet_io import GspreadStore
-            store = GspreadStore(open_workbook())
         try:
-            day = reserve(store, SOURCE, args.run_id)
-        except AllowanceSpent:
-            fetcher.close()
-            print('allowance_spent: linkedin-login already used today (America/New_York); collect nothing')
-            return EXIT_SPENT
-        outcome, items, ran, error, diagnostics = 'failed', [], 0, COLLECTOR_ERROR, []
-        job_items, job_ran, job_error, jobs_digest = [], 0, COLLECTOR_ERROR if job_queries else '', ''
-        try:
+            if store is None:
+                from jobhunter.google_auth import open_workbook
+                from jobhunter.sheet_io import GspreadStore
+                store = GspreadStore(open_workbook())
             try:
-                items, ran, error = collect_posts(
-                    fetcher.search, queries, max_posts=LIMITS[SOURCE]['posts'], per_query=LIMITS[SOURCE]['per_query'],
-                    sleep=sleep, rng=rng)
+                day = reserve(store, SOURCE, args.run_id)
+            except AllowanceSpent:
+                print('allowance_spent: linkedin-login already used today (America/New_York); collect nothing')
+                return EXIT_SPENT
+            outcome, items, ran, error, diagnostics = 'failed', [], 0, COLLECTOR_ERROR, []
+            job_items, job_ran, job_error, jobs_digest = [], 0, COLLECTOR_ERROR if job_queries else '', ''
+            try:
+                try:
+                    items, ran, error = collect_posts(
+                        fetcher.search, queries, max_posts=LIMITS[SOURCE]['posts'], per_query=LIMITS[SOURCE]['per_query'],
+                        sleep=sleep, rng=rng)
+                    if job_queries:
+                        if error in (LOGIN_FAILED, RATE_LIMITED):
+                            job_error = error  # the session was refused: do not ask again in the same session
+                        else:
+                            sleep(pause(rng))
+                            job_items, job_ran, job_error = collect_posts(
+                                fetcher.search_jobs, job_queries, max_posts=LIMITS[SOURCE]['jobs'],
+                                per_query=LIMITS[SOURCE]['job_per_query'], sleep=sleep, rng=rng)
+                except Exception:  # noqa: BLE001 - keep only a fixed word
+                    items, ran, error = [], 0, COLLECTOR_ERROR
+                    job_items, job_ran, job_error = [], 0, COLLECTOR_ERROR if job_queries else ''
+                diagnostics = list(getattr(fetcher, 'diagnostics', []))
+                artifact = candidate_artifact(SOURCE, items, captured, queries_run=ran, error=error)
+                artifact['stats']['searches'] = [d for d in diagnostics if d.get('kind') != 'jobs']  # numbers only
+                digest = write_artifact(args.output, artifact)
                 if job_queries:
-                    if error in (LOGIN_FAILED, RATE_LIMITED):
-                        job_error = error  # the session was refused: do not ask again in the same session
-                    else:
-                        sleep(pause(rng))
-                        job_items, job_ran, job_error = collect_posts(
-                            fetcher.search_jobs, job_queries, max_posts=LIMITS[SOURCE]['jobs'],
-                            per_query=LIMITS[SOURCE]['job_per_query'], sleep=sleep, rng=rng)
-            except Exception:  # noqa: BLE001 - keep only a fixed word
-                items, ran, error = [], 0, COLLECTOR_ERROR
-                job_items, job_ran, job_error = [], 0, COLLECTOR_ERROR if job_queries else ''
-            diagnostics = list(getattr(fetcher, 'diagnostics', []))
-            artifact = candidate_artifact(SOURCE, items, captured, queries_run=ran, error=error)
-            artifact['stats']['searches'] = [d for d in diagnostics if d.get('kind') != 'jobs']  # numbers only
-            digest = write_artifact(args.output, artifact)
+                    jobs_artifact = candidate_artifact(JOBS_SOURCE, job_items, captured, queries_run=job_ran, error=job_error)
+                    jobs_artifact['stats']['searches'] = [d for d in diagnostics if d.get('kind') == 'jobs']
+                    jobs_digest = write_artifact(args.jobs_output, jobs_artifact)
+                outcome = allowance_outcome(items + job_items, error or job_error)
+            finally:
+                try:
+                    finish(store, SOURCE, args.run_id, outcome, day=day)
+                except Exception:  # noqa: BLE001 - the day stays spent either way; say so without hiding the result
+                    print('allowance_close_failed: the day stays spent')
+            print(f'linkedin_collected: queries_run={ran} posts={len(items)} error={error or "none"} allowance_day={day}')
+            for number, record in enumerate(diagnostics, 1):
+                print('search_%d: %s' % (number, ' '.join(f'{key}={value}' for key, value in record.items())))
+            print(f'linkedin_candidates_sha256={digest}')
             if job_queries:
-                jobs_artifact = candidate_artifact(JOBS_SOURCE, job_items, captured, queries_run=job_ran, error=job_error)
-                jobs_artifact['stats']['searches'] = [d for d in diagnostics if d.get('kind') == 'jobs']
-                jobs_digest = write_artifact(args.jobs_output, jobs_artifact)
-            outcome = allowance_outcome(items + job_items, error or job_error)
+                print(f'linkedin_jobs_collected: queries_run={job_ran} jobs={len(job_items)} error={job_error or "none"}')
+                print(f'linkedin_jobs_candidates_sha256={jobs_digest}')
+            return 0
         finally:
             close = getattr(fetcher, 'close', None)
             if close:
                 close()
-            try:
-                finish(store, SOURCE, args.run_id, outcome, day=day)
-            except Exception:  # noqa: BLE001 - the day stays spent either way; say so without hiding the result
-                print('allowance_close_failed: the day stays spent')
-        print(f'linkedin_collected: queries_run={ran} posts={len(items)} error={error or "none"} allowance_day={day}')
-        for number, record in enumerate(diagnostics, 1):
-            print('search_%d: %s' % (number, ' '.join(f'{key}={value}' for key, value in record.items())))
-        print(f'linkedin_candidates_sha256={digest}')
-        if job_queries:
-            print(f'linkedin_jobs_collected: queries_run={job_ran} jobs={len(job_items)} error={job_error or "none"}')
-            print(f'linkedin_jobs_candidates_sha256={jobs_digest}')
-        return 0
     except Exception as exc:  # noqa: BLE001
         code = str(exc)
         if code not in SAFE_ERRORS | ALLOWANCE_ERRORS | {'invalid_social_queries', 'invalid_lookback_days', 'invalid_output_paths'}:

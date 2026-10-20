@@ -4,6 +4,15 @@
 Claude continues) and docs/LIMITS.md (every limit and its value). docs/SOURCES_HOW_READ.md
 says which sources are read by code and which by Claude.
 
+## Latest continuation: Codex review repairs (October 19, New York)
+
+Read PENDING section 0 for current status, then `docs/REVIEW_REPAIRS.md`. The user authorized all eleven Codex reviews
+and then Codex implementation of their ten findings while Claude is unavailable. The fix-only PR compares
+`codex/repair-review-findings` to the frozen `codex/review-findings-base` snapshot; it requires Claude review of its final
+pushed SHA. It must never be retargeted or merged wholesale into main. The original PR heads below have not been changed.
+The combined run branch contains the same repair revision for consistency; no new live run was performed.
+Do not start another implementation owner or infer any answer to the remaining user decisions.
+
 ## START HERE: state at the end of October 19, 2026 (about 23:30 UTC), for the next Claude or Codex session
 
 Read `docs/PENDING.md` section 0 first: the decisions only the user can make (0.1), the user's tasks (0.2), the Codex queue (0.3)

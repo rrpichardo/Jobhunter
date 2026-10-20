@@ -1,6 +1,7 @@
 # Pending items: your decisions, your tasks, Codex, and what Claude does next
 
-Created October 18, 2026; rewritten and re-checked against GitHub and the Sheet on October 19, 2026, about 23:30 UTC.
+Created October 18, 2026; review/repair status updated October 19, 2026 (New York). Sheet counts below remain the
+historical October 19 live-run readback; this repair task has not accessed the Sheet.
 When the user asks "what is pending", "what do you need from me" or "where are we", Claude reads section 0 first,
 checks it against GitHub, answers in plain language, and fixes this file if it is out of date. Nothing here is a claim
 that work exists unless its status says so.
@@ -16,7 +17,7 @@ column. Fill it in (or answer in chat); Claude copies each answer back here. The
 | --- | --- | --- | --- |
 | A18 | **LinkedIn: what now?** The first live run was refused at login on its first search (`social_login_failed`, a redirect loop). A fresh cookie fixes only one possible cause, so nothing guarantees it works next time. Options: (a) read your LinkedIn job-alert emails through Gmail (needs B1); (b) rely on JSearch and Jooble, which already bring LinkedIn listings into the Sheet; (c) one diagnostic try: Claude first makes the collector say what page it was sent to, then you refresh the cookie; (d) run the LinkedIn collector on your own computer (your home internet and browser) instead of the cloud; (e) drop the LinkedIn collectors (close #43 and #48); (f) your own proposal. | (a) plus (b) now; keep #43 and #48 open but on hold; remove `LINKEDIN_LI_AT` from JobHunterEnv until you decide, so the daily routine does not knock with a bad cookie. | open |
 | A3 | **Create the daily routine?** First look at the new rows the first run added to the Sheet (505 jobs, 94 of them X leads) and say whether they are useful. Then Claude creates `JobHunter Daily` (06:07 New York, 3-day window, Haiku reads, LinkedIn off unless A18 says otherwise). | Yes, after you look at the Sheet. | open (needs your look at the Sheet) |
-| A12 | **Codex "go".** All eleven open PRs need a Codex review of their exact head before anything merges. Say "go" when you have Codex credits; Claude requests one PR at a time in the order in `docs/CODEX_REVIEW_QUEUE.md`. | Go when credits are available. | open |
+| A12 | **Codex "go".** All eleven open PRs need a Codex review of their exact head before anything merges. Say "go" when you have Codex credits; Claude requests one PR at a time in the order in `docs/CODEX_REVIEW_QUEUE.md`. | Go when credits are available. | answered: go; all eleven exact-head Codex reviews completed in this chat |
 | A16 | **X posts that name no company** (E8). 39 facts from 34 X posts were rejected only because the company was empty (a person posting "we are hiring a Chief of Staff, DM me"). | Fill the company with the poster's `@handle` in code (not by the AI) and show the row as a lead; needs a PR and Codex. | open |
 | A17 | **Pay written like `$190k-$220k`** (E7). The pay filter reads `USD 50,000 per year` but not plain `$Nk-$Mk`, so those jobs are kept as "pay unresolved" and the floors ($140k US, $70k Latin America) rarely act on X and Hacker News posts. | Count `$Nk-$Mk` as annual USD when no hourly or monthly word or other currency is next to it; anything else stays "unresolved". | open |
 | A13 | **Plural titles** ("Product Managers"). Today the plural is dropped and the singular collected; it also keeps such posts from being read at all on Hacker News. | Yes, accept plurals. | open |
@@ -42,30 +43,36 @@ Decisions already made are listed in section 2 so they are not asked again.
 | B6 | After the routine is live: rate leads in the Sheet and join the day-7 and day-14 reviews. | later |
 | B7 | Later, when you ask: clean up old alert subscriptions in your main mailbox. Not authorized now. | deferred |
 
-### 0.3 Waiting on Codex (your "go", A12)
+### 0.3 Review repairs: Codex implementing; Claude reviews the repair PR
 
-Every open PR is Claude-written and needs a Codex review of its exact head plus green CI before it may merge. Heads, history and a
-ready-to-paste request for each are in `docs/CODEX_REVIEW_QUEUE.md`. Until then each carries an interim independent review.
+All eleven original PRs received exact-head Codex reviews; two were clean and nine have ten findings. The user then
+authorized Codex to implement the fixes and submit a PR for Claude review while Claude is unavailable. Codex is the sole
+implementation owner on `codex/repair-review-findings`, based on the combined run branch. All ten fixes are implemented with regressions; Claude review
+of the final repair revision is pending. No fix is approved or merged to main. Original PR heads remain unchanged. The repair PR will contain only the fix delta against
+`codex/review-findings-base` at e3eef3fa9a98bc804befc16e2e840486c4820c46, never the entire combined branch against main.
+The combined run branch is kept in sync with these unreviewed repairs for future authorized runs only; this is not deployment.
+See `docs/REVIEW_REPAIRS.md` for the reviewer instructions and integration boundaries. Claude must review its final SHA, then the original
+feature branches must receive the appropriate commits and fresh reviews before merging. Other decisions remain open.
 
 | PR | What | Note |
 | --- | --- | --- |
-| #42 | Forward-Deployed / AI Deployment / AI Implementation Strategist roles | Codex found 1 issue on `62fc1be`, fixed; needs review of the current head |
-| #44 | Work at a Startup public pages | |
-| #45 | a16z portfolio jobs | conflicts with #44 when both merge (keep both sides) |
-| #46 | This status and handoff documentation | head moves with every docs update |
-| #49 | Haiku-vs-Sonnet reading test (ran: 100 of 100 agree) | |
-| #50 | E4: a reason for every rejected fact and every filter drop | CI green; Claude's automated review: no issues |
-| #40 | X collector | ran live on October 19 (worked); base of #41, #43, #47 |
-| #41 | Run modes: 28 days by hand, 3 days daily, refuses after a gap | after #40 |
-| #43 | LinkedIn post collector | live login failed (A18); on hold until A18 |
-| #47 | Ali Rohde newsletter | ran live on October 19 (worked) |
-| #48 | LinkedIn job listings | live login failed (A18); on hold until A18 |
+| #42 | Forward-Deployed / AI Deployment / AI Implementation Strategist roles | Codex clean on b90c1d2; unchanged |
+| #44 | Work at a Startup public pages | 1 finding: retain secondary discovery times; implemented on repair branch; Claude review pending |
+| #45 | a16z portfolio jobs | 1 finding: same discovery-time issue; implemented on repair branch; Claude review pending |
+| #46 | This status and handoff documentation | 1 finding: pinned uv in run prompt; implemented on repair branch; Claude review pending |
+| #49 | Haiku-vs-Sonnet reading test (ran: 100 of 100 agree) | 1 finding: do not score unread items as agreement; implemented on repair branch; Claude review pending |
+| #50 | E4: a reason for every rejected fact and every filter drop | 1 finding: do not echo unknown item text in traces; implemented on repair branch; Claude review pending |
+| #40 | X collector | 1 finding: dispose of cookie session after startup failures; implemented on repair branch; Claude review pending |
+| #41 | Run modes: 28 days by hand, 3 days daily, refuses after a gap | No new findings on 4c0fe90; depends on #40 repairs |
+| #43 | LinkedIn post collector | 1 finding: dispose of browser after startup failures; implemented on repair branch; Claude review pending; live collection held for A18 |
+| #47 | Ali Rohde newsletter | 2 findings: tracking-link duplicates and generic-link role loss; implemented on repair branch; Claude review pending |
+| #48 | LinkedIn job listings | 1 finding: reject aliased output paths before spending the day; implemented on repair branch; Claude review pending; live collection held for A18 |
 
 ### 0.4 What Claude does as soon as you answer
 
 - A18: builds or closes what you choose; (a) waits on B1. A3: creates the routine with the agreed sources and Haiku reading.
-- A12: requests Codex one PR at a time, fixes findings in new commits, merges each only with an exact-head Codex review and green
-  CI, in the order and with the conflict recipes in `docs/CLAUDE_HANDOFF.md` ("Merge plan").
+- A12 answered: initial Codex reviews complete. Codex implements the authorized repairs in new commits, opens a fix-only
+  PR for Claude review, and records its full head SHA. No merge or fresh cloud run is part of this repair request.
 - A16, A17, A13, A19, A20, A21: one small PR each, with tests, then Codex.
 - B9, B3, B10: builds or retests the source with the address or name you give.
 
@@ -112,7 +119,7 @@ every command exited 0. The Sheet was backed up first (A15).
 | E1 | README that explains every command, in order, for a non-technical reader | pending (A21) |
 | E2 | A basic control page: Run Log and source health without the terminal, and a plain way to change settings; must not become a local production dependency | pending, design to discuss (A21) |
 | E3 | One editable settings file the program reads for every number (today they are constants in code; all explained in `docs/PARAMETERS.md`) | pending (A21) |
-| E4 | A reason for every rejected fact and every filter drop, printed by each run (`trace:` lines) and mapped in `docs/TRACEABILITY.md` | **built, PR #50**, waiting for Codex; already in the run branch |
+| E4 | A reason for every rejected fact and every filter drop, printed by each run (`trace:` lines) and mapped in `docs/TRACEABILITY.md` | **built, PR #50**, Codex reviewed; privacy repair awaits Claude in the repair PR |
 | E5 | Keep the reason counts in the Sheet so they outlive the session | proposed (A20) |
 | E6 | Print why job boards drop jobs (role, place, pay) | proposed (A20) |
 | E7 | Read pay written like `$190k-$220k` | your call (A17) |
@@ -131,7 +138,7 @@ every command exited 0. The Sheet was backed up first (A15).
 | Work at a Startup logged-in lists (the public page shows only 24 of 241 jobs) | B10 |
 | LinkedIn collectors (#43, #48) | A18 |
 | The daily routine | A3 |
-| Merging anything | A12 (Codex) |
+| Merging anything | Resolve findings; current opposite-agent reviews and green CI; follow merge authorization |
 | The small rule fixes | A13, A16, A17, A19 |
 
 ## 5. How runs work (your direction, October 18)

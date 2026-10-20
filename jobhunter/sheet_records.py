@@ -141,6 +141,16 @@ def _discovery_details(record, previous):
     return '\n'.join(lines)
 
 
+def _legacy_newsletter_alias(record, old, key):
+    """A verified requisition can reuse a legacy newsletter ID after link tracking changes.
+
+    Generic links never establish identity, even when title and company agree. Keep their old rows and user fields;
+    the existing shared-link path flags incoming rows for manual review instead of guessing a match.
+    """
+    return (record['Source'] == old['Source'] == 'alirohde-rss' and verified_requisition(key)
+            and re.fullmatch(r'alirohde:[a-f0-9]{16}', old['Job ID']) is not None)
+
+
 def reconcile_jobs(rows, records):
     mapping, identities = table_index(rows, JOB_HEADERS, 'Job ID')
     known = {identity: {h: values[mapping[h]] if mapping[h] < len(values) else '' for h in JOB_HEADERS}
@@ -155,7 +165,8 @@ def reconcile_jobs(rows, records):
         key = canonical_key(record['Apply link']) if https_url(record['Apply link']) else None
         if identity not in known and identity not in planned and key is not None:
             matches = sorted(candidate for candidate in by_link.get(key, ())
-                             if (planned.get(candidate) or known[candidate])['Source'] != record['Source'])
+                             if ((planned.get(candidate) or known[candidate])['Source'] != record['Source']
+                                 or _legacy_newsletter_alias(record, planned.get(candidate) or known[candidate], key)))
             if len(matches) > 1 and verified_requisition(key):
                 # Never choose between rows whose user-owned cells may disagree.
                 # A shared generic/custom URL does not verify which requisition

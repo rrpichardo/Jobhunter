@@ -127,8 +127,8 @@ def _facts_for(link_title_company):
 
 def test_same_title_at_different_companies_are_different_jobs_and_a_role_relisted_next_week_is_the_same_job():
     from jobhunter import post_facts as pf
-    body = ('<p><a href="https://jobs.ashbyhq.com/a/1">Chief of Staff</a>, Acme (AI, Series B), Remote</p>'
-            '<p><a href="https://jobs.ashbyhq.com/b/2">Chief of Staff</a>, Beta (AI, Series B), Remote</p>')
+    body = ('<p><a href="https://boards.greenhouse.io/acme/jobs/1001">Chief of Staff</a>, Acme (AI, Series B), Remote</p>'
+            '<p><a href="https://boards.greenhouse.io/beta/jobs/1002">Chief of Staff</a>, Beta (AI, Series B), Remote</p>')
     def candidates(slug):
         cands, _ = nl.edition_candidates(SOURCE, feed(item('E', 'Fri, 16 Oct 2026 15:17:32 GMT',
                                                            f'https://alirohdejobs.substack.com/p/{slug}', content=body)), NOW, 28)
@@ -137,12 +137,12 @@ def test_same_title_at_different_companies_are_different_jobs_and_a_role_reliste
     ids = []
     for slug in ('edition-275-ali-rohde-jobs', 'edition-276-ali-rohde-jobs'):
         cands = candidates(slug)
-        quote_a = 'Chief of Staff [https://jobs.ashbyhq.com/a/1] , Acme (AI, Series B), Remote'
-        quote_b = 'Chief of Staff [https://jobs.ashbyhq.com/b/2] , Beta (AI, Series B), Remote'
+        quote_a = 'Chief of Staff [https://boards.greenhouse.io/acme/jobs/1001] , Acme (AI, Series B), Remote'
+        quote_b = 'Chief of Staff [https://boards.greenhouse.io/beta/jobs/1002] , Beta (AI, Series B), Remote'
         facts = [{'item_id': slug, 'title': 'Chief of Staff', 'company': 'Acme', 'location': 'Remote', 'salary': '',
-                  'description_quote': quote_a, 'apply_url': 'https://jobs.ashbyhq.com/a/1'},
+                  'description_quote': quote_a, 'apply_url': 'https://boards.greenhouse.io/acme/jobs/1001'},
                  {'item_id': slug, 'title': 'Chief of Staff', 'company': 'Beta', 'location': 'Remote', 'salary': '',
-                  'description_quote': quote_b, 'apply_url': 'https://jobs.ashbyhq.com/b/2'}]
+                  'description_quote': quote_b, 'apply_url': 'https://boards.greenhouse.io/beta/jobs/1002'}]
         result = pf.social_result(SOURCE, cands, facts, '2026-10-19T16:00:00+00:00', listed=1, stats={}, known_ids={slug})
         ids.append([p['job_id'] for p in result['postings']])
     assert len(ids[0]) == 2 and len(set(ids[0])) == 2   # two companies, one title: two jobs
