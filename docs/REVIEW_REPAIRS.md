@@ -3,6 +3,8 @@
 The user authorized Codex to fix the ten findings posted on PRs #40–#50 and submit one PR for Claude while Claude is
 unavailable. This is a repair handoff, not a deployment. PENDING section 0 remains the authoritative decision/status list.
 
+Repair PR: [#51](https://github.com/rrpichardo/Jobhunter/pull/51), open for Claude review.
+
 ## Review the fix delta
 
 - Base snapshot: `codex/review-findings-base`, exactly `e3eef3fa9a98bc804befc16e2e840486c4820c46` (the pre-repair combined run branch).

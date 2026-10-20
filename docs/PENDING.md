@@ -48,7 +48,7 @@ Decisions already made are listed in section 2 so they are not asked again.
 All eleven original PRs received exact-head Codex reviews; two were clean and nine have ten findings. The user then
 authorized Codex to implement the fixes and submit a PR for Claude review while Claude is unavailable. Codex is the sole
 implementation owner on `codex/repair-review-findings`, based on the combined run branch. All ten fixes are implemented with regressions; Claude review
-of the final repair revision is pending. No fix is approved or merged to main. Original PR heads remain unchanged. The repair PR will contain only the fix delta against
+of the final repair revision is pending. No fix is approved or merged to main. Original PR heads remain unchanged. Repair [PR #51](https://github.com/rrpichardo/Jobhunter/pull/51) is open for Claude review and contains only the fix delta against
 `codex/review-findings-base` at e3eef3fa9a98bc804befc16e2e840486c4820c46, never the entire combined branch against main.
 The combined run branch is kept in sync with these unreviewed repairs for future authorized runs only; this is not deployment.
 See `docs/REVIEW_REPAIRS.md` for the reviewer instructions and integration boundaries. Claude must review its final SHA, then the original
