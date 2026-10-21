@@ -247,3 +247,40 @@ def test_noun_first_wording_about_customers_does_not_qualify(text):
 ])
 def test_only_the_class_or_program_year_counts_not_an_application_or_launch_year(text, expected):
     assert p.collection_reason(job(text=text)) == expected
+
+
+# Codex final review of PR 52 (fourth round, authorized by the user in chat): two false exclusions.
+@pytest.mark.parametrize('text', [
+    'Experience is not required, open to MBA students graduating in May 2027.',
+    'Experience is not required and open to MBA students graduating in May 2027.',
+    'Prior experience is not necessary; this role is open to MBA students graduating in May 2027.',
+    'A degree is not enough: this role is open to MBA students graduating in 2027.',
+    'The role is not remote, but it is open to MBA students graduating in 2027.',
+])
+def test_a_negative_word_in_an_earlier_clause_does_not_cancel_the_applicant_statement(text):
+    assert p.collection_reason(job(text=text)) == ''
+
+
+@pytest.mark.parametrize('text', [
+    'This role is not open to MBA students graduating in spring 2027.',
+    'This role is not, however, open to MBA students graduating in spring 2027.',
+    'We do not recruit MBA candidates graduating in 2027.',
+    'Open to all except MBA students graduating in 2027.',
+])
+def test_a_denial_in_the_statements_own_clause_still_cancels_it(text):
+    assert p.collection_reason(job(text=text)) == 'not_mba_2027'
+
+
+@pytest.mark.parametrize('text,expected', [
+    ('Open to MBA students graduating in May 2026 or May 2027.', ''),
+    ('Open to MBA students graduating in 2026, 2027 or 2028.', ''),
+    ('Open to MBA students graduating between 2026 and 2027.', ''),
+    ('Open to MBA students graduating in 2025 to 2028.', ''),
+    ('Open to MBA students of the class of 2026 and 2027.', ''),
+    ('Open to MBA students graduating in May 2028 or May 2029.', 'mba_other_class_year'),
+    ('Open to MBA students graduating in May 2026 or May 2028.', 'mba_other_class_year'),
+    ('Open to MBA students graduating in 2028; the 2027 cycle is closed.', 'mba_other_class_year'),
+    ('Open to MBA students graduating in spring 2028 only, with applications opening in 2027.', 'mba_other_class_year'),
+])
+def test_every_year_of_a_graduation_list_or_range_counts_but_unrelated_years_do_not(text, expected):
+    assert p.collection_reason(job(text=text)) == expected

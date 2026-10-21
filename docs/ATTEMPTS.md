@@ -1031,3 +1031,14 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
   2 of 6,812 board postings meet the rule, 38 are class-of-2027 without an MBA, yearly USD pay read unchanged (3,622 postings), cleanup dry run unchanged (1 / 3 / 164 / 542).
   No live source, Sheet access, cookie, model call, paid service, deployment, merge, re-cut or edit of any other PR. This closes the three authorized cycles of this round;
   any further change needs a new authorization.
+
+- **Additional round after the three authorized cycles (user authorization in chat, October 21, 2026):** Codex's third-cycle review of `70f332c` (round NOT CLEAR)
+  reported that the three authorized cycles were exhausted and that any further round needed a new explicit user authorization. The user gave it in the Claude
+  Code session ("Yes, one more round") for exactly the two remaining P2 false exclusions; the earlier counters are preserved, and this entry does not reset them.
+  (1) Negation is bounded to the statement's own clause: a "not" before the last clause break (comma, colon, dash, "and", "but", "while" ...) no longer cancels it
+  ("Experience is not required, open to MBA students graduating in May 2027" qualifies), while a denial in the same clause, including one split by a short
+  interjection ("This role is not, however, open to ..."), still does. (2) Every year of a graduation or class list or range counts ("May 2026 or May 2027",
+  "2026, 2027 or 2028", "between 2026 and 2027", "2025 to 2028"), while application, start, launch and cycle years that follow other words are still ignored.
+  Verification: `uv run --locked --extra social python -m pytest -q`: 1,278 passed, 10 subtests passed; real-data re-checks unchanged (2 of 6,812 board postings meet the
+  rule, 38 are class-of-2027 without an MBA, cleanup dry run 1 / 3 / 164 / 542). The unpublished local session commit `3252e0f` was not used or combined. No live
+  source, Sheet access, cookie, model call, paid service, deployment, merge, re-cut or edit of any other PR. No further round is authorized.

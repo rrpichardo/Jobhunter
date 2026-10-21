@@ -403,21 +403,51 @@ _NEGATION = re.compile(r"\b(?:not|never|no\s+longer|isn't|aren't|cannot|can't|wo
                        r"except|other\s+than|unless)\b|n't\b", re.I)
 
 
+_CLAUSE_BREAK = re.compile(r"[,:\u2014\u2013]|\s-\s|\b(?:but|and|while|although|though|however|whereas|so)\b", re.I)
+
+
 def _negated(source: str, match) -> bool:
-    """True when the words that lead into the statement (earlier in its sentence) or the statement itself deny it:
-    "This role is NOT open to MBA students graduating in spring 2027"."""
+    """True when the statement is denied in ITS OWN clause: the words between the last clause break (comma, colon, dash,
+    "and", "but" ...) and the statement, or the statement itself. "This role is NOT open to MBA students" is denied;
+    "Experience is not required, open to MBA students" is not, because the "not" belongs to the earlier clause."""
     before = re.split(r'[.;\n]', source[max(0, match.start() - 80):match.start()])[-1]
-    return bool(_NEGATION.search(before[-30:] + ' ' + match.group(0)))
+    before = re.sub(r',\s*(?:however|of course|in fact|generally|currently|usually|typically|normally|for now|at present)\s*,', ' ', before, flags=re.I)
+    clause = _CLAUSE_BREAK.split(before)[-1]
+    return bool(_NEGATION.search(clause[-30:] + ' ' + match.group(0)))
 
 
 # A year counts as the class or program year only when it is tied to graduating, a class, a cohort, a program or a start; an
 # application window, a launch or a fiscal year in the same sentence says nothing about who may apply.
+_GRADUATION_CUE = re.compile(r"\b(?:graduat\w*|graduation|class(?:es)?\s+of|cohort|completing|completes?|finishing|finishes)\b"
+                             r"[^.;\n]{0,30}?\b(20[2-3]\d)\b", re.I)
+_MONTH = (r"(?:spring|summer|fall|winter|autumn|jan\w*|feb\w*|mar\w*|apr\w*|may|jun\w*|jul\w*|aug\w*|sep\w*|oct\w*|"
+          r"nov\w*|dec\w*)")
+# More years in the same list or range: "May 2026 or May 2027", "2026, 2027 and 2028", "2026 to 2028" (a range includes the years between).
+_NEXT_YEAR = re.compile(rf"\s*(,\s*)?(?:(or|and|&|/|to|through|until|[-\u2013\u2014])\s*)?(?:the\s+)?(?:class\s+of\s+)?"
+                        rf"(?:{_MONTH}\s+)?(20[2-3]\d)\b", re.I)
 _COHORT_YEAR = tuple(re.compile(pattern, re.I) for pattern in (
-    r"\b(?:graduat\w*|graduation|class(?:es)?\s+of|cohort|completing|completes?|finishing|finishes)\b[^.;\n]{0,30}?\b(20[2-3]\d)\b",
     r"\b(20[2-3]\d)\s+(?:north\s+america\s+)?(?:mba\s+)?(?:graduates?|grads?|graduating|class|cohort|program(?:me)?|intake)\b",
     rf"\b{_MBA}\s+(?:grad(?:uate)?s?\s*)?(?:class\s+of\s+)?\(?(20[2-3]\d)\b",
 ))
 _START_YEAR = re.compile(r"\b(?:start(?:s|ing)?|begin(?:s|ning)?)\b[^.;\n]{0,20}?\b(20[2-3]\d)\b", re.I)
+
+
+def _graduation_years(sentence: str) -> set:
+    """Every year of each graduation or class list: the first year after the cue plus the ones joined to it by
+    a comma, or/and/&, or a range word. Application, start or launch years that follow other words are not joined."""
+    years = set()
+    for cue in _GRADUATION_CUE.finditer(sentence):
+        last, position = int(cue.group(1)), cue.end()
+        years.add(last)
+        while True:
+            more = _NEXT_YEAR.match(sentence, position)
+            if not more or not (more.group(1) or more.group(2)):
+                break
+            year = int(more.group(3))
+            years.update(range(last, year + 1) if more.group(2) in ('to', 'through', 'until', '-', '\u2013', '\u2014') and year > last
+                         else (year,))
+            last, position = year, more.end()
+    return {str(year) for year in years}
 
 
 def _class_years(source: str, match, title: str) -> set:
@@ -425,7 +455,7 @@ def _class_years(source: str, match, title: str) -> set:
     sentence = _sentence(source, match)
     if source is title:
         return set(re.findall(r'\b(20[2-3]\d)\b', sentence))
-    years = {y for pattern in _COHORT_YEAR for y in pattern.findall(sentence)}
+    years = _graduation_years(sentence) | {y for pattern in _COHORT_YEAR for y in pattern.findall(sentence)}
     return years or set(_START_YEAR.findall(sentence))
 
 
