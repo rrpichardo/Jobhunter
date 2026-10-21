@@ -60,14 +60,17 @@ keys or tokens. Do not call any paid service.
 
 ## 1. Free-text sources you read yourself (Hacker News)
 
-> **Which model reads.** The reading steps (Hacker News comments, X and LinkedIn posts, LinkedIn job cards, newsletter
-> editions) run on the routine session's own model (Sonnet). The user wants the cheaper Haiku used ONLY if an eval shows
-> it agrees with Sonnet on more than 90% of 100 real items (plan and harness: `docs/evals/HAIKU_READING_EVAL.md`,
-> `scripts/eval_reading.py`). The eval ran (100 of 100 agree) and the user accepted Haiku (A11 in `docs/PENDING.md`), but
-> the switch is made when the routine is created (A3); until this note is changed, do not hand the reading to a Haiku
-> subagent. When it changes, it will say: give the work file path, the exact fact format and the rules
-> below to a subagent started with `model: haiku`, run the validation yourself, and fall back to reading the items yourself
-> if its file is rejected.
+> **Which model reads (decided: Haiku; PENDING A11).** Every reading step (Hacker News comments, X and LinkedIn posts,
+> LinkedIn job cards, newsletter editions) is done by a subagent started with `model: haiku`. The user accepted Haiku after the
+> eval (100 of 100 posts agreed, `docs/evals/HAIKU_READING_EVAL.md`; "haiku is good to go"). The workflow, for each source:
+> 1. Give the Haiku subagent the work file path, the exact fact format and the rules below, and tell it to write the facts
+>    file and nothing else.
+> 2. YOU (the primary session) then run the validation command yourself; code accepts a value only if it appears word for
+>    word in the item, so Haiku can at worst miss a role, never put a wrong value in the Sheet.
+> 3. If the subagent fails, or the validation rejects its file as invalid (`incomplete`, `invalid_extractions`, ...), YOU read
+>    the items yourself (fallback) and say so in the final report.
+> Creating and scheduling the routine is still a separate gate (A3), and LinkedIn stays off until the user decides A18; this
+> note does not create or schedule anything.
 
 Run, saving each printed digest:
 
@@ -213,7 +216,7 @@ is harmless because jobs collapse by Job ID.
   --jobs-output $DIR/li_jobs.json`: up to 5 job searches in the SAME session and under the SAME single daily allowance,
   `scripts.allowance`, one live LinkedIn session per day), so the A18 hold above covers them too: never run them until
   A18 allows it, and report them as "held, A18 open". Only then do the job cards go through the same read step as posts:
-  `ai_queue pull --source linkedin-jobs --id-field item_id`, Claude (the session model; see the note at the top of
+  `ai_queue pull --source linkedin-jobs --id-field item_id`, Claude (a Haiku subagent; see the note at the top of
   section 1) copies title, company, place and pay word for word from each card's text, `social_posts validate --source
   linkedin-jobs` (copy its `trace:` lines into the report like every other source), `source_probe --social-result`,
   delivery, `ai_queue commit`. A job card shows an age ("3 days ago"), not a date, so its posted date is the capture day
