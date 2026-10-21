@@ -5,7 +5,7 @@ untrusted: it is cleaned, never executed, and only an exact leading excerpt of i
 is stored. Models do not choose any cell value on this path.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from html import unescape
@@ -450,6 +450,8 @@ def _collect(items, build):
         except (ValueError, TypeError, AttributeError, KeyError):
             rejected += 1
             continue
+        if not posting.salary:  # the source gave no pay field; a range written in the posting still counts
+            posting = replace(posting, salary=salary_from_text(posting.text))
         if posting.job_id in seen:
             raise ValueError("duplicate_source_id")
         seen.add(posting.job_id)
@@ -465,6 +467,99 @@ def _salary(low, high, currency="", period=""):
     return " ".join(part for part in (amount, str(currency or ""), str(period or "")) if part)
 
 
+def _union(ranges):
+    """(low, high) covering every (low, high) pair; zone and state tiers of one posting become one range."""
+    lows = [low for low, _ in ranges if low]
+    highs = [high for _, high in ranges if high]
+    return (min(lows) if lows else 0, max(highs) if highs else 0)
+
+
+def greenhouse_pay(ranges):
+    """Pay Greenhouse publishes beside a posting (`pay_input_ranges`, amounts in cents), as one Salary cell.
+
+    Yearly USD ranges win (the tiers of one posting are merged into one range); otherwise the first other currency or
+    an hourly or on-target-earnings range is written with its own unit word, which the pay filter reads as unresolved.
+    """
+    found = {}
+    for item in ranges if isinstance(ranges, list) else []:
+        if not isinstance(item, dict):
+            continue
+        low, high = item.get('min_cents'), item.get('max_cents')
+        low = low // 100 if type(low) is int and low > 0 else 0
+        high = high // 100 if type(high) is int and high > 0 else 0
+        title = plain(item.get('title'))
+        if not (low or high):
+            continue
+        unit = ('hour' if re.search(r'\bhour', title, re.I) else
+                'OTE' if re.search(r'\b(?:OTE|on[- ]target|commission)\b', title, re.I) else 'year')
+        found.setdefault((plain(item.get('currency_type')).upper() or 'USD', unit), []).append((low, high))
+    for currency, unit in sorted(found, key=lambda key: (key != ('USD', 'year'), key[1] != 'year', key)):
+        low, high = _union(found[(currency, unit)])
+        return _salary(low, high, currency, unit)
+    return ''
+
+
+ASHBY_INTERVALS = {'1 YEAR': 'year', '1 MONTH': 'month', '1 WEEK': 'week', '1 DAY': 'day', '1 HOUR': 'hour'}
+
+
+def ashby_pay(compensation):
+    """Salary components of an Ashby posting (requested with `includeCompensation=true`) as one Salary cell."""
+    components = compensation.get('summaryComponents') if isinstance(compensation, dict) else None
+    found = {}
+    for item in components if isinstance(components, list) else []:
+        if not isinstance(item, dict) or item.get('compensationType') != 'Salary':
+            continue
+        low, high = item.get('minValue'), item.get('maxValue')
+        low = int(low) if type(low) in (int, float) and low > 0 else 0
+        high = int(high) if type(high) in (int, float) and high > 0 else 0
+        if low or high:
+            found.setdefault((plain(item.get('currencyCode')).upper() or 'USD',
+                              ASHBY_INTERVALS.get(plain(item.get('interval')).upper(), plain(item.get('interval')).lower())),
+                             []).append((low, high))
+    for currency, unit in sorted(found, key=lambda key: (key != ('USD', 'year'), key[1] != 'year', key)):
+        low, high = _union(found[(currency, unit)])
+        return _salary(low, high, currency, unit)
+    return ''
+
+
+_PAY_AMOUNT = r'\$\s?\d{2,3}(?:,\d{3})+(?:\.\d+)?|\$\s?\d{2,3}(?:\.\d+)?\s?[kK]\b'
+_PAY_RANGE = re.compile(rf'({_PAY_AMOUNT})\s*(?:-|\u2013|\u2014|to)\s*({_PAY_AMOUNT}|\d{{2,3}}(?:,\d{{3}})+|\d{{2,3}}\s?[kK]\b)')
+_PAY_CUE = re.compile(r'\b(?:salary|base pay|base compensation|annual|per year|a year|yearly|pay range|pay scale|'
+                      r'compensation range|compensation)\b', re.I)
+_NOT_BASE_PAY = re.compile(r'\b(?:bonus|commission|equity|stock|sign[- ]on|signing|relocation|stipend|allowance|'
+                           r'reimbursement|401|OTE|on[- ]target)\b', re.I)
+_OTHER_CURRENCY = re.compile(r'(?:\bCAD|\bAUD|\bMXN|\bEUR|\bGBP|\bCA\$|\bC\$|\bA\$|[\u20ac\u00a3])\s*$', re.I)
+
+
+def _pay_number(text):
+    digits = re.sub(r'[^\d.]', '', text.replace(',', '').rstrip('kK '))
+    return float(digits) * (1000 if re.search(r'[kK]\s*$', text.strip()) else 1)
+
+
+def salary_from_text(text):
+    """A yearly USD range written in a posting ("The salary range is $160,000 - $200,000"), or "".
+
+    Deliberately narrow: two amounts of at least 30,000, a pay word shortly before them, nothing that makes the clause
+    bonus, equity, commission or another currency, and no hourly, monthly or weekly word right after. Several ranges
+    (one per location tier) are merged into one.
+    """
+    ranges = []
+    for match in _PAY_RANGE.finditer(text or ''):
+        before, after = text[max(0, match.start() - 160):match.start()], text[match.end():match.end() + 30]
+        clause = re.split(r'[.;:\n]', before)[-1] if _PAY_CUE.search(re.split(r'[.;\n]', before)[-1]) else before
+        if (not _PAY_CUE.search(before) or _NOT_BASE_PAY.search(clause) or _OTHER_CURRENCY.search(before[-8:])
+                or re.match(r'\s*(?:/\s*|per\s+|an?\s+)?(?:hour|hr|month|mo\b|week|wk|day)', after, re.I)
+                or re.match(r'\s*(?:in\s+)?(?:bonus|commission|equity|OTE)', after, re.I)):
+            continue
+        low, high = _pay_number(match.group(1)), _pay_number(match.group(2))
+        if 30_000 <= low <= high:
+            ranges.append((int(low), int(high)))
+    if not ranges:
+        return ''
+    low, high = _union(ranges)
+    return _salary(low, high, 'USD', 'year')
+
+
 def parse_greenhouse(data, ctx):
     if not isinstance(data, dict) or not isinstance(data.get("jobs"), list):
         raise ValueError("invalid_board_response")
@@ -475,8 +570,8 @@ def parse_greenhouse(data, ctx):
             raise ValueError
         return Posting(f"greenhouse:{ctx['board']}:{item['id']}", ctx["source_id"], ctx["company"],
                        plain(item.get("title")), plain(location.get("name")), clean_html(item.get("content")),
-                       item.get("absolute_url"), ctx["captured_at"], tag=ctx["tag"],
-                       posted_at=parse_posted(item.get("first_published")))
+                       item.get("absolute_url"), ctx["captured_at"], salary=greenhouse_pay(item.get("pay_input_ranges")),
+                       tag=ctx["tag"], posted_at=parse_posted(item.get("first_published")))
     return (*_collect(data["jobs"], build), len(data["jobs"]))
 
 
@@ -509,8 +604,8 @@ def parse_ashby(data, ctx):
         text = plain(item.get("descriptionPlain")) or clean_html(item.get("descriptionHtml"))
         return Posting(f"ashby:{ctx['board']}:{item['id']}", ctx["source_id"], ctx["company"],
                        plain(item.get("title")), location, text, item.get("jobUrl"),
-                       ctx["captured_at"], tag=ctx["tag"], remote=item.get('isRemote') is True,
-                       posted_at=parse_posted(item.get("publishedAt")))
+                       ctx["captured_at"], salary=ashby_pay(item.get("compensation")), tag=ctx["tag"],
+                       remote=item.get('isRemote') is True, posted_at=parse_posted(item.get("publishedAt")))
     return (*_collect(listed, build), len(listed))
 
 

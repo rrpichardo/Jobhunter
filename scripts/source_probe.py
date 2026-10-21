@@ -24,7 +24,7 @@ import yaml
 
 from jobhunter.artifacts import SYNC_MAX_BYTES, read_artifact, safe_error_code, write_artifact
 from jobhunter.post_facts import SOCIAL, postings_from_result
-from jobhunter.postings import (AI_TERMS, DETAIL_SOURCES, LISTING_ONLY, PARSERS, Posting, collection_match, collection_reason,
+from jobhunter.postings import (AI_TERMS, DETAIL_SOURCES, LISTING_ONLY, PARSERS, Posting, collection_match, collection_reason, salary_from_text,
                                 collection_stub_match, collection_priority, collection_title_priority,
                                 dedupe, parse_posted, role_family, to_row, within_lookback)
 
@@ -38,9 +38,9 @@ PAGE_SAFETY_STOP = 100
 PAGED_KINDS = {"themuse", "jobicy"}
 LOOKBACK_DAYS = 28  # first-run backfill and the default daily window; repeats are harmless (upsert by Job ID)
 BLOCKED = {401, 403, 406, 429}
-URLS = {"greenhouse": "https://boards-api.greenhouse.io/v1/boards/{board}/jobs?content=true",
+URLS = {"greenhouse": "https://boards-api.greenhouse.io/v1/boards/{board}/jobs?content=true&pay_transparency=true",
         "lever": "https://api.lever.co/v0/postings/{board}?mode=json",
-        "ashby": "https://api.ashbyhq.com/posting-api/job-board/{board}"}
+        "ashby": "https://api.ashbyhq.com/posting-api/job-board/{board}?includeCompensation=true"}
 JSON_KINDS = {"greenhouse", "lever", "ashby", "remotive", "remoteok", "himalayas", "jobicy",
               "themuse", "hn", "jsearch", "jooble"}
 KEYED_KINDS = {"jsearch", "jooble"}
@@ -200,7 +200,7 @@ def fetch_details(client, entry, stubs, stamp, *, delay, sleep):
             found = detail(body)
             postings.append(Posting(stub["job_id"], entry["id"], found.get("company") or stub["company"], stub["title"],
                                     found.get("location") or stub["location"], found["text"], stub["url"], stamp,
-                                    salary=found.get("salary") or stub["salary"], tag="other",
+                                    salary=found.get("salary") or stub["salary"] or salary_from_text(found["text"]), tag="other",
                                     posted_at=found.get("posted_at") or stub.get("posted_at", "")))
         except (ValueError, TypeError, KeyError, AttributeError, RecursionError):
             rejected += 1
