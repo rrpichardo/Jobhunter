@@ -216,7 +216,7 @@ ROLE_FAMILIES = (
                                      r'(?:MBA|management) (?:development|rotation(?:al)?) program)\b', re.I)),
     ('Strategy', re.compile(r'\b(?:strategy (?:manager|lead|director)|'
                            r'(?:manager|director|head|vp) (?:of )?(?:corporate |business )?strategy)\b', re.I)),
-    ('Entrepreneurship', re.compile(r'\b(?:entrepreneur|founder) in residence\b', re.I)),
+    ('Entrepreneurship', re.compile(r'\b(?:entrepreneur|founder)[- ]in[- ]residence\b', re.I)),
     ('Project management', re.compile(r'\bproject (?:manager|management lead|director)\b', re.I)),
     # "Forward-Deployed AI Strategist" and its variants: forward deployed / FDE next to strategist or strategy within
     # one title, in either order ("AI Strategist, Forward Deployed"), plus "AI Deployment Strategist" and "AI
@@ -663,6 +663,30 @@ def stubs_yc(text, ctx):
     return stubs, rejected
 
 
+def stubs_waas(text, ctx):
+    """Work at a Startup public listing (no login): the page data holds the first jobs of one role page."""
+    stubs, rejected = [], 0
+    for job in _page_json(text)["props"]["jobs"]:
+        try:
+            stubs.append({"job_id": f"waas:{int(job['id'])}", "company": _stub_text(job.get("companyName")),
+                          "title": _stub_text(job.get("title")), "location": _stub_text(job.get("location")),
+                          "url": f"https://www.workatastartup.com/jobs/{int(job['id'])}",
+                          "salary": _stub_text(job.get("salary")), "posted_at": ""})  # the site shows no posting date
+        except (KeyError, TypeError, ValueError, AttributeError):
+            rejected += 1
+    return stubs, rejected
+
+
+def detail_waas(text):
+    props = _page_json(text)["props"]
+    job, company = props["job"], props.get("company") or {}
+    description = clean_html(job.get("descriptionHtml"))
+    if not description:
+        raise ValueError("invalid_board_response")
+    return {"text": description, "company": _stub_text(company.get("name")), "location": _stub_text(job.get("location")),
+            "salary": _stub_text(job.get("salaryRange"))}
+
+
 LD_JSON = re.compile(r'<script type="application/ld(?:\+|&#x2B;)json">(.*?)</script>', re.S)
 
 
@@ -777,11 +801,11 @@ PARSERS = {"greenhouse": parse_greenhouse, "lever": parse_lever, "ashby": parse_
            "jsearch": parse_jsearch, "jooble": parse_jooble}
 LISTING_ONLY = {"a16z": count_a16z, "hn": count_hn}
 DETAIL_SOURCES = {"yc": (stubs_yc, detail_yc), "getro": (stubs_getro, detail_getro),
-                  "builtin": (stubs_builtin, detail_builtin)}
+                  "builtin": (stubs_builtin, detail_builtin), "waas": (stubs_waas, detail_waas)}
 
 
 SOURCE_PRIORITY = {"greenhouse": 0, "lever": 0, "ashby": 0, "yc-product": 1, "getro-accel": 1, "getro-primary": 1,
-                   "builtin-product": 1}
+                   "builtin-product": 1, "waas-product": 1, "waas-operations": 1}
 
 
 def _similar(posting: Posting) -> str:
@@ -797,8 +821,15 @@ def dedupe(postings):
     def rank(posting):
         return SOURCE_PRIORITY.get(posting.source_id.split(":")[0], SOURCE_PRIORITY.get(posting.source_id, 2))
     ordered = sorted(postings, key=rank)  # stable: first-seen order inside a priority
-    kept, by_key, by_similar = [], {}, {}
+    kept, by_key, by_similar, by_id = [], {}, {}, {}
     for posting in ordered:
+        if posting.job_id in by_id:  # the very same job found again (e.g. by two searches of one board): one row
+            if by_id[posting.job_id]["posting"].source_id != posting.source_id:
+                entry = by_id[posting.job_id]
+                entry["also"].append(posting.source_id)
+                entry['seen'][posting.source_id] = min(entry['seen'].get(posting.source_id, posting.captured_at),
+                                                       posting.captured_at)
+            continue
         key = canonical_key(posting.apply_url)
         if (verified_requisition(key) and key in by_key
                 and by_key[key]["posting"].source_id != posting.source_id):
@@ -812,6 +843,7 @@ def dedupe(postings):
                  'shared': by_key[key]['posting'].job_id if not verified_requisition(key) and key in by_key else None}
         by_key.setdefault(key, entry)
         by_similar.setdefault(_similar(posting), posting.job_id)
+        by_id[posting.job_id] = entry
         kept.append(entry)
     notes = []
     for entry in kept:
