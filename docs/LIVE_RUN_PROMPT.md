@@ -27,10 +27,10 @@ Rules that never bend:
 - X and LinkedIn each allow ONE live collection per New York day. Make exactly one attempt per source. If a collector exits 3 (spent day)
   or reports `social_login_failed`, `social_rate_limited`, `wall=True` or status 999/403, do NOT retry it, skip that source for the rest
   of the run, continue with the other sources, and say so at the top of your report.
-- `docs/ROUTINE_PROMPT.md` has two out-of-date notes, overridden by the user's October 19 decisions: (1) the note at the top of section 1
-  says not to hand reading to a Haiku subagent until an eval passes. The eval passed and the user accepted Haiku, so DO hand the
-  reading to a subagent started with model `haiku`, giving it the work file path, the exact fact format and the rules from
-  section 1; run the validation yourself; if its file is rejected, read those items yourself. (2) Section 5 lists X, LinkedIn posts
+- Reading model: follow the "Which model reads" note at the top of `docs/ROUTINE_PROMPT.md` section 1 (the user accepted Haiku):
+  hand the reading to a subagent started with model `haiku`, giving it the work file path, the exact fact format and the rules from
+  section 1; run the validation yourself; if its file is rejected, read those items yourself.
+- `docs/ROUTINE_PROMPT.md` has one out-of-date note, overridden by the user's October 19 decisions: Section 5 lists X, LinkedIn posts
   and LinkedIn jobs as "not run": run X now (and LinkedIn only past the gate above) as part of this run, exactly as the runbook and section 5 describe. Also, a16z now
   delivers jobs (its PR is merged into this branch).
 

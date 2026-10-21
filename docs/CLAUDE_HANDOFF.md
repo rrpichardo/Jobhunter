@@ -50,7 +50,7 @@ Each social source spends one attempt per New York day; never retry a spent day;
 
 **Do next, in order, once the user answers:** (1) A12 "go": request Codex on one PR at a time (`docs/CODEX_REVIEW_QUEUE.md`), fix
 findings in new commits, merge in the order below. (2) A3: create the routine with the agreed sources (LinkedIn off unless A18 says
-otherwise) and name Haiku for the reading step in `docs/ROUTINE_PROMPT.md`. (3) One small PR per decided rule fix (A13, A16, A17, A19)
+otherwise); `docs/ROUTINE_PROMPT.md` section 1 already names Haiku for the reading step (#48). (3) One small PR per decided rule fix (A13, A16, A17, A19)
 and per tracing item (A20). Commits omit the `Claude-Session:` line (PENDING section 6).
 
 ### Merge plan, checked by a trial replay (October 19, about 22:00 UTC)

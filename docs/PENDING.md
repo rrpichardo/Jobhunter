@@ -2,7 +2,7 @@
 
 Created October 18, 2026; rewritten and re-checked against GitHub and the Sheet on October 19, 2026, about 23:30 UTC;
 PR states in 0.3 updated October 21, 2026 from `main`'s merge history (merged: #40 to #47, #49, #50); #52 reopened the same day;
-`main` (`8c81341`) merged into #48 the same day (integration; Codex review of the new head pending).
+`main` (`8c81341`) merged into #48 the same day (integration), then a docs fix for Codex's Haiku-note finding (review of the new head pending).
 When the user asks "what is pending", "what do you need from me" or "where are we", Claude reads section 0 first,
 checks it against GitHub, answers in plain language, and fixes this file if it is out of date. Nothing here is a claim
 that work exists unless its status says so.
@@ -56,7 +56,7 @@ ready-to-paste request for each are in `docs/CODEX_REVIEW_QUEUE.md`.
 
 | PR | What | Note |
 | --- | --- | --- |
-| #48 | LinkedIn job listings | `main` (`8c81341`) merged in on October 21 (integration; GitHub had refused the old head as conflicting). Conflicts in the `SOCIAL` dict, `docs/SOURCES_HOW_READ.md` and `docs/ROUTINE_PROMPT.md`, both sides kept; offline tests only. **Needs a fresh Codex review of the new head.** Code merging does not lift the hold: built but held, no live LinkedIn step until A18 |
+| #48 | LinkedIn job listings | `main` (`8c81341`) merged in on October 21 (integration; GitHub had refused the old head as conflicting). Conflicts in the `SOCIAL` dict, `docs/SOURCES_HOW_READ.md` and `docs/ROUTINE_PROMPT.md`, both sides kept; offline tests only. Then a docs-only fix for Codex's finding: the routine prompt now says Haiku reads (A11), with this session validating and reading itself if a file is rejected. **Needs a fresh Codex review of the new head.** Code merging does not lift the hold: built but held, no live LinkedIn step until A18 |
 | #52 | Claude-written PR; its open findings are postings wrongly excluded | **Reopened October 21** by your message "dont worrya bout the three cylce limit we need to have 52 well": the three-cycle cap is lifted for #52 and further Claude fixes and Codex reviews are allowed. Its earlier stop after three cycles (third review on `70f332c`, Codex review 5601000995, two wrong exclusions still open) stays in `docs/ATTEMPTS.md` as history; counters are not reset. Not fixed yet; open and unmerged. |
 
 #51 is Codex-authored and outside this list (it gets a Claude review, not Codex).

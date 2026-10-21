@@ -1,5 +1,25 @@
 # Implementation attempt log
 
+## October 21 PR #48 (LinkedIn job listings) integration repair — integration cycle 2 of 3
+
+- Starting head `4dfb8bb48b5c38a7fbd92dac67c9e294d609b37f`; the fetched remote `claude/linkedin-jobs` still equalled it
+  (no ownership race). Docs-only fix in a new commit (no rebase, no force push), by Claude as the sole implementation
+  owner. Cycle 1 (merge of main `8c81341`) and all older counters are kept.
+- Codex integration review (P2): the `docs/ROUTINE_PROMPT.md` section 1 "Which model reads" note added by #48 still told
+  the routine to read on the session model (Sonnet) and not to use Haiku, contradicting merged #49, A11 and the user's
+  acceptance of Haiku; a routine following it would never use the approved cheaper reader. Cycle 1 had only reworded it.
+- Fix: the note now says Haiku reads every free-text source in a `model: haiku` subagent given the work file path, the
+  exact fact format and the rules; this session runs the validation; if the file is rejected (or the subagent fails) the
+  session reads those items itself. The 100/100 eval is named as the reason Haiku was accepted, not as proof that new
+  items are read correctly. Matching current notes updated: the LinkedIn job-card step in `ROUTINE_PROMPT.md`, the
+  override in `LIVE_RUN_PROMPT.md` (no longer calls the note out of date), the A3 "do next" item in `CLAUDE_HANDOFF.md`,
+  the reading-model row in `PARAMETERS.md` and the way-C model line in `SOURCES_HOW_READ.md`. Dated historical
+  evidence (first live run on Sonnet, eval records, earlier ATTEMPTS entries) left unchanged.
+- Unchanged: CLI collector validation, the A18 LinkedIn hold, limits and permissions; no code or tests touched; no model
+  or paid test rerun. Checks: `git diff --check` clean; static search of current docs for Sonnet-first or "do not use
+  Haiku" instructions finds none. The full suite was last run on `4dfb8bb` (1,095 passed, 1 skipped, 10 subtests) and the
+  code is unchanged; exact-head CI is the remaining check. Next: fresh exact-head Codex review.
+
 ## October 21 PR #48 (LinkedIn job listings) integration with main — integration cycle 1 of 3
 
 - Starting head `b79585ab1cd42562cfb1d8741719995d1125fa37`; the fetched remote `claude/linkedin-jobs` still equalled it (no

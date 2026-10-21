@@ -14,8 +14,9 @@ re-labels it as messy text.
 | **B. Listing, then each job's page** | Code reads the listing for links, then opens each job page and reads its standard job-details block (JSON-LD or page data). No AI. | YC, Built In, Getro |
 | **C. Claude reads, code checks** | A Claude model reads free text and proposes the facts. Code accepts a value only if it appears word for word in that text, and code makes the Job ID, the date and the fallback link. | Hacker News comments now; alert emails, newsletters, LinkedIn and X posts when built |
 
-The model for way C is whatever model the routine session runs (Sonnet 5.5 in the first test). The code does not
-choose it. The plan's idea of using Haiku for this step has not been built or tested.
+The model for way C is Haiku, accepted by the user (A11) after a 100-item test agreed with Sonnet on all 100; the
+routine prompt hands the reading to a Haiku subagent and the session reads the items itself if the checker rejects
+its file. The code does not choose the model, and the checker stays the gate for every fact.
 
 ## Every source
 

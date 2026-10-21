@@ -163,7 +163,7 @@ Most of this is in `sources/v0_sources.yaml`, which you can edit (see section 12
 
 | Setting | Today | What it does | Where |
 | --- | --- | --- | --- |
-| Model for reading | **Haiku** (accepted October 19) | Copies title, company, place and pay out of posts. Code then rejects any value that is not word for word in the post. | the routine prompt, `docs/ROUTINE_PROMPT.md` (the change to name Haiku there is still to be written) |
+| Model for reading | **Haiku** (accepted October 19) | Copies title, company, place and pay out of posts. Code then rejects any value that is not word for word in the post. | the routine prompt, `docs/ROUTINE_PROMPT.md` section 1 ("Which model reads") |
 | Items handed to the AI per run | 1,000 | Safety stop; the rest wait for the next run. | `WORK_SAFETY_STOP` in `jobhunter/ai_queue.py` |
 | Size of the file handed to the AI | 3 MB | The rest stays pending. | `WORK_BYTE_STOP` |
 | Hacker News comments collected per run | 1,500 | Safety stop. | `CANDIDATE_SAFETY_STOP` in `jobhunter/hn_hiring.py` |
