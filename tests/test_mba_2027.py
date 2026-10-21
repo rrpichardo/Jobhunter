@@ -138,3 +138,13 @@ def test_the_real_sierra_posting_wording_qualifies_and_the_real_qualification_wo
     for qualification in ('MBA or equivalent professional experience at the intersection of technology and operations',
                           "Bachelor's degree required; MBA or advanced degree preferred", 'MBA is a strong plus'):
         assert p.mba_class_evidence('Product Manager', qualification)[0] == ''
+
+
+@pytest.mark.parametrize('title', ['2027 North America Business Leadership Development Program (Full-Time MBA)',
+                                   'Rotational Product Manager (MBA)'])
+def test_a_title_that_marks_the_program_as_mba_qualifies(title):
+    assert p.mba_class_evidence(title, 'Join us.')[0] == 'mba'
+
+
+def test_mba_in_parentheses_as_a_preference_does_not_qualify():
+    assert p.mba_class_evidence('Product Manager', 'Experience (MBA preferred) in payments.')[0] == ''

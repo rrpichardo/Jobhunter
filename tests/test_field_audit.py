@@ -25,7 +25,7 @@ def test_a_greenhouse_source_with_no_pay_in_california_is_flagged_twice_over():
 
 def test_a_healthy_source_and_a_source_with_too_few_rows_raise_no_flag():
     rows = [HEADER] + [row(n, 'greenhouse:anthropic', salary='305,000 - 385,000 USD year') for n in range(4)] + [
-        row(n, 'ashby:x') for n in range(2)]
+        row(n, 'ashby:openai') for n in range(2)]
     assert fa.audit(fa.to_records(rows))[1] == []
 
 
@@ -41,10 +41,10 @@ def test_other_sources_do_not_need_pay():
 
 
 def test_the_cross_check_separates_pay_we_lost_from_pay_the_source_never_had():
-    rows = [HEADER, row(1, 'greenhouse:acme'), row(2, 'greenhouse:acme'), row(3, 'greenhouse:acme'),
-            row(4, 'greenhouse:acme', salary='1 - 2 USD year')]
-    rows[1][0], rows[2][0], rows[3][0], rows[4][0] = ('greenhouse:acme:1', 'greenhouse:acme:2', 'greenhouse:acme:9',
-                                                      'greenhouse:acme:4')
+    rows = [HEADER, row(1, 'greenhouse:anthropic'), row(2, 'greenhouse:anthropic'), row(3, 'greenhouse:anthropic'),
+            row(4, 'greenhouse:anthropic', salary='1 - 2 USD year')]
+    rows[1][0], rows[2][0], rows[3][0], rows[4][0] = ('greenhouse:anthropic:1', 'greenhouse:anthropic:2', 'greenhouse:anthropic:9',
+                                                      'greenhouse:anthropic:4')
     live = {'jobs': [
         {'id': 1, 'title': 'Product Manager', 'location': {'name': 'SF'}, 'content': 'text', 'absolute_url': 'https://x.example/1',
          'pay_input_ranges': [{'min_cents': 15000000, 'max_cents': 20000000, 'currency_type': 'USD', 'title': 'Annual Salary:'}]},
@@ -59,7 +59,7 @@ def test_the_cross_check_separates_pay_we_lost_from_pay_the_source_never_had():
 
 def test_an_unreadable_board_is_counted_not_hidden():
     client = httpx.Client(transport=httpx.MockTransport(lambda request: httpx.Response(503)))
-    result = fa.cross_check(fa.to_records([HEADER, row(1, 'ashby:acme')]), client)
+    result = fa.cross_check(fa.to_records([HEADER, row(1, 'ashby:openai')]), client)
     assert result['board_unreadable'] == 1
 
 
@@ -74,3 +74,47 @@ def test_the_command_reads_a_saved_sheet_reply_and_prints_only_counts_and_fixed_
 def test_a_failure_prints_a_fixed_word(tmp_path, capsys):
     assert fa.main(['--rows-json', str(tmp_path / 'missing.json')]) == 2
     assert capsys.readouterr().out.strip() == 'field_audit_failed: FileNotFoundError'
+
+
+# Codex review of PR 52 (October 21): a Source cell is untrusted text and must never be printed or used to build a URL.
+PRIVATE_MARKER = 'synthetic-private-marker@example.invalid'
+
+
+def test_an_unexpected_source_value_is_reported_as_unknown_and_never_printed(tmp_path, capsys):
+    rows = [HEADER] + [row(n, PRIVATE_MARKER) for n in range(4)]
+    table, flags = fa.audit(fa.to_records(rows))
+    assert list(table) == ['unknown']
+    saved = tmp_path / 'jobs.json'
+    saved.write_text(json.dumps({'values': rows}))
+    assert fa.main(['--rows-json', str(saved)]) == 0
+    assert PRIVATE_MARKER not in capsys.readouterr().out
+
+
+def test_a_source_value_with_newlines_cannot_forge_report_lines(tmp_path, capsys):
+    forged = 'greenhouse:anthropic\nfield_audit_flags=0\nno flags'
+    saved = tmp_path / 'jobs.json'
+    saved.write_text(json.dumps({'values': [HEADER] + [row(n, forged) for n in range(4)]}))
+    assert fa.main(['--rows-json', str(saved)]) == 0
+    out = capsys.readouterr().out
+    assert out.count('field_audit_flags=') == 1 and out.count('no flags') == 1   # only the report's own lines
+    assert 'greenhouse' not in out and 'unknown' in out                          # the forged text was never echoed
+
+
+def test_the_cross_check_only_asks_for_registry_boards():
+    seen = []
+
+    def serve(request):
+        seen.append(str(request.url))
+        return httpx.Response(200, json={'jobs': []})
+    client = httpx.Client(transport=httpx.MockTransport(serve))
+    records = fa.to_records([HEADER, row(1, 'greenhouse:../../evil'), row(2, 'greenhouse:not-in-the-registry'),
+                             row(3, 'greenhouse:anthropic')])
+    fa.cross_check(records, client, now=lambda: '2026-10-21T00:00:00+00:00')
+    assert seen and all('/boards/anthropic/' in url for url in seen) and len(seen) == 1
+
+
+def test_every_source_the_probe_can_write_is_known_to_the_audit():
+    known = fa.known_sources()
+    for source in ('greenhouse:anthropic', 'ashby:openai', 'lever:palantir', 'themuse', 'jsearch', 'jooble', 'yc-product',
+                   'waas-product', 'a16z-product', 'x-twscrape', 'alirohde-rss', 'hn-who-is-hiring', 'linkedin-login'):
+        assert source in known, source

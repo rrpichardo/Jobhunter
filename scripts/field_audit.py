@@ -14,9 +14,11 @@ import argparse
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 import json
+from pathlib import Path
 import re
 
 import httpx
+import yaml
 
 from jobhunter.postings import PARSERS
 from scripts.source_probe import URLS
@@ -37,7 +39,27 @@ PAY_TRANSPARENCY_PLACE = re.compile(r'(?:,\s*(?:CA|NY|CO|WA)\b|\b(?:California|N
 PAY_TRANSPARENCY_MIN = 0.5
 
 
-def family(source):
+REGISTRY = Path(__file__).resolve().parent.parent / 'sources' / 'v0_sources.yaml'
+# Sources written by collectors that are not in the registry's job-board lists.
+FIXED_SOURCES = frozenset({'x-twscrape', 'linkedin-login', 'linkedin-jobs', 'alirohde-rss', 'hn-who-is-hiring'})
+
+
+def known_sources(registry=REGISTRY):
+    """Every Source value this program can write: registry boards as kind:board, other registry ids, fixed collector ids."""
+    with open(registry, encoding='utf-8') as handle:
+        data = yaml.safe_load(handle)
+    known = set(FIXED_SOURCES)
+    for kind, boards in (data.get('boards') or {}).items():
+        known.update(f'{kind}:{board["board"]}' for board in boards)
+    for group in ('aggregators', 'keyed_apis', 'detail_sources', 'listing_only', 'needs_setup'):
+        known.update(entry['id'] for entry in data.get(group) or [])
+    return frozenset(known)
+
+
+def family(source, known):
+    """The source family for a Source cell, or the fixed word `unknown`: a cell value is never printed or used as a key."""
+    if not isinstance(source, str) or source not in known:
+        return 'unknown'
     kind = source.split(':')[0]
     return kind if kind in ATS else source
 
@@ -47,12 +69,13 @@ def to_records(rows):
     return [dict(zip(header, list(row) + [''] * (len(header) - len(row)))) for row in rows[1:] if any(row)]
 
 
-def audit(records):
+def audit(records, known=None):
     """({family: {'rows': n, column: filled}}, [flag text]) from Jobs rows."""
+    known = known_sources() if known is None else known
     table = defaultdict(Counter)
     place_pay = defaultdict(Counter)
     for record in records:
-        fam = family(record.get('Source', ''))
+        fam = family(record.get('Source', ''), known)
         table[fam]['rows'] += 1
         for column in ALWAYS + ('Salary', 'Location'):
             if str(record.get(column, '')).strip():
@@ -77,17 +100,18 @@ def audit(records):
     return table, flags
 
 
-def cross_check(records, client, *, now=None):
+def cross_check(records, client, *, now=None, known=None):
     """Compare blank Salary cells with what the live boards publish now.
 
     Returns Counter: has_pay_we_left_blank (our gap), source_also_blank (nothing to read), no_longer_listed,
     board_unreadable, filled_already. The board data is parsed by the same parsers the probe uses.
     """
+    known = known_sources() if known is None else known
     stamp = (now or (lambda: datetime.now(timezone.utc).isoformat(timespec='seconds')))()
     wanted = defaultdict(list)
     for record in records:
         source = record.get('Source', '')
-        if family(source) in ATS and ':' in source:
+        if source in known and family(source, known) in ATS:  # only registry boards: a cell value never builds a URL
             wanted[source].append(record)
     result = Counter()
     for source, rows in sorted(wanted.items()):

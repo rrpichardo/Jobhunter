@@ -355,6 +355,7 @@ MBA_STANDALONE = tuple(re.compile(pattern, re.I) for pattern in (
     rf"\b{_MBA}\s+(?:leadership|rotational|rotation|associate|early[- ]career|development)\s+(?:development\s+)?program(?:me)?\b",
     rf"\bpost[- ]{_MBA}\s+(?:role|hires?|position|associate|product|opportunit\w+)\b",
     rf"\b{_MBA}\s+(?:campus\s+)?recruit(?:ing|ment|s)\b",
+    rf"\(\s*(?:full[- ]time\s+|part[- ]time\s+)?{_MBA}\s*\)",  # "Business Leadership Development Program (Full-Time MBA)"
     rf"\b(?:applicants?|candidates?)\s+(?:must|should)\s+(?:be|have)\s+(?:currently\s+)?(?:pursuing|enrolled\s+in|completing)\s+an?\s+{_MBA}\b",
 ))
 MBA_PEOPLE_IN_TITLE = re.compile(rf"\b(?:{_MBA_PEOPLE})", re.I)
