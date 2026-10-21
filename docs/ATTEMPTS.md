@@ -980,3 +980,26 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
   `uv run --locked python -m pytest -q` — 1,092 passed, 2 optional-dependency/browser skips, 10 subtests passed.
   Nineteen new regression cases cover the fixes. The saved Haiku report replays byte-identically (100/100, 15 jobs each).
   `git diff --check` passed. No live integration or scheduled proof was attempted. Claude review remains pending.
+
+### PR #52 repair round (Codex review of `781741a`, October 21, 2026)
+
+- The user authorized Claude to fix the five P2 findings of Codex's review of PR #52 (maximum three repair/review cycles per PR;
+  Claude is the sole implementation owner; no live source, Sheet access, cookie, paid service, deployment or merge). Historical counters
+  above are retained; this round does not reset any of them.
+- **Cycle 1 of 3 (repair pushed):** findings 1 and 2 (applicant targeting and class year tied to the statement), 3 and 4 (pay currency,
+  period and type from the whole compensation sentence and the Greenhouse label), and 5 (the audit never prints or uses a Source cell it does
+  not know). New commits `cbe4318`, `4183ef4`, `63727b2`; docs and Excel `45a73da`. Each of Codex's synthetic counterexamples is a regression
+  test (`tests/test_mba_2027.py`, `tests/test_pay_fields.py`, `tests/test_field_audit.py`); the HN, X, newsletter, Jooble and other migrated
+  fixtures now use real applicant wording ("open to MBA students graduating in spring 2027") instead of a weaker rule. The user decisions A23 and A24
+  were not chosen: the class-of-2027-without-MBA drop reason is only tightened to the same applicant-statement standard, and the title list is unchanged.
+- Verification: `uv run --locked --extra social python -m pytest -q` at `63727b2`: 1,197 passed, 10 subtests passed. Real-data re-checks
+  (offline, saved public board data): the same 2 MBA postings qualify among 6,812; Greenhouse pay read as yearly USD unchanged (1,979 ranges); the
+  cleanup dry run is unchanged (1 keep, 3 maybe, 164 no, 542 cannot tell). No Sheet access or write, cookie or live source in this round.
+- Fresh review: requested on `63727b2`; Codex answered "You have reached your Codex usage limits" (a usage-limit reply is not a review and
+  consumes no cycle beyond the repair above). The review is still owed.
+- A separate GitHub Action job (`@claude` comment trigger, run 39546448264) started from the authorization comment, could not run tests, and
+  pushed nothing; the branch was verified unchanged afterwards.
+- Earlier the same day Claude backported the ten Codex repairs, plus a clock fix found in Claude's review of PR #51, onto the original
+  PR branches #40, #41, #43, #44, #45, #46, #47, #48, #49 and #50 as NEW commits (heads `e2ce21d`, `40fda94`, `45aa52f`, `7e4088a`, `aa9ee55`,
+  `148eec6`, `716f3fc`, `b79585a`, `96f14eb`, `3214479`), each branch tested on its own; their Codex re-reviews hit the usage limit and
+  are still owed.
