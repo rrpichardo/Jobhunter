@@ -307,9 +307,9 @@ def test_detail_safety_stop_prioritizes_known_ai_titles_and_reports_skipped_cand
 
 def test_duplicates_across_sources_are_merged_and_counted():
     gh = {"jobs": [{"id": 1, "title": "Product Manager, AI Agents", "location": {"name": "Remote"},
-                    "content": "<p>Agents for MBA students graduating in spring 2027.</p>", "absolute_url": "https://job-boards.greenhouse.io/good/jobs/1"}]}
+                    "content": "<p>Agents, open to MBA students graduating in spring 2027.</p>", "absolute_url": "https://job-boards.greenhouse.io/good/jobs/1"}]}
     remotive = {"jobs": [{"id": 9, "title": "Product Manager, AI Agents", "company_name": "Good",
-                          "candidate_required_location": "USA", "description": "<p>Agents for MBA students graduating in spring 2027.</p>",
+                          "candidate_required_location": "USA", "description": "<p>Agents, open to MBA students graduating in spring 2027.</p>",
                           "url": "https://job-boards.greenhouse.io/good/jobs/1?ref=remotive"}]}
     registry = {"boards": {"greenhouse": [{"board": "good", "company": "Good", "tag": "ai"}]},
                 "aggregators": [{"id": "remotive", "kind": "remotive", "url": "https://agg.test/r"}],
@@ -362,7 +362,7 @@ JSEARCH_BODY = {"status": "OK", "data": [
      "job_description": "AI.", "job_apply_link": "http://insecure.test/3"}]}
 JOOBLE_BODY = {"totalCount": 2, "jobs": [
     {"id": 555, "title": "Senior <b>Product</b> <b>Manager</b>, AI", "location": "New York, NY",
-     "snippet": "build <b>LLM</b> features for MBA students graduating in spring 2027", "salary": "$160k", "source": "acme.test", "type": "Full-time",
+     "snippet": "build <b>LLM</b> features, open to MBA students graduating in spring 2027", "salary": "$160k", "source": "acme.test", "type": "Full-time",
      "link": "https://jooble.org/desc/555", "company": "Delta", "updated": "2026-10-16"},
     {"id": 556, "title": "Chef", "location": "Boston", "snippet": "cook", "link": "https://jooble.org/desc/556",
      "company": "Eats"}]}

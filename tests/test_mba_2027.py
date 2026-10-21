@@ -102,3 +102,39 @@ def test_the_probe_says_how_many_approved_roles_were_dropped_and_why():
     record, jobs, note = source_probe.probe_source(client, entry, '2026-10-21T00:00:00+00:00')
     assert [job.title for job in jobs] == ['Product Manager']
     assert 'dropped=not_mba_2027:1,place_excluded:1' in note  # the engineer is not an approved role, so it is not counted
+
+
+# Codex review of PR 52 (October 21): wording that mentions MBAs without saying who may apply must not qualify.
+@pytest.mark.parametrize('text', [
+    'Build learning products for MBA students graduating in spring 2027. Applicants must have 10 years of product experience.',
+    'MBA preferred for this senior role supporting our 2027 launch.',
+    'We make software that MBA students graduating in 2027 use to plan their careers.',
+    'Our customers include MBA candidates; the product launches in 2027.',
+])
+def test_incidental_mba_wording_is_not_an_applicant_statement(text):
+    assert p.collection_reason(job(text=text)) == 'not_mba_2027'
+
+
+@pytest.mark.parametrize('text', [
+    'Open to MBA students graduating in spring 2028 only. Our new platform launches in 2027.',
+    'This role is open to MBA students graduating in 2026. Our fiscal year 2027 starts in July.',
+])
+def test_an_unrelated_2027_cannot_override_an_explicit_other_class(text):
+    assert p.collection_reason(job(text=text)) == 'mba_other_class_year'
+
+
+def test_a_second_statement_for_2027_still_qualifies_a_posting_that_also_names_another_class():
+    text = 'Open to MBA students graduating in spring 2026. Also open to MBA students graduating in spring 2027.'
+    assert p.collection_reason(job(text=text)) == ''
+
+
+def test_a_title_naming_the_applicants_qualifies():
+    posting = job(title='Strategist, Agent Development (MBA Grad 2027)', text='Own it.')
+    assert p.mba_class_evidence(posting.title, posting.text)[0] == 'mba'
+
+
+def test_the_real_sierra_posting_wording_qualifies_and_the_real_qualification_wordings_do_not():
+    assert p.mba_class_evidence('Strategist', 'ABOUT US ... This role is open to MBA students graduating in spring 2027. WHAT YOU DO')[0] == 'mba'
+    for qualification in ('MBA or equivalent professional experience at the intersection of technology and operations',
+                          "Bachelor's degree required; MBA or advanced degree preferred", 'MBA is a strong plus'):
+        assert p.mba_class_evidence('Product Manager', qualification)[0] == ''

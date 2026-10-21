@@ -16,7 +16,7 @@ from sheet_fakes import MemoryStore
 
 ROOT = Path(__file__).resolve().parent.parent
 POST_ID = '1850000000000000001'
-TEXT = 'We are hiring a Product Manager (Remote US) for MBA students graduating in spring 2027, DM me.'
+TEXT = 'We are hiring a Product Manager (Remote US), open to MBA students graduating in spring 2027, DM me.'
 
 
 def test_validation_prints_the_trace_lines_with_the_empty_company_reason(tmp_path, capsys):
@@ -32,7 +32,7 @@ def test_validation_prints_the_trace_lines_with_the_empty_company_reason(tmp_pat
     facts = tmp_path / 'facts.json'
     facts.write_text(json.dumps({'processed': [POST_ID], 'facts': [{
         'item_id': POST_ID, 'title': 'Product Manager', 'company': '', 'location': 'Remote US', 'salary': '',
-        'description_quote': 'We are hiring a Product Manager (Remote US) for MBA students graduating in spring 2027',
+        'description_quote': 'We are hiring a Product Manager (Remote US), open to MBA students graduating in spring 2027',
         'apply_url': ''}]}))
     result = tmp_path / 'result.json'
     assert social_posts.main(['validate', '--source', 'x-twscrape', '--candidates', str(work), '--candidates-sha256',

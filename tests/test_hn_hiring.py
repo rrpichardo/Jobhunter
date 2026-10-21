@@ -33,7 +33,7 @@ def item(story, children):
 
 
 THREAD = {'story_id': '1000', 'title': 'Ask HN: Who is hiring? (October 2026)', 'created_at': '2026-10-01T00:00:00+00:00'}
-PM_TEXT = ('Acme (Remote US) | Senior Product Manager, AI | $170k-$210k<p>We build agents for MBA students graduating in spring 2027. Apply at '
+PM_TEXT = ('Acme (Remote US) | Senior Product Manager, AI | $170k-$210k<p>We build agents, open to MBA students graduating in spring 2027. Apply at '
            '<a href="https:&#x2F;&#x2F;acme.example&#x2F;jobs&#x2F;pm" rel="nofollow">https:&#x2F;&#x2F;acme.example&#x2F;jobs&#x2F;pm</a>')
 
 
@@ -75,7 +75,7 @@ def candidate():
 
 def fact(**changes):
     base = {'comment_id': '2001', 'title': 'Senior Product Manager, AI', 'company': 'Acme',
-            'location': 'Remote US', 'salary': '$170k-$210k', 'description_quote': 'We build agents for MBA students graduating in spring 2027.',
+            'location': 'Remote US', 'salary': '$170k-$210k', 'description_quote': 'We build agents, open to MBA students graduating in spring 2027.',
             'apply_url': 'https://acme.example/jobs/pm'}
     return base | changes
 

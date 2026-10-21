@@ -332,39 +332,67 @@ def collection_stub_match(title: str, location: str, salary: str) -> bool:
                 and (amount is None or amount >= (70_000 if region == 'unresolved' else floor)))
 
 
-# The user graduates with an MBA in May 2027, so a role is collected only when the posting itself says it is meant for
-# MBA graduates. "MBA preferred" or "MBA or equivalent experience" is a qualification, not a target, and a plain "New
-# Grad 2027" role asks for a bachelor's or master's in a technical field, so neither counts. Job seniority does not
-# matter: a Senior Product Manager role open to MBAs graduating in 2027 qualifies.
+# The user graduates with an MBA in May 2027, so a role is collected only when the posting itself says WHO MAY APPLY: MBA
+# students or graduates of 2027. Wording that only mentions MBAs is not enough: "MBA preferred" or "MBA or equivalent
+# experience" is a qualification, "products for MBA students" describes customers, and a plain "New Grad 2027" role asks
+# for a bachelor's or master's in a technical field. Job seniority does not matter: a Senior Product Manager role open to
+# MBAs graduating in 2027 qualifies. The graduating year is read from the same statement, so an unrelated "2027" elsewhere
+# in the posting never overrides an explicit other class.
 _MBA = r"(?:MBA|M\.B\.A\.?|master(?:'?s)? of business administration)s?"
-MBA_TARGETED = tuple(re.compile(pattern, re.I) for pattern in (
-    rf"\b{_MBA}\b[^.;\n]{{0,100}}\b2027\b|\b2027\b[^.;\n]{{0,100}}\b{_MBA}\b",
-    rf"\b{_MBA}\s+(?:graduates?|grads?|candidates?|students?|associates?|rotational|leadership|recruit\w*|hires?|"
-    rf"program(?:me)?|internship)\b",
-    rf"\b(?:recent|new|upcoming|graduating|soon[- ]to[- ]be|incoming)\s+{_MBA}\b",
-    rf"\bpost[- ]{_MBA}\b",
-    rf"\b(?:leadership development|rotational|rotation)\s+program(?:me)?\b[^.;\n]{{0,100}}\b{_MBA}\b|"
-    rf"\b{_MBA}\b[^.;\n]{{0,100}}\b(?:leadership development|rotational|rotation)\s+program",
-    rf"\b(?:pursuing|enrolled in|completing|currently in)\s+an?\s+{_MBA}\b",
+_MBA_PEOPLE = (rf"(?:(?:recent|new|upcoming|graduating|soon[- ]to[- ]be|incoming|current|full[- ]time)\s+)?{_MBA}\s+"
+               rf"(?:students?|graduates?|grads?|candidates?|hires?|recruits?|associates?)\b"
+               rf"|(?:recent|new|upcoming|graduating|soon[- ]to[- ]be|incoming)\s+{_MBA}\b")
+# Words that say who may apply. "for" counts only after role, position, program and similar words, never after "products".
+_APPLICANT_LEAD = (r"(?:role|position|program(?:me)?|opening|opportunity|job|internship|fellowship|cohort|track)\s+"
+                   r"(?:is\s+|are\s+)?(?:only\s+)?(?:open\s+to|for|aimed\s+at|designed\s+for|intended\s+for|reserved\s+for|"
+                   r"available\s+to|restricted\s+to|limited\s+to)"
+                   r"|open\s+(?:only\s+)?to|(?:we\s+(?:are\s+|'re\s+)?)?(?:recruiting|hiring|seeking|targeting|inviting)"
+                   r"|(?:applicants?|candidates?)\s+(?:must|should|need\s+to)\s+be|eligibility:?|eligible:?")
+MBA_APPLICANT = re.compile(rf"\b(?:{_APPLICANT_LEAD})\b[^.;\n]{{0,40}}?\b(?:{_MBA_PEOPLE})", re.I)
+MBA_STANDALONE = tuple(re.compile(pattern, re.I) for pattern in (
+    rf"\b{_MBA}\s+class(?:\s+of)?\b",
+    rf"\b{_MBA}\s+grad(?:uate)?s?\b\s*(?:\(?20\d\d|class)",
+    rf"\b{_MBA}\s+(?:leadership|rotational|rotation|associate|early[- ]career|development)\s+(?:development\s+)?program(?:me)?\b",
+    rf"\bpost[- ]{_MBA}\s+(?:role|hires?|position|associate|product|opportunit\w+)\b",
+    rf"\b{_MBA}\s+(?:campus\s+)?recruit(?:ing|ment|s)\b",
+    rf"\b(?:applicants?|candidates?)\s+(?:must|should)\s+(?:be|have)\s+(?:currently\s+)?(?:pursuing|enrolled\s+in|completing)\s+an?\s+{_MBA}\b",
 ))
-OTHER_CLASS_YEAR = re.compile(r"\b(?:class(?:es)? of|graduat\w*\s+(?:in|by|before|between)?|new[- ]grad(?:uate)?s?\s*\(?)\s*"
-                              r"(?:\w+\s+)?(?:2024|2025|2026|2028|2029|2030)\b", re.I)
+MBA_PEOPLE_IN_TITLE = re.compile(rf"\b(?:{_MBA_PEOPLE})", re.I)
 CLASS_2027_ONLY = re.compile(r"\bclass(?:es)? of 2027\b|\bnew[- ]grad(?:uate)?s?\b[^.;\n]{0,30}\b2027\b|"
-                             r"\bgraduat\w*[^.;\n]{0,80}\b2027\b|\b2027\b\s+(?:graduates?|grads?)\b|"
+                             r"\byou\s+(?:will\s+)?graduat\w*[^.;\n]{0,80}\b2027\b|"
+                             r"\b(?:expected\s+)?graduation(?:\s+date)?\b[^.;\n]{0,60}\b2027\b|\b2027\b\s+(?:graduates?|grads?)\b|"
+                             r"\b(?:open\s+to|seeking|recruiting|hiring)\b[^.;\n]{0,40}\b(?:students|graduates)\b[^.;\n]{0,40}\b2027\b|"
                              r"\bearly[- ]career\b[^.;\n]{0,30}\b2027\b", re.I)
 
 
+def _statements(title: str, text: str):
+    """Spans of the posting that state who may apply as an MBA student or graduate."""
+    for pattern in MBA_STANDALONE:
+        for source in (title, text):
+            for match in pattern.finditer(source):
+                yield source, match
+    for match in MBA_PEOPLE_IN_TITLE.finditer(title):  # a title such as "Strategist (MBA Graduates 2027)" names the applicants
+        yield title, match
+    for match in MBA_APPLICANT.finditer(text):
+        yield text, match
+
+
 def mba_class_evidence(title: str, text: str) -> tuple[str, str]:
-    """(kind, quote): `mba` when the posting is meant for MBA graduates, with the words that say so; otherwise
-    `other_year` (MBA wording but another graduating class), `class_only` (graduating class 2027 without an MBA) or ''."""
-    blob = f'{title}. {text}'
-    for pattern in MBA_TARGETED:
-        match = pattern.search(blob)
-        if match:
-            if OTHER_CLASS_YEAR.search(blob) and '2027' not in blob:
-                return 'other_year', ''
-            return 'mba', ' '.join(blob[max(0, match.start() - 40):match.end() + 60].split())
-    return ('class_only', '') if CLASS_2027_ONLY.search(blob) else ('', '')
+    """(kind, quote): `mba` when the posting says it is for MBA students or graduates of 2027, with those words;
+    `other_year` when it is for MBAs but names another graduating year in the same statement; `class_only` when it is
+    for the 2027 graduating class without an MBA; otherwise ''."""
+    other = False
+    for source, match in _statements(title, text):
+        end = re.search(r'[.;\n]', source[match.end():match.end() + 120])
+        span = source[max(0, match.start() - 14):match.end() + (end.start() if end else 120)]
+        years = set(re.findall(r'\b(20[2-3]\d)\b', span))
+        if years and '2027' not in years:
+            other = True
+            continue
+        return 'mba', ' '.join(source[max(0, match.start() - 40):match.end() + 60].split())
+    if other:
+        return 'other_year', ''
+    return ('class_only', '') if CLASS_2027_ONLY.search(f'{title}. {text}') else ('', '')
 
 
 def collection_reason(posting: Posting) -> str:

@@ -24,7 +24,7 @@ def post_id(when=WHEN, low=5):
     return str((int(when.timestamp() * 1000) << 22) | low)
 
 
-def card(number, when=WHEN, *, text='Acme is hiring a Senior Product Manager, AI (Remote US) for MBA students graduating in spring 2027.', style='href'):
+def card(number, when=WHEN, *, text='Acme is hiring a Senior Product Manager, AI (Remote US), open to MBA students graduating in spring 2027.', style='href'):
     pid = post_id(when, number)
     reference = (f'<a href="/feed/update/urn:li:activity:{pid}/?utm_source=share">3d</a>' if style == 'href'
                  else f'<span data-urn="urn:li:activity:{pid}"></span>')
