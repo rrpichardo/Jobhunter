@@ -399,15 +399,28 @@ def _sentence(source: str, match) -> str:
     return before + source[match.start():match.end()] + after
 
 
-_NEGATION = re.compile(r"\b(?:not|never|no\s+longer|isn't|aren't|cannot|can't|won't|unable|ineligible|excluded?|excluding|"
-                       r"except|other\s+than|unless)\b|n't\b", re.I)
+# A denial is a negation that governs the applicant predicate itself, never a negative word elsewhere in the sentence
+# ("Experience is not required, open to MBA students ..." is still an applicant statement). Lead-first: "not open to",
+# "not recruiting", "isn't for", "except" directly before the MBA applicants. Noun-first: "MBA students ... are not eligible
+# to apply", "... should not apply", "... are ineligible".
+_DENYING = r"(?:\b(?:not|never|no\s+longer|cannot|unable\s+to)|\b\w+n't)\s+(?!only\b)"
+MBA_DENIED = tuple(re.compile(pattern, re.I) for pattern in (
+    rf"{_DENYING}(?:(?:be|been|currently|actively|presently|now|yet|being)\s+)*"
+    rf"(?:open\s+to|for|recruit\w*|hir\w*|seek\w*|target\w*|invit\w*|accept\w*|consider\w*|available\s+to|eligible\s+to|"
+    rf"aimed\s+at|designed\s+for|intended\s+for|reserved\s+for|restricted\s+to|limited\s+to)\s*{_APPLICANT_WORDS}\b(?:{_MBA_PEOPLE})",
+    rf"\b(?:except|excluding|exclud\w+|other\s+than)\s+(?:for\s+)?{_APPLICANT_WORDS}\b(?:{_MBA_PEOPLE})",
+    rf"\b(?:{_MBA_PEOPLE}|{_MBA}\s+class(?:\s+of)?|{_MBA}\s+grad(?:uate)?s?)[^.;\n]{{0,60}}?"
+    rf"(?:\b(?:are|is)\s+(?:not|never)\s+(?:eligible|encouraged|welcome|invited|considered|accepted)|"
+    rf"\b(?:aren't|isn't)\s+(?:eligible|encouraged|welcome|invited|considered|accepted)|"
+    rf"\b(?:should|can|may|must|will|need)\s+(?:not|never)\s+(?:apply|be\s+considered)|"
+    rf"\b(?:shouldn't|can't|cannot|mustn't|won't)\s+(?:apply|be\s+considered)|\b(?:are|is)\s+(?:ineligible|excluded))\b",
+))
 
 
-def _negated(source: str, match) -> bool:
-    """True when the words that lead into the statement (earlier in its sentence) or the statement itself deny it:
-    "This role is NOT open to MBA students graduating in spring 2027"."""
-    before = re.split(r'[.;\n]', source[max(0, match.start() - 80):match.start()])[-1]
-    return bool(_NEGATION.search(before[-30:] + ' ' + match.group(0)))
+def _denials(text: str):
+    """Spans of the description that deny MBA applicants."""
+    for pattern in MBA_DENIED:
+        yield from pattern.finditer(text)
 
 
 # A year counts as the class or program year only when it is tied to graduating, a class, a cohort, a program or a start; an
@@ -418,15 +431,39 @@ _COHORT_YEAR = tuple(re.compile(pattern, re.I) for pattern in (
     rf"\b{_MBA}\s+(?:grad(?:uate)?s?\s*)?(?:class\s+of\s+)?\(?(20[2-3]\d)\b",
 ))
 _START_YEAR = re.compile(r"\b(?:start(?:s|ing)?|begin(?:s|ning)?)\b[^.;\n]{0,20}?\b(20[2-3]\d)\b", re.I)
+# Alternatives and ranges of one graduating class: "May 2026 or May 2027", "between December 2026 and June 2027",
+# "2026-2028", "2026, 2027 or 2028", "classes of 2026 and 2027". A cue on any year of the group stands for the whole group.
+_WHEN = (r"(?:(?:early|late|mid)[- ]?)?(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|"
+         r"sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|spring|summer|fall|autumn|winter)\.?\s+")
+_YEAR_LINK = r"\s*(?:,\s*(?:or|and)?|or|and|to|through|thru|until|-|–|—|/)\s*"
+_YEAR_GROUP = re.compile(rf"(?:\bbetween\s+)?(?:{_WHEN})?\b20[2-3]\d\b(?:{_YEAR_LINK}(?:{_WHEN})?\b20[2-3]\d\b)*", re.I)
+_RANGE_LINK = re.compile(r"^\s*(?:to|through|thru|until|-|–|—)\s*$", re.I)
+
+
+def _year_group(sentence: str, position: int) -> set:
+    """Every year of the alternative or range group that holds the year at `position`; a range covers the years between."""
+    for group in _YEAR_GROUP.finditer(sentence):
+        if group.start() <= position < group.end():
+            years = list(re.finditer(r'20[2-3]\d', group.group(0)))
+            found = {int(year.group(0)) for year in years}
+            between = group.group(0).lower().startswith('between')
+            for first, second in zip(years, years[1:]):
+                link = group.group(0)[first.end():second.start()]
+                if _RANGE_LINK.match(re.sub(rf"^\s*|(?:{_WHEN})$", '', link, flags=re.I)) or (between and re.fullmatch(
+                        rf"\s*and\s*(?:{_WHEN})?", link, re.I)):
+                    found.update(range(int(first.group(0)), int(second.group(0)) + 1))
+            return {str(year) for year in found}
+    return set()
 
 
 def _class_years(source: str, match, title: str) -> set:
-    """The graduating-class or program years a statement names. In a title every year is the program year."""
+    """The graduating-class or program years a statement names, with every alternative and range of each one.
+    In a title every year is the program year."""
     sentence = _sentence(source, match)
     if source is title:
-        return set(re.findall(r'\b(20[2-3]\d)\b', sentence))
-    years = {y for pattern in _COHORT_YEAR for y in pattern.findall(sentence)}
-    return years or set(_START_YEAR.findall(sentence))
+        return {year for group in _YEAR_GROUP.finditer(sentence) for year in _year_group(sentence, group.start())}
+    found = [year for pattern in _COHORT_YEAR for year in pattern.finditer(sentence)] or list(_START_YEAR.finditer(sentence))
+    return {year for cue in found for year in _year_group(sentence, cue.start(1))}
 
 
 def mba_class_evidence(title: str, text: str) -> tuple[str, str]:
@@ -437,10 +474,17 @@ def mba_class_evidence(title: str, text: str) -> tuple[str, str]:
     Every applicant statement is read before deciding: a statement that names 2027 qualifies the posting; otherwise any
     statement that names another year (the program year in a title, an explicit class in the description) disqualifies it,
     even when another statement names no year at all ("Product Manager (MBA)" plus "graduating in spring 2028 only").
+
+    A statement the posting denies ("not open to MBA students ...", "MBA graduates 2027 should not apply") is not evidence.
+    A denial that names 2027 or no year at all also outweighs every other match for 2027 or without a year, so a title such
+    as "Product Manager (MBA)" cannot bring back eligibility the description takes away.
     """
+    denials = list(_denials(text))
+    denied_2027 = any('2027' in years or not years for years in (_class_years(text, denial, title) for denial in denials))
     explicit, other, unqualified = None, False, None
     for source, match in _statements(title, text):
-        if _negated(source, match):
+        if source is text and any(denial.start() <= match.start() < denial.end() or match.start() <= denial.start() < match.end()
+                                  for denial in denials):
             continue
         years = _class_years(source, match, title)
         quote = ' '.join(source[max(0, match.start() - 40):match.end() + 60].split())
@@ -450,13 +494,13 @@ def mba_class_evidence(title: str, text: str) -> tuple[str, str]:
             other = True
         else:
             unqualified = unqualified or quote
-    if explicit:
+    if explicit and not denied_2027:
         return 'mba', explicit
     if other:
         return 'other_year', ''
-    if unqualified:
+    if unqualified and not denied_2027:
         return 'mba', unqualified
-    return ('class_only', '') if CLASS_2027_ONLY.search(f'{title}. {text}') else ('', '')
+    return ('class_only', '') if not denied_2027 and CLASS_2027_ONLY.search(f'{title}. {text}') else ('', '')
 
 
 def collection_reason(posting: Posting) -> str:
