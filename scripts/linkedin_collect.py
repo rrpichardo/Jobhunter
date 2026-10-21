@@ -204,42 +204,43 @@ def main(argv=None, *, store=None, fetcher=None, environ=None, now=None, sleep=t
                       'installed and that the cookie was pasted without quotes or spaces). Nothing was collected and '
                       'no allowance was spent.')
                 return EXIT_NEEDS_SETUP
-        if store is None:
-            from jobhunter.google_auth import open_workbook
-            from jobhunter.sheet_io import GspreadStore
-            store = GspreadStore(open_workbook())
         try:
-            day = reserve(store, SOURCE, args.run_id)
-        except AllowanceSpent:
-            fetcher.close()
-            print('allowance_spent: linkedin-login already used today (America/New_York); collect nothing')
-            return EXIT_SPENT
-        outcome, items, ran, error, diagnostics = 'failed', [], 0, COLLECTOR_ERROR, []
-        try:
+            if store is None:
+                from jobhunter.google_auth import open_workbook
+                from jobhunter.sheet_io import GspreadStore
+                store = GspreadStore(open_workbook())
             try:
-                items, ran, error = collect_posts(
-                    fetcher.search, queries, max_posts=LIMITS[SOURCE]['posts'], per_query=LIMITS[SOURCE]['per_query'],
-                    sleep=sleep, rng=rng)
-            except Exception:  # noqa: BLE001 - e.g. the browser could not start; keep only a fixed word
-                items, ran, error = [], 0, COLLECTOR_ERROR
-            diagnostics = list(getattr(fetcher, 'diagnostics', []))
-            artifact = candidate_artifact(SOURCE, items, captured, queries_run=ran, error=error)
-            artifact['stats']['searches'] = diagnostics  # fixed-shape numbers only, to tune the reader after a live run
-            digest = write_artifact(args.output, artifact)
-            outcome = allowance_outcome(items, error)
+                day = reserve(store, SOURCE, args.run_id, now=now)
+            except AllowanceSpent:
+                print('allowance_spent: linkedin-login already used today (America/New_York); collect nothing')
+                return EXIT_SPENT
+            outcome, items, ran, error, diagnostics = 'failed', [], 0, COLLECTOR_ERROR, []
+            try:
+                try:
+                    items, ran, error = collect_posts(
+                        fetcher.search, queries, max_posts=LIMITS[SOURCE]['posts'], per_query=LIMITS[SOURCE]['per_query'],
+                        sleep=sleep, rng=rng)
+                except Exception:  # noqa: BLE001 - e.g. the browser could not start; keep only a fixed word
+                    items, ran, error = [], 0, COLLECTOR_ERROR
+                diagnostics = list(getattr(fetcher, 'diagnostics', []))
+                artifact = candidate_artifact(SOURCE, items, captured, queries_run=ran, error=error)
+                artifact['stats']['searches'] = diagnostics  # fixed-shape numbers only, to tune the reader after a live run
+                digest = write_artifact(args.output, artifact)
+                outcome = allowance_outcome(items, error)
+            finally:
+                try:
+                    finish(store, SOURCE, args.run_id, outcome, day=day)
+                except Exception:  # noqa: BLE001 - the day stays spent either way; say so without hiding the result
+                    print('allowance_close_failed: the day stays spent')
+            print(f'linkedin_collected: queries_run={ran} posts={len(items)} error={error or "none"} allowance_day={day}')
+            for number, record in enumerate(diagnostics, 1):
+                print('search_%d: %s' % (number, ' '.join(f'{key}={value}' for key, value in record.items())))
+            print(f'linkedin_candidates_sha256={digest}')
+            return 0
         finally:
             close = getattr(fetcher, 'close', None)
             if close:
                 close()
-            try:
-                finish(store, SOURCE, args.run_id, outcome, day=day)
-            except Exception:  # noqa: BLE001 - the day stays spent either way; say so without hiding the result
-                print('allowance_close_failed: the day stays spent')
-        print(f'linkedin_collected: queries_run={ran} posts={len(items)} error={error or "none"} allowance_day={day}')
-        for number, record in enumerate(diagnostics, 1):
-            print('search_%d: %s' % (number, ' '.join(f'{key}={value}' for key, value in record.items())))
-        print(f'linkedin_candidates_sha256={digest}')
-        return 0
     except Exception as exc:  # noqa: BLE001
         code = str(exc)
         if code not in SAFE_ERRORS | ALLOWANCE_ERRORS | {'invalid_social_queries', 'invalid_lookback_days'}:
