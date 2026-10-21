@@ -20,7 +20,8 @@ keys or tokens. Do not call any paid service.
 ## 0. Setup
 
 1. Work from a clean checkout of the repository's `main` branch. Run `uv sync --locked` with the pinned uv
-   (the cloud image ships 0.11.32; install 0.13.1 with `python3 -m venv ~/uvvenv && ~/uvvenv/bin/pip install uv==0.13.1`).
+   (the cloud image ships 0.11.32; install 0.13.1 with `python3 -m venv ~/uvvenv && ~/uvvenv/bin/pip install uv==0.13.1`,
+   then `export PATH="$HOME/uvvenv/bin:$PATH"` and keep it for every command below, so plain `uv` is the pinned 0.13.1).
 2. Make a private run directory OUTSIDE the checkout (mode 0700), for example
    `mktemp -d`. Every artifact below is written there as a NEW file (the tools
    refuse to overwrite). Delete the directory when the run ends, but only after
@@ -173,8 +174,10 @@ is harmless because jobs collapse by Job ID.
   read again tomorrow. Exit 3 means today's allowance is spent: collect
   nothing. Exit 4 means the cookies are not set up. Never print or ask for cookie values.
 - LinkedIn hiring posts: the collector exists (`scripts/linkedin_collect.py`, headless browser with the saved `li_at`,
-  `LINKEDIN_LI_AT` in the environment settings) but is NOT run by this routine until the user gives the go-ahead for the
-  first live test (A2). Same flow as X: `linkedin_collect` (reserves today's allowance first), `ai_queue pull --source
+  `LINKEDIN_LI_AT` in the environment settings) but is NOT run by this routine. The first live test (A2) was refused at
+  login on October 19, so LinkedIn is on hold until the user answers A18 in `docs/PENDING.md`: never run `linkedin_collect`
+  or use `LINKEDIN_LI_AT`, and report LinkedIn as "held, A18 open" (not a failure; no allowance spent). Only once A18
+  allows it, the flow is the same as X: `linkedin_collect` (reserves today's allowance first), `ai_queue pull --source
   linkedin-login --id-field item_id`, Claude reads, `social_posts validate --source linkedin-login`, `source_probe
   --social-result`, delivery, then `ai_queue commit`. It prints one `search_N:` line per search (numbers only); paste
   them into the report. Exit 3 = allowance spent, exit 4 = not set up. Never print or ask for the cookie value.

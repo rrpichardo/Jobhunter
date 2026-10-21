@@ -4,6 +4,96 @@
 Claude continues) and docs/LIMITS.md (every limit and its value). docs/SOURCES_HOW_READ.md
 says which sources are read by code and which by Claude.
 
+## START HERE: state at the end of October 19, 2026 (about 23:30 UTC), for the next Claude or Codex session
+
+Read `docs/PENDING.md` section 0 first: the decisions only the user can make (0.1), the user's tasks (0.2), the Codex queue (0.3)
+and what to do once they answer (0.4). The user's answers go in the last column of `docs/DECISIONS_FORM.md` (same IDs) or arrive in chat;
+copy each answer into PENDING section 0 and act on it (0.4).
+
+**Landed on `main`:** the earlier stack through PR #39. **Ran for real:** on October 19, 22:17 to 22:36 UTC, the first live test and
+first manual run (28 days) from `claude/combined-live-run` (commit `846f3be`) in session `session_015VLCYtHCKyG9e468TSVkUg`:
+505 jobs from 51 sources written in four batches (readback verified; the Jobs tab now has 710 rows); X, the Ali Rohde newsletter,
+a16z and the boards worked; **LinkedIn was refused at login** (A18). Results and every number: PENDING section 1.
+
+**Update October 21, 2026:** #40, #41, #42, #43, #44, #45, #49 and #50 are merged into `main` (`15976f0`); `main` was merged
+into #46 (`docs/ATTEMPTS.md`). Open: #46, #47, #48 (Codex review pending); #52 stopped after three review cycles, then was
+reopened by the user on October 21 with the cap lifted (history and counters kept in `docs/ATTEMPTS.md`; its two findings are
+not fixed yet; the local Claude session owns it, the cloud session was told to hold); #51 is Codex-authored. Merged code does not lift the LinkedIn hold: A18 still gates every live
+LinkedIn step, and every runbook installs the pinned uv 0.13.1 and puts it first on PATH. The table below is the October 19 snapshot.
+
+**Open PRs (all Claude-written; each needs a Codex review of its exact head and green CI before merging; nothing merges without
+the user's "go" for Codex, A12).** Heads at the time of writing (re-read them from GitHub before acting):
+
+| PR | Branch | Base | Head | What |
+| --- | --- | --- | --- | --- |
+| #40 | claude/social-collectors | main | 5ceb6cc | X collector (twscrape); base of #41, #43, #47; worked live |
+| #41 | claude/docs-run-modes | #40 | 4c0fe90 | manual 28 days / daily 3 days, `scripts.run_window` guard |
+| #42 | claude/role-forward-deployed | main | b90c1d2 | Forward-Deployed / AI Deployment / AI Implementation Strategist roles |
+| #43 | claude/linkedin-posts | #40 | 352309d | LinkedIn post collector; live login failed; on hold (A18) |
+| #44 | claude/waas | main | 209efbc | Work at a Startup public pages |
+| #45 | claude/a16z | main | e9d29ec | a16z portfolio jobs; worked live |
+| #46 | claude/handoff-oct19 | main | see PR | this status/handoff documentation |
+| #47 | claude/newsletter-alirohde | #40 | 9400d18 | Ali Rohde Jobs newsletter; worked live |
+| #48 | claude/linkedin-jobs | #43 | 9a86668 | LinkedIn job cards; on hold (A18); carries #42's older commits |
+| #49 | claude/haiku-eval | main | 82bd0d4 | Haiku-vs-Sonnet reading test (ran: 100 of 100 agree; Haiku accepted, A11) |
+| #50 | claude/trace-rejections | main | 40729d7 | E4: a reason for every rejected fact and filter drop; `docs/TRACEABILITY.md` |
+
+**Run branch** `claude/combined-live-run` = `main` + all eleven PRs with the conflict fixes in the Merge plan below; 1,075 tests pass.
+It exists only for real runs before Codex; never merge it. To run again: start a JobHunterEnv session (`env_01M9moVSWZBGvWAZYrqTm49s`,
+`source_revision` `claude/combined-live-run`) with the prompt in `docs/LIVE_RUN_PROMPT.md` (for a daily-style run use `--mode daily`).
+That prompt skips LinkedIn unless the user's A18 answer is added at its top; do not add that line on your own.
+Each social source spends one attempt per New York day; never retry a spent day; never print a cookie value.
+
+**Do next, in order, once the user answers:** (1) A12 "go": request Codex on one PR at a time (`docs/CODEX_REVIEW_QUEUE.md`), fix
+findings in new commits, merge in the order below. (2) A3: create the routine with the agreed sources (LinkedIn off unless A18 says
+otherwise) and name Haiku for the reading step in `docs/ROUTINE_PROMPT.md`. (3) One small PR per decided rule fix (A13, A16, A17, A19)
+and per tracing item (A20). Commits omit the `Claude-Session:` line (PENDING section 6).
+
+### Merge plan, checked by a trial replay (October 19, about 22:00 UTC)
+
+Claude replayed every planned merge, in order, on a throwaway local branch that was never pushed, starting from `main` at `f71464f`.
+Heads used: #42 `b90c1d2`, #44 `209efbc`, #45 `e9d29ec`, #46 (this PR), #49 `82bd0d4`, #40 `5ceb6cc`, #41 `4c0fe90`, #43 `1c732a2`,
+#47 `9400d18`, #48 `42d109d`. Result: every conflict is additive (both sides add entries) and the fully combined result passes
+**1,056 tests** with the social extra (re-checked with the newest heads of #42, #46 and #49). Heads move, so re-check before acting. Exact steps and resolutions:
+
+| Step | PR | Result in the replay | What to do |
+| --- | --- | --- | --- |
+| 1 | #42 | clean | merge |
+| 2 | #44 | clean | merge |
+| 3 | #45 | **conflict** in `jobhunter/postings.py` (the `DETAIL_SOURCES` dict) and `sources/v0_sources.yaml` | merge `main` into #45's branch and **keep both sides**: both the `waas` and `a16z` entries in `DETAIL_SOURCES`; the `waas-*` and the `a16z-*` source lines in the YAML. 881 tests passed after this |
+| 4 | #46 | clean | merge |
+| 5 | #49 | clean | merge |
+| 6 | #40 | **conflict** in `docs/PENDING.md` (decisions table, section A), because #46 rewrote the same rows | merge `main` into #40's branch; take #40's wording for A1, A3, A5 and A6 and #46's wording for A2 and A8 (they record the user's October 19 decisions) |
+| 7 | #41, #43, #47 | clean after #40 | retarget each to `main` (merge `main` into the branch first), then merge |
+| 8 | #48 | **conflict** in `docs/SOURCES_HOW_READ.md` and `jobhunter/post_facts.py` (the `SOCIAL` dict) | merge `main` into #48's branch; keep both the `alirohde-rss` and the `linkedin-jobs` entries; in the docs table keep #47's two newsletter rows and #48's "LinkedIn job listings" row and drop the stale "none yet" and "Newsletters: Next Play, Ali Rohde ... not built" lines. #48 also carries older #42 commits, so this merge picks up `b90c1d2` |
+
+Each of these merges changes a PR head, so it needs a fresh Codex review of that exact head (the conflict fixes are small).
+
+### Live-test rehearsal, done offline (October 19, about 21:50 UTC)
+
+Nothing here touched X or LinkedIn. On the `claude/linkedin-posts` branch (#43, which contains #40) with `uv sync --locked --extra social`:
+946 tests pass; every flag named in `docs/FIRST_LIVE_TEST.md` exists on the commands it names; `x_collect` and `linkedin_collect` with no
+cookies exit 4, print names only and write nothing; the real `BrowserSession` class starts the pinned Playwright 1.56.0 with the
+preinstalled Chromium 141 and closes cleanly (no network); the searches are 10 for X and 5 post searches for LinkedIn.
+**Gaps found:**
+1. Runbook step 4 (`scripts.run_window --mode manual`) fails with "No module named scripts.run_window" on #43, because that tool is in
+   **#41**. So #41 must be merged before the live test (A2 now says #40, #41 and #43). FIXED: the runbook now says so (commit `1c732a2` on #43).
+2. (Corrected: an earlier version of this note wrongly said `queries_run=5` becomes 10 after #48.) With #48 the collector keeps the post line
+   `linkedin_collected: queries_run=5 ...` and prints a SEPARATE `linkedin_jobs_collected: queries_run=5 jobs=N ...` line plus `kind=jobs` search
+   lines. FIXED: #48's runbook documents them (commit `42d109d`, checked against the collector's own output).
+3. This session has none of the cookies; the live test must run in a JobHunterEnv session. The unavoidable remaining risk is LinkedIn's
+   live page layout, which only the real run can show (the card reader is tested on saved HTML only).
+
+**Gotchas learned:** the pinned uv is 0.13.1 (`python3 -m venv ~/uvvenv && ~/uvvenv/bin/pip install uv==0.13.1`; run tests with
+`~/uvvenv/bin/uv run --locked --extra social python -m pytest -q`); `httpx` is blocked by Substack's bot filter (use
+`urllib`) and workatastartup.com answers 406 without `Accept: text/html`; Job IDs may only contain `[A-Za-z0-9:._~-]`;
+every collector builds its browser/library BEFORE reserving the allowance (a local failure must not spend the day); never
+print cookie values; the user wants plain, non-technical reports; CI's Windows job runs the tests (no POSIX file modes).
+
+**Open user tasks:** see `docs/PENDING.md` section 0.2. The old "Claude-Session" commit lines were deliberately left (PENDING section 6).
+
+## History below this line (older handoff notes, kept for reference; section 0 of PENDING.md wins where they differ)
+
 ## Latest clarification — full source scope and decisions still pending
 
 The user asked for another commit/push/PR handoff after the plain-language
