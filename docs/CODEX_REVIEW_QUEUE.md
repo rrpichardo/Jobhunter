@@ -38,7 +38,7 @@ stretch from about 16:10. Check or raise the limit at https://chatgpt.com/codex/
 - **Group 2, the independent PRs, each reviewed separately, one request per PR:** #42, #44, #45, #46, #49 and #50. None of them depends on the
   X stack, so a finding or a moved head in one never holds up another.
 - #51 (Codex's repair PR) is not in either group: Codex wrote it, so it needs **Claude's** review (see `docs/PENDING.md` 0.3).
-- Status (October 21): your "go" is recorded; requests are held until the repairs in #51 (plus the clock fix from Claude's review of `76e7788`) are backported onto the PR heads, because the heads in the snapshot below do not contain them. The snapshot SHAs will be replaced then.
+- Status (October 21): the repairs were backported and the requests were posted. Current exact heads: #40 `e2ce21dc9fdf3dc82b022a3183dab6d8c56ff2fb`, #41 `40fda9453f3cf50d58619020e719727d88aad9c0`, #43 `45aa52f99379b39141d16e510fb752281eda67c3`, #47 `716f3fce90a6d627e73e828ad8dd2eaf7dbe7b2b`, #48 `b79585ab1cd42562cfb1d8741719995d1125fa37` (group 1, requested on #40); #44 `7e4088af8a6ea4c6c30f2003ba12333e4a7bfaa9`, #45 `aa9ee551c0bdb833dba4a53ede1dd85b17f6ac84`, #46 `148eec68ba3c3a5ef0dd49b1c89cfe09c7a468d8`, #49 `96f14ebe76bdd64eb09653b4e2362fbedef70446`, #50 `3214479766692582b4131a0ac3796e948afc126b` (group 2, one request each). The SHAs in the October 19 snapshot table below are history.
 - Unchanged: Codex reviews only the exact current head, CI must be green, findings are fixed in new commits, and the request comment is posted only after
   your "go" for that round.
 
