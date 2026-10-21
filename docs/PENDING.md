@@ -53,11 +53,11 @@ Decisions already made are listed in section 2 so they are not asked again.
 **How the next Codex round is grouped (your decision, October 21: split grouping).** Group 1, reviewed together in one request: the X collector
 stack #40, #41, #43, #47 and #48. Group 2, each reviewed separately: #42, #44, #45, #46, #49 and #50. #51 needs Claude's review, not Codex's. The
 request comments are posted only after your "go" for that round. Details and order: `docs/CODEX_REVIEW_QUEUE.md`.
+**Your "go" (October 21) is recorded, and the requests are held on one prerequisite:** the repairs are not yet on the original PR heads, so a review of today's heads would only repeat the ten known findings. Codex (the repair implementation owner) backports the fixes, plus the clock fix from Claude's review, onto #40, #41, #43, #44, #45, #46, #47, #48, #49 and #50 as new commits; then Claude posts group 1 (the X stack) and group 2 (one request each) against the new exact heads. Say "Claude backports" if you would rather have Claude do the backport.
 
 All eleven original PRs received exact-head Codex reviews; two were clean and nine have ten findings. The user then
 authorized Codex to implement the fixes and submit a PR for Claude review while Claude is unavailable. Codex is the sole
-implementation owner on `codex/repair-review-findings`, based on the combined run branch. All ten fixes are implemented with regressions; Claude review
-of the final repair revision is pending. No fix is approved or merged to main. Original PR heads remain unchanged. Repair [PR #51](https://github.com/rrpichardo/Jobhunter/pull/51) is open for Claude review and contains only the fix delta against
+implementation owner on `codex/repair-review-findings`, based on the combined run branch. All ten fixes are implemented with regressions. **Claude's review of repair head `76e7788` was posted on PR #51 on October 21:** the ten repairs read as correct, with one finding (the 14 X and LinkedIn collector tests only pass on October 19, because `reserve()` is not given the collector's clock; one-line fix, already written as `144859f` on the session branch) and one behavior to confirm (a generic-link newsletter role relisted in a later edition gets a new row). No fix is approved or merged to main. Original PR heads remain unchanged. Repair [PR #51](https://github.com/rrpichardo/Jobhunter/pull/51) is open for Claude review and contains only the fix delta against
 `codex/review-findings-base` at e3eef3fa9a98bc804befc16e2e840486c4820c46, never the entire combined branch against main.
 The combined run branch is kept in sync with these unreviewed repairs for future authorized runs only; this is not deployment.
 See `docs/REVIEW_REPAIRS.md` for the reviewer instructions and integration boundaries. Claude must review its final SHA, then the original
@@ -71,7 +71,7 @@ feature branches must receive the appropriate commits and fresh reviews before m
 | #46 | This status and handoff documentation | 1 finding: pinned uv in run prompt; implemented on repair branch; Claude review pending |
 | #49 | Haiku-vs-Sonnet reading test (ran: 100 of 100 agree) | 1 finding: do not score unread items as agreement; implemented on repair branch; Claude review pending |
 | #50 | E4: a reason for every rejected fact and every filter drop | 1 finding: do not echo unknown item text in traces; implemented on repair branch; Claude review pending |
-| #51 | Codex-written repair PR: the ten review fixes (head `76e7788`, also in the run branch) | Claude review pending; GitHub shows no review or comment on it yet (October 21) |
+| #51 | Codex-written repair PR: the ten review fixes (head `76e7788`, also in the run branch) | Claude review posted October 21 on `76e7788`: one finding (date-dependent tests) and one question; waits for Codex to fix and backport |
 | #40 | X collector | 1 finding: dispose of cookie session after startup failures; implemented on repair branch; Claude review pending |
 | #41 | Run modes: 28 days by hand, 3 days daily, refuses after a gap | No new findings on 4c0fe90; depends on #40 repairs |
 | #43 | LinkedIn post collector | 1 finding: dispose of browser after startup failures; implemented on repair branch; Claude review pending; live collection held for A18 |
