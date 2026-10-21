@@ -246,7 +246,7 @@ def main(argv=None, *, store=None, fetcher=None, environ=None, now=None, sleep=t
                 from jobhunter.sheet_io import GspreadStore
                 store = GspreadStore(open_workbook())
             try:
-                day = reserve(store, SOURCE, args.run_id)
+                day = reserve(store, SOURCE, args.run_id, now=now)
             except AllowanceSpent:
                 print('allowance_spent: linkedin-login already used today (America/New_York); collect nothing')
                 return EXIT_SPENT
