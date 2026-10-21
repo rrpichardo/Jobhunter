@@ -5,11 +5,17 @@ spends that day's allowance (one live collection per source per America/New_York
 the first request, and kept even if the run fails). Run it by hand in a JobHunterEnv session, never from the daily
 routine, and never twice in a day.
 
+**LinkedIn is on hold (A18 in `docs/PENDING.md`, added October 21).** The October 19 run was refused at login. Until the user
+answers A18 and says LinkedIn may be collected that day, skip every LinkedIn command and row below (never run `linkedin_collect`
+or use `LINKEDIN_LI_AT`) and record LinkedIn as "held, A18 open". A held source is not a failure and spends no allowance. X is unaffected.
+
 ## Before you start (names only; never print values)
 
 1. The environment settings hold `X_AUTH_TOKEN` and `X_CT0` (X) and `LINKEDIN_LI_AT` (LinkedIn; `LI_AT` also works).
 2. Copy the spreadsheet first (File > Make a copy), so a surprise can be undone.
-3. `uv sync --locked --extra social` (installs twscrape 0.20.1 and playwright 1.56.0; Chromium 1194 is preinstalled).
+3. Install the pinned uv and put it first on PATH for every command in this runbook (the cloud image ships an older uv):
+   `python3 -m venv ~/uvvenv && ~/uvvenv/bin/pip install uv==0.13.1`, then `export PATH="$HOME/uvvenv/bin:$PATH"`; plain `uv`
+   must resolve to 0.13.1. Then `uv sync --locked --extra social` (installs twscrape 0.20.1 and playwright 1.56.0; Chromium 1194 is preinstalled).
 4. `uv run --locked python -m scripts.run_window --mode manual` prints `window_days=28`. This tool is added by PR #41, so it
    only exists once #41 is merged (without it the command stops with `No module named scripts.run_window`). The live test
    therefore waits for #40, #41 and #43 to be merged. If you must run before #41, skip this check: step 1 passes
@@ -23,6 +29,8 @@ uv run --locked --extra social python -m scripts.x_collect --run-id $RUN-x --out
 uv run --locked --extra social python -m scripts.linkedin_collect --run-id $RUN-li --output $DIR/li_cand.json \
     --jobs-output $DIR/li_jobs.json --lookback-days 28
 ```
+
+(The second command only when A18 allows LinkedIn that day; see the hold at the top.)
 
 Read the printed lines (they hold numbers and fixed words only):
 

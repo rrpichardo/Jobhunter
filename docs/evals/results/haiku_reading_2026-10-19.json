@@ -1,0 +1,678 @@
+{
+  "items": 100,
+  "agree": 100,
+  "agreement_percent": 100.0,
+  "jobs": {
+    "sonnet": 15,
+    "haiku": 15,
+    "in_both": 15
+  },
+  "rejected_facts": {
+    "sonnet": 0,
+    "haiku": 0
+  },
+  "items_read": {
+    "sonnet": 100,
+    "haiku": 100
+  },
+  "rows": [
+    {
+      "item": "50071142",
+      "agree": true,
+      "sonnet": [
+        "product manager | estuary"
+      ],
+      "haiku": [
+        "product manager | estuary"
+      ]
+    },
+    {
+      "item": "49978570",
+      "agree": true,
+      "sonnet": [
+        "product manager | posthog"
+      ],
+      "haiku": [
+        "product manager | posthog"
+      ]
+    },
+    {
+      "item": "49922593",
+      "agree": true,
+      "sonnet": [
+        "ai product manager | shepherd"
+      ],
+      "haiku": [
+        "ai product manager | shepherd"
+      ]
+    },
+    {
+      "item": "50021373",
+      "agree": true,
+      "sonnet": [
+        "product manager design led | willow education"
+      ],
+      "haiku": [
+        "product manager design led | willow education"
+      ]
+    },
+    {
+      "item": "49931033",
+      "agree": true,
+      "sonnet": [
+        "technical project manager | plantingspace"
+      ],
+      "haiku": [
+        "technical project manager | plantingspace"
+      ]
+    },
+    {
+      "item": "49927984",
+      "agree": true,
+      "sonnet": [
+        "product manager | sourcegraph"
+      ],
+      "haiku": [
+        "product manager | sourcegraph"
+      ]
+    },
+    {
+      "item": "49924165",
+      "agree": true,
+      "sonnet": [
+        "head of product | swingvision"
+      ],
+      "haiku": [
+        "head of product | swingvision"
+      ]
+    },
+    {
+      "item": "49935497",
+      "agree": true,
+      "sonnet": [
+        "technical product manager integrations | prior labs"
+      ],
+      "haiku": [
+        "technical product manager integrations | prior labs"
+      ]
+    },
+    {
+      "item": "49931746",
+      "agree": true,
+      "sonnet": [
+        "product engineer product manager role not a full stack role | search atlas"
+      ],
+      "haiku": [
+        "product engineer product manager role not a full stack role | search atlas"
+      ]
+    },
+    {
+      "item": "49980976",
+      "agree": true,
+      "sonnet": [
+        "product manager aml | oscilar com",
+        "product manager device and behavior | oscilar com"
+      ],
+      "haiku": [
+        "product manager aml | oscilar com",
+        "product manager device and behavior | oscilar com"
+      ]
+    },
+    {
+      "item": "49927132",
+      "agree": true,
+      "sonnet": [
+        "principal product manager ai products | komodo health"
+      ],
+      "haiku": [
+        "principal product manager ai products | komodo health"
+      ]
+    },
+    {
+      "item": "49922769",
+      "agree": true,
+      "sonnet": [
+        "product manager devtools ai reliability | checkly"
+      ],
+      "haiku": [
+        "product manager devtools ai reliability | checkly"
+      ]
+    },
+    {
+      "item": "49996333",
+      "agree": true,
+      "sonnet": [
+        "staff product manager | coast"
+      ],
+      "haiku": [
+        "staff product manager | coast"
+      ]
+    },
+    {
+      "item": "49968954",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49924087",
+      "agree": true,
+      "sonnet": [
+        "senior product manager machine learning | baton"
+      ],
+      "haiku": [
+        "senior product manager machine learning | baton"
+      ]
+    },
+    {
+      "item": "50090302",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49971729",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "50033036",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49922910",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49962075",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49924889",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49966852",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49994263",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49937360",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49929235",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49934993",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49929657",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49923010",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49923426",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49923320",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49930428",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49926195",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49927389",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49923384",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "50066343",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49976350",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49929368",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49934638",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49926244",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49933507",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49929522",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49928358",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "50014023",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49933183",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49925489",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "50003866",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "50063001",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49940381",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49946276",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49966427",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "50001801",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49930066",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49925071",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49964196",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49937789",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49926504",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49968228",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49980867",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49927917",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49934886",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49930568",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49924239",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49943992",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49966712",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49969213",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49928755",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49972097",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49925545",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49926811",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49928396",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49930868",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49939804",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49924974",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49926951",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49927319",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49925300",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49961551",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49923163",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49922929",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49933038",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49923847",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49991656",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "50075162",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49925469",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49925063",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49996914",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "50095249",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49926050",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49926228",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49972736",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49929588",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49927464",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49928066",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49927356",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49926511",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "50091446",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49923454",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49923640",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "50063248",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    },
+    {
+      "item": "49924972",
+      "agree": true,
+      "sonnet": [],
+      "haiku": []
+    }
+  ]
+}

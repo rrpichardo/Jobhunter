@@ -36,13 +36,15 @@ choose it. The plan's idea of using Haiku for this step has not been built or te
 | Built In | B | `stubs_builtin`, `detail_builtin` | Ran |
 | Getro boards (Accel, Primary) | B | `stubs_getro`, `detail_getro` | Primary ran; Accel was flagged failed by a bug fixed in PR #29 |
 | Hacker News "Who is hiring?" | C | `jobhunter/hn_hiring.py` plus the shared checker in `jobhunter/post_facts.py` | Ran: 28 comments read, 14 jobs delivered |
-| a16z portfolio jobs | none yet | `count_a16z` counts links only | Listing-only: delivers no jobs |
+| a16z portfolio jobs (four searches: product manager, chief of staff, strategy, founder in residence) | B | `stubs_a16z`, `detail_a16z` | Read live without a login on October 19: first page (about 25 jobs) of each search; 24 product, 11 chief-of-staff and 7 strategy jobs matched the rules and were parsed with company, place, pay and posting date. Later pages need the site's scripts and are not read |
 | Gmail job alerts | C | `jobhunter/gmail_alerts.py` | Not live: no forwarded alert yet and the connector adapter is not built |
-| Newsletters: Next Play, Ali Rohde | C (planned) | not built | Needs verified feed URLs |
-| LinkedIn job listings | C | `jobhunter/linkedin_cards.py` (job cards) plus the shared checker | Built, not run: needs the first live run (A2). The card text goes to the AI read step, so no markup guessing decides a field |
+| Newsletter: Ali Rohde Jobs (weekly, chief of staff roles with a direct application link on each title) | C | `jobhunter/newsletter.py` plus the shared checker in `post_facts.py` | Feed verified October 19 (`alirohdejobs.substack.com/feed`, edition 275 on October 16); 4 editions in a 28-day window; the collector ran live, the AI read step has not. The standard-library HTTP client is used because the site's bot filter blocks `httpx` |
+| Newsletter: Next Play | C (planned) | not built | `nextplay.substack.com` is a 2021 publication, not the current newsletter; the right feed URL is still needed (your task B3/B2) |
+| LinkedIn job listings | C | `jobhunter/linkedin_cards.py` (job cards) plus the shared checker | Built but held: LinkedIn refused the login on October 19 and every live LinkedIn step waits for your A18 answer; not run yet. The card text goes to the AI read step, so no markup guessing decides a field |
 | LinkedIn hiring posts | C | checker built (`post_facts.py`); the collector that fetches posts is not | Not run |
 | X hiring posts | C | checker built; the collector is not | Not run |
-| Work at a Startup (logged in) | B or A (to be decided) | not built | Needs your approval (A1) |
+| Work at a Startup, public pages (product and operations role pages) | B | `stubs_waas`, `detail_waas` | Read live without a login on October 19: 24 product listings (15 matched the rules) and 29 operations listings (1 matched). The site answers HTTP 406 unless the request says it accepts HTML. Shows no posting date, and only the first ~25 jobs of each role page |
+| Work at a Startup, logged in (full lists: ~240 product, ~1,400 operations) | B | not built | Optional: needs your session cookies |
 | Cosign, school and MBA sites | to be decided | not built | Need your URLs |
 
 ## What stops a wrong value reaching the Sheet

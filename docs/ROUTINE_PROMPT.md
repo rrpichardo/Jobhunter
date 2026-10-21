@@ -20,12 +20,35 @@ keys or tokens. Do not call any paid service.
 ## 0. Setup
 
 1. Work from a clean checkout of the repository's `main` branch. Run `uv sync --locked` with the pinned uv
-   (the cloud image ships 0.11.32; install 0.13.1 with `python3 -m venv ~/uvvenv && ~/uvvenv/bin/pip install uv==0.13.1`).
+   (the cloud image ships 0.11.32; install 0.13.1 with `python3 -m venv ~/uvvenv && ~/uvvenv/bin/pip install uv==0.13.1`,
+   then `export PATH="$HOME/uvvenv/bin:$PATH"` and keep it for every command below, so plain `uv` is the pinned 0.13.1).
 2. Make a private run directory OUTSIDE the checkout (mode 0700), for example
    `mktemp -d`. Every artifact below is written there as a NEW file (the tools
    refuse to overwrite). Delete the directory when the run ends, but only after
    step 3 has exited 0 or you have reported its failure.
-3. Set a NEW run label for every collection, for example
+3. Choose the look-back window by running the guard, never by guessing:
+
+   ```
+   uv run --locked python -m scripts.run_window --mode daily     # the scheduled routine
+   uv run --locked python -m scripts.run_window --mode manual    # first manual run, or a catch-up by hand
+   ```
+
+   It prints `window_days=N`; use that N as `$WINDOW` below. The user decided on October 19: the first manual run
+   and any catch-up look back **28** days; the scheduled daily routine looks back **3** days (so one missed day is
+   still covered, with a full day of room for run time). The daily mode reads the Run Log (read-only) and REFUSES,
+   exit 3 `catch_up_needed`, when there has never been a complete run or the last complete run started more than
+   about two days ago (2 days plus 6 hours of drift). On exit 3 do nothing else: report that a manual 28-day catch-up
+   run is needed first, otherwise postings from the gap would never be collected. Repeats are harmless: jobs already
+   in the Sheet keep their Status, Notes and My rating. The guard checks that a run was delivered, not that every source
+   worked: if one source failed for several days (for example an expired cookie), fix it and then run `--mode manual` to
+   backfill that source, because the 3-day window will not reach back that far.
+   Two further limits: (1) X and LinkedIn each allow ONE live collection per New York day, so after the daily routine has
+   used a day's allowance a 28-day social catch-up the same day is refused (exit 3); the social lanes cannot be backfilled
+   beyond the daily window unless the routine's social step is skipped that day and the manual run takes the allowance.
+   (2) Shortening the window from 28 to 3 days also shortens how long an unread or held queue item stays retrievable:
+   older ones are cleared as expired (`ai_queue pull` prints the count). A fully delivered run whose last batch is
+   exactly 150 jobs is treated as unfinished and asks for a manual run (the safe direction).
+4. Set a NEW run label for every collection, for example
    `RUN=daily-$(TZ=America/New_York date +%Y%m%d-%H%M%S)-$(openssl rand -hex 3)`
    (the random part keeps two collections started in the same second apart). The writer
    binds a run label to the jobs and source records it was first given, so a label may be
@@ -40,15 +63,16 @@ keys or tokens. Do not call any paid service.
 > **Which model reads.** The reading steps (Hacker News comments, X and LinkedIn posts, LinkedIn job cards, newsletter
 > editions) run on the routine session's own model (Sonnet). The user wants the cheaper Haiku used ONLY if an eval shows
 > it agrees with Sonnet on more than 90% of 100 real items (plan and harness: `docs/evals/HAIKU_READING_EVAL.md`,
-> `scripts/eval_reading.py`; NOT RUN YET). Until that is done and the user has read the results, do not hand the reading to
-> a Haiku subagent. If the eval passes, this note changes to: give the work file path, the exact fact format and the rules
+> `scripts/eval_reading.py`). The eval ran (100 of 100 agree) and the user accepted Haiku (A11 in `docs/PENDING.md`), but
+> the switch is made when the routine is created (A3); until this note is changed, do not hand the reading to a Haiku
+> subagent. When it changes, it will say: give the work file path, the exact fact format and the rules
 > below to a subagent started with `model: haiku`, run the validation yourself, and fall back to reading the items yourself
 > if its file is rejected.
 
 Run, saving each printed digest:
 
 ```
-uv run --locked python -m scripts.hn_hiring candidates --output $DIR/hn_cand.json
+uv run --locked python -m scripts.hn_hiring candidates --output $DIR/hn_cand.json --lookback-days $WINDOW
 uv run --locked python -m scripts.ai_queue pull --source hn-who-is-hiring \
     --candidates $DIR/hn_cand.json --candidates-sha256 <candidates_sha256> --output $DIR/hn_work.json
 ```
@@ -90,6 +114,32 @@ proposed fact the code rejected is NOT marked read: validation prints
 `held_for_retry=N` and leaves those comments out of `processed_ids`, so they are read
 again on the next run. Report N in the final report.
 
+Validation also prints a `trace:` line (and a `trace_rejected:` line with up to ten examples) that says what happened to
+every fact: how many were valid, duplicates, or rejected with a fixed reason code (for example `not_in_post:title`,
+`link_not_in_post_links`, `too_long:description_quote`), how many posts were unreadable, how many valid facts the
+collection filter dropped and why (`role_not_in_scope`, `place_excluded`, `pay_below_floor`), how many were delivered and
+how many posts are held. **Copy the `trace:` lines into the final report unchanged** for every validated source. They hold
+only numbers, reason codes and post ids; never paste post text, a name or an email into the report.
+
+### 1b. Newsletter editions (Ali Rohde Jobs, weekly)
+
+```
+uv run --locked python -m scripts.newsletter_collect --source alirohde-rss --output $DIR/ali_cand.json --lookback-days $WINDOW
+uv run --locked python -m scripts.ai_queue pull --source alirohde-rss --candidates $DIR/ali_cand.json \
+    --candidates-sha256 <newsletter_candidates_sha256> --id-field item_id --output $DIR/ali_work.json
+```
+
+Each candidate is one edition: `text` lists roles as `Title [application link] , Company (sector, stage), Place`. Write
+`$DIR/ali_facts.json` exactly as in section 1 but with `item_id` (the edition's id) instead of `comment_id`, one fact per
+role that matches the roles we collect; copy every value word for word, `description_quote` is an exact excerpt of at most
+300 characters, and `apply_url` is the role's own link from the `[...]` beside its title (it must be one of the edition's
+`links`). Then `scripts.social_posts validate --source alirohde-rss --candidates $DIR/ali_work.json --candidates-sha256
+<work digest> --extractions $DIR/ali_facts.json --output $DIR/ali_result.json`, pass it to `source_probe` as
+`--social-result $DIR/ali_result.json --social-result-sha256 <digest>`, and run `ai_queue commit --source alirohde-rss
+--result $DIR/ali_result.json --result-sha256 <digest>` only after step 3 exited 0. If a step prints a failure, skip this
+source today and say so in the report. The feed is public: no login and no allowance. Validation prints the same `trace:`
+lines as section 1; copy them into the final report unchanged.
+
 ## 2. Everything that code can fetch
 
 First list the jobs already in the Sheet, so job-page sources do not reopen pages they delivered:
@@ -102,12 +152,13 @@ Then:
 
 ```
 uv run --locked python -m scripts.source_probe --output $DIR/probe.json \
+    --lookback-days $WINDOW \
     --known-ids $DIR/known.json --known-ids-sha256 <known_ids_sha256> \
     --hn-result $DIR/hn_result.json --hn-result-sha256 <hn_result_sha256>
 ```
 
-(Omit the two `--hn-` options if step 1 was skipped. If `known_ids` fails, run without `--known-ids`: it only saves requests.) The default window is the last
-28 days, which is also the first-run backfill. Boards, public job sites, YC and
+(Omit the two `--hn-` options if step 1 was skipped. If `known_ids` fails, run without `--known-ids`: it only saves requests.) The window is
+`$WINDOW` days (28 for the first run, 3 for the daily routine). Boards, public job sites, YC and
 Built In, Getro, JSearch and Jooble are fetched here. Sources without a key or an
 account are recorded `needs setup` by the tool; do not try to work around that.
 
@@ -144,34 +195,39 @@ is harmless because jobs collapse by Job ID.
   alert rules are not finished.
 - X hiring posts: the collector exists (`scripts/x_collect.py`; install with `uv sync --locked --extra social`)
   but is NOT run by this routine until the user gives the go-ahead for the first live test (A2) and sets
-  `X_AUTH_TOKEN` and `X_CT0` in the environment settings. When approved, the steps are: `x_collect` (reserves
+  `X_AUTH_TOKEN` and `X_CT0` in the environment settings. When approved, the steps are: `x_collect ... --lookback-days $WINDOW` (reserves
   today's allowance first, searches, writes a candidate file), `ai_queue pull --id-field item_id`, Claude reads,
   `social_posts validate`, then `source_probe --social-result`, step 3 (delivery) and, only after step 3 exited 0,
   `ai_queue commit --source x-twscrape --result <validated file> --result-sha256 <digest>` so the same posts are not
   read again tomorrow. Exit 3 means today's allowance is spent: collect
   nothing. Exit 4 means the cookies are not set up. Never print or ask for cookie values.
 - LinkedIn hiring posts: the collector exists (`scripts/linkedin_collect.py`, headless browser with the saved `li_at`,
-  `LINKEDIN_LI_AT` in the environment settings) but is NOT run by this routine until the user gives the go-ahead for the
-  first live test (A2). Same flow as X: `linkedin_collect` (reserves today's allowance first), `ai_queue pull --source
+  `LINKEDIN_LI_AT` in the environment settings) but is NOT run by this routine. The first live test (A2) was refused at
+  login on October 19, so LinkedIn is on hold until the user answers A18 in `docs/PENDING.md`: never run `linkedin_collect`
+  or use `LINKEDIN_LI_AT`, and report LinkedIn as "held, A18 open" (not a failure; no allowance spent). Only once A18
+  allows it, the flow is the same as X: `linkedin_collect` (reserves today's allowance first), `ai_queue pull --source
   linkedin-login --id-field item_id`, Claude reads, `social_posts validate --source linkedin-login`, `source_probe
   --social-result`, delivery, then `ai_queue commit`. It prints one `search_N:` line per search (numbers only); paste
   them into the report. Exit 3 = allowance spent, exit 4 = not set up. Never print or ask for the cookie value.
-- LinkedIn job listings: built into the same collector run (`linkedin_collect ... --jobs-output $DIR/li_jobs.json`: up
-  to 5 job searches in the SAME session and under the SAME single daily allowance), and not run until A2. The job
-  cards go through the same read step as posts: `ai_queue pull --source linkedin-jobs --id-field item_id`, Claude (the
-  session model; see the note at the top of section 1) copies title, company, place and pay word for word from each card's text,
-  `social_posts validate --source linkedin-jobs`, `source_probe --social-result`, delivery, `ai_queue commit`. A job
-  card shows an age ("3 days ago"), not a date, so its posted date is the capture day minus that age (day precision).
-  Never log in or open this site in this routine except through the collector.
-- Work at a Startup (logged in), Cosign, school and MBA sites, Next Play and Ali
-  Rohde feeds: not set up.
+- LinkedIn job listings: built but held. They run inside the same collector run as the posts (`linkedin_collect ...
+  --jobs-output $DIR/li_jobs.json`: up to 5 job searches in the SAME session and under the SAME single daily allowance,
+  `scripts.allowance`, one live LinkedIn session per day), so the A18 hold above covers them too: never run them until
+  A18 allows it, and report them as "held, A18 open". Only then do the job cards go through the same read step as posts:
+  `ai_queue pull --source linkedin-jobs --id-field item_id`, Claude (the session model; see the note at the top of
+  section 1) copies title, company, place and pay word for word from each card's text, `social_posts validate --source
+  linkedin-jobs` (copy its `trace:` lines into the report like every other source), `source_probe --social-result`,
+  delivery, `ai_queue commit`. A job card shows an age ("3 days ago"), not a date, so its posted date is the capture day
+  minus that age (day precision). Never log in or open this site in this routine except through the collector.
+- Work at a Startup (logged in), Cosign, school and MBA sites, Next Play feed: not set up
+  (the Ali Rohde feed is step 1b).
 - a16z: listing-only, delivers no jobs.
 
 ## 6. Final report
 
 Reply with plain text only: the run ID; for each source its status and counts (read
 them from the tool output, do not estimate); batches delivered; the AI queue numbers
-from `pull` (new, already read, held, expired, oldest unread age); every non-zero
+from `pull` (new, already read, held, expired, oldest unread age); the `trace:` lines from each
+validation; every non-zero
 exit with its printed code; and the sources left `needs setup`. Say "unknown" for
 anything you could not read. A green routine status does not prove success: the
 Sheet readback line from step 3 does.

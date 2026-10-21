@@ -150,6 +150,13 @@ class GspreadStore:
             raise ValueError('sheet_mutation_unconfirmed')
         _call(self.workbook.batch_update, {'requests': [{'deleteSheet': {'sheetId': LOCK_ID}}]})
 
+    def has_tab(self, title):
+        """True if the workbook has this approved tab. One metadata read; writes nothing."""
+        if title not in TABS:
+            raise ValueError('unapproved_tab')
+        self.refresh()
+        return title in self.tabs
+
     def read(self, title):
         if title not in TABS:
             raise ValueError('unapproved_tab')

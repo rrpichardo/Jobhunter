@@ -1,5 +1,11 @@
 # Jobhunter — KISS build plan v5 (Google Sheets = database + CRM)
 
+> **Status, October 19, 2026 (end of day).** The first live test and first 28-day manual run happened (505 jobs written; X, the
+> Ali Rohde newsletter, a16z, Work at a Startup and the boards worked; **LinkedIn was refused at login**). Haiku does the reading
+> step. Nothing new is merged until Codex reviews each PR. The live state, every open decision and the user's tasks are in
+> `docs/PENDING.md` section 0; the user's answer sheet is `docs/DECISIONS_FORM.md`. Where this plan and PENDING differ, PENDING
+> is current. LinkedIn is now an open decision (A18): the plan's cookie-based LinkedIn lane is on hold.
+
 ## Current operator follow-ups — October 18, 2026
 
 Latest salary clarification: US roles, including remote work from the US, have
