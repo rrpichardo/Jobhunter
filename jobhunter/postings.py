@@ -502,11 +502,32 @@ def _union(ranges):
     return (min(lows) if lows else 0, max(highs) if highs else 0)
 
 
+def _pay_unit(label):
+    """What a pay label from a source says the amount is: bonus, total compensation, OTE, hour, month, week, day, else year.
+
+    Words after "excluding" or "plus" describe what the range leaves out ("Annual base salary (excluding equity and bonus)").
+    """
+    label = re.sub(r'\b(?:excluding|exclusive of|not including|without|before|plus)\b[^:.;)]*', ' ', label, flags=re.I)
+    if re.search(r'\b(?:bonus|commission|equity|stock|rsu|sign(?:ing)?[- ]?on|signing)\b', label, re.I):
+        return 'bonus'
+    if re.search(r'\btotal\s+(?:cash\s+|target\s+)?(?:compensation|comp|rewards|cash|target)\b', label, re.I):
+        return 'total compensation'
+    if re.search(r'\b(?:OTE|on[- ]target)\b', label, re.I):
+        return 'OTE'
+    for pattern, unit in ((r'\b(?:hourly|hour|per hour)\b', 'hour'), (r'\b(?:bi-?weekly|weekly|per week)\b', 'week'),
+                          (r'\b(?:monthly|per month)\b', 'month'), (r'\b(?:daily|per day)\b', 'day')):
+        if re.search(pattern, label, re.I):
+            return unit
+    return 'year'
+
+
 def greenhouse_pay(ranges):
     """Pay Greenhouse publishes beside a posting (`pay_input_ranges`, amounts in cents), as one Salary cell.
 
-    Yearly USD ranges win (the tiers of one posting are merged into one range); otherwise the first other currency or
-    an hourly or on-target-earnings range is written with its own unit word, which the pay filter reads as unresolved.
+    The label (`title`, and the `blurb` only for an explicit "monthly salary" style phrase) decides what each amount is.
+    Yearly USD ranges win (the tiers of one posting are merged into one range). Anything else is written with its own
+    unit word (CAD year, USD month, USD bonus, USD total compensation ...), which the pay filter reads as unresolved
+    instead of as yearly base pay. An unlabeled range is yearly, as Greenhouse pay ranges are.
     """
     found = {}
     for item in ranges if isinstance(ranges, list) else []:
@@ -515,11 +536,14 @@ def greenhouse_pay(ranges):
         low, high = item.get('min_cents'), item.get('max_cents')
         low = low // 100 if type(low) is int and low > 0 else 0
         high = high // 100 if type(high) is int and high > 0 else 0
-        title = plain(item.get('title'))
         if not (low or high):
             continue
-        unit = ('hour' if re.search(r'\bhour', title, re.I) else
-                'OTE' if re.search(r'\b(?:OTE|on[- ]target|commission)\b', title, re.I) else 'year')
+        title = plain(item.get('title'))
+        unit = _pay_unit(title)
+        if unit == 'year':  # the blurb is generic text ("for sales roles ... OTE"), so only a plain period phrase counts
+            blurb = clean_html(item.get('blurb'))
+            match = re.search(r'\b(monthly|weekly|bi-?weekly|hourly|daily)\s+(?:salary|pay|rate|range|compensation)\b', blurb, re.I)
+            unit = _pay_unit(match.group(0)) if match else 'year'
         found.setdefault((plain(item.get('currency_type')).upper() or 'USD', unit), []).append((low, high))
     for currency, unit in sorted(found, key=lambda key: (key != ('USD', 'year'), key[1] != 'year', key)):
         low, high = _union(found[(currency, unit)])
@@ -552,11 +576,12 @@ def ashby_pay(compensation):
 
 _PAY_AMOUNT = r'\$\s?\d{2,3}(?:,\d{3})+(?:\.\d+)?|\$\s?\d{2,3}(?:\.\d+)?\s?[kK]\b'
 _PAY_RANGE = re.compile(rf'({_PAY_AMOUNT})\s*(?:-|\u2013|\u2014|to)\s*({_PAY_AMOUNT}|\d{{2,3}}(?:,\d{{3}})+|\d{{2,3}}\s?[kK]\b)')
-_PAY_CUE = re.compile(r'\b(?:salary|base pay|base compensation|annual|per year|a year|yearly|pay range|pay scale|'
-                      r'compensation range|compensation)\b', re.I)
-_NOT_BASE_PAY = re.compile(r'\b(?:bonus|commission|equity|stock|sign[- ]on|signing|relocation|stipend|allowance|'
-                           r'reimbursement|401|OTE|on[- ]target)\b', re.I)
-_OTHER_CURRENCY = re.compile(r'(?:\bCAD|\bAUD|\bMXN|\bEUR|\bGBP|\bCA\$|\bC\$|\bA\$|[\u20ac\u00a3])\s*$', re.I)
+_PAY_CUE = re.compile(r'\b(?:salary|base pay|base compensation|pay range|pay scale|compensation range|base range)\b', re.I)
+_NOT_BASE_PAY = re.compile(r'\b(?:total\s+(?:cash\s+|target\s+)?(?:compensation|comp|rewards|cash)|on[- ]target|OTE|bonus|commission|'
+                           r'equity|stock|rsu|sign[- ]?on|signing|relocation|stipend|allowance|reimbursement|401|monthly|weekly|'
+                           r'bi-?weekly|daily|hourly|per\s+(?:month|week|day|hour)|a\s+month|each\s+month)\b', re.I)
+_CURRENCY_CODE = r'(?:CAD|AUD|NZD|MXN|EUR|GBP|CHF|SGD|INR|BRL|JPY|CNY|AED|SEK|NOK|DKK|PLN|COP|ARS|CLP|ZAR|CA\$|C\$|A\$|\u20ac|\u00a3)'
+_OTHER_CURRENCY = re.compile(rf'(?:\b{_CURRENCY_CODE})\s*$|[\u20ac\u00a3]\s*$', re.I)
 
 
 def _pay_number(text):
@@ -565,19 +590,23 @@ def _pay_number(text):
 
 
 def salary_from_text(text):
-    """A yearly USD range written in a posting ("The salary range is $160,000 - $200,000"), or "".
+    """A yearly USD base-pay range written in a posting ("The salary range is $160,000 - $200,000"), or "".
 
-    Deliberately narrow: two amounts of at least 30,000, a pay word shortly before them, nothing that makes the clause
-    bonus, equity, commission or another currency, and no hourly, monthly or weekly word right after. Several ranges
+    Deliberately narrow, and it reads the whole compensation sentence: two amounts of at least 30,000; a base-pay word
+    (salary, base pay, pay range ...) earlier in the same sentence; nothing in that sentence that makes the amount total
+    compensation, OTE, bonus, equity, commission or a monthly, weekly, daily or hourly figure; no other currency before or
+    right after the range; no period word or bonus word right after it. Anything else stays unresolved. Several ranges
     (one per location tier) are merged into one.
     """
+    text = text or ''
     ranges = []
-    for match in _PAY_RANGE.finditer(text or ''):
-        before, after = text[max(0, match.start() - 160):match.start()], text[match.end():match.end() + 30]
-        clause = re.split(r'[.;:\n]', before)[-1] if _PAY_CUE.search(re.split(r'[.;\n]', before)[-1]) else before
-        if (not _PAY_CUE.search(before) or _NOT_BASE_PAY.search(clause) or _OTHER_CURRENCY.search(before[-8:])
+    for match in _PAY_RANGE.finditer(text):
+        sentence = re.split(r'[.;\n]', text[max(0, match.start() - 200):match.start()])[-1]
+        after = text[match.end():match.end() + 40]
+        if (not _PAY_CUE.search(sentence) or _NOT_BASE_PAY.search(sentence) or _OTHER_CURRENCY.search(text[max(0, match.start() - 8):match.start()])
+                or re.match(rf'\s*{_CURRENCY_CODE}', after, re.I)
                 or re.match(r'\s*(?:/\s*|per\s+|an?\s+)?(?:hour|hr|month|mo\b|week|wk|day)', after, re.I)
-                or re.match(r'\s*(?:in\s+)?(?:bonus|commission|equity|OTE)', after, re.I)):
+                or re.match(r'\s*(?:in\s+)?(?:bonus|commission|equity|OTE|total)', after, re.I)):
             continue
         low, high = _pay_number(match.group(1)), _pay_number(match.group(2))
         if 30_000 <= low <= high:

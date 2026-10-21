@@ -109,3 +109,59 @@ def test_the_probe_asks_greenhouse_and_ashby_for_their_pay_fields():
     urls = {entry["kind"]: entry["url"] for entry in source_probe.entries(registry)}
     assert "pay_transparency=true" in urls["greenhouse"] and "content=true" in urls["greenhouse"]
     assert "includeCompensation=true" in urls["ashby"]
+
+
+# Codex review of PR 52 (October 21): the label and the whole compensation sentence decide what an amount is.
+@pytest.mark.parametrize("text", [
+    "The annual base salary range is $90,000 - $120,000 CAD.",          # another currency written after the range
+    "Total compensation is $100,000 - $120,000 per year.",              # not base pay
+    "The monthly salary range is $40,000 - $50,000.",                   # a monthly amount
+    "The weekly pay range is $3,000 - $4,000.",
+    "Target total cash compensation is $150,000 - $190,000.",
+    "The base salary range is $150,000 - $190,000 EUR.",
+])
+def test_text_pay_with_another_currency_period_or_type_stays_unresolved(text):
+    assert p.salary_from_text(text) == ""
+
+
+def test_text_pay_that_is_unresolved_does_not_drop_an_otherwise_matching_job():
+    posting = p.parse_lever([{"id": "l9", "text": "Product Manager", "categories": {"location": "New York, NY"},
+                              "descriptionPlain": mba("The monthly salary range is $40,000 - $50,000."),
+                              "hostedUrl": "https://jobs.lever.co/acme/l9"}], CTX | {"source_id": "lever:acme"})[0][0]
+    assert posting.salary == "" and p.collection_reason(posting) == ""
+
+
+@pytest.mark.parametrize("title,expected", [
+    ("Monthly Salary", "10,000 - 15,000 USD month"),
+    ("Annual Bonus", "10,000 - 15,000 USD bonus"),
+    ("Annual Total Compensation", "10,000 - 15,000 USD total compensation"),
+    ("Sign-on bonus", "10,000 - 15,000 USD bonus"),
+    ("Weekly Rate", "10,000 - 15,000 USD week"),
+    ("Annual Base Salary Range:", "10,000 - 15,000 USD year"),
+    ("Annual base salary range (excluding equity and bonus):", "10,000 - 15,000 USD year"),
+    ("Zone 1 Pay Range", "10,000 - 15,000 USD year"),
+])
+def test_greenhouse_labels_decide_what_the_amount_is(title, expected):
+    ranges = [{"min_cents": 1000000, "max_cents": 1500000, "currency_type": "USD", "title": title}]
+    assert p.greenhouse_pay(ranges) == expected
+
+
+@pytest.mark.parametrize("title", ["Monthly Salary", "Annual Bonus", "Annual Total Compensation"])
+def test_a_greenhouse_amount_that_is_not_yearly_base_pay_is_unresolved_and_does_not_drop_the_job(title):
+    ranges = [{"min_cents": 1000000, "max_cents": 1500000, "currency_type": "USD", "title": title}]
+    posting = p.parse_greenhouse({"jobs": [gh_job(ranges)]}, CTX)[0][0]
+    assert p.annual_usd_salary_ceiling(posting.salary) is None
+    assert p.collection_reason(posting) == ""
+
+
+def test_a_yearly_base_range_wins_over_a_bonus_range_on_the_same_posting():
+    ranges = [{"min_cents": 1000000, "max_cents": 2000000, "currency_type": "USD", "title": "Annual Bonus"},
+              {"min_cents": 15000000, "max_cents": 19000000, "currency_type": "USD", "title": "Annual Base Salary Range:"}]
+    assert p.greenhouse_pay(ranges) == "150,000 - 190,000 USD year"
+
+
+def test_the_generic_sales_disclaimer_in_the_blurb_does_not_turn_a_base_range_into_ote():
+    blurb = ('<p>The annual compensation range for this role is listed below.</p><p>For sales roles, the range provided is the '
+             'role’s On Target Earnings ("OTE") range, meaning that the range includes both commissions and base salary.</p>')
+    ranges = [{"min_cents": 30500000, "max_cents": 38500000, "currency_type": "USD", "title": "Annual Salary:", "blurb": blurb}]
+    assert p.greenhouse_pay(ranges) == "305,000 - 385,000 USD year"
