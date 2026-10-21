@@ -1,5 +1,34 @@
 # Implementation attempt log
 
+## October 21 PR #52 — STOP: review cycles exhausted (3 of 3)
+
+- The third and final Codex review, on `70f332c8155cf4eb6a070d92998cbc2fc13cfbd7` (review 5601000995), still found false
+  exclusions: (1) an unrelated negation earlier in the text excludes the posting, for example "Experience is not required, open
+  to MBA students graduating in May 2027"; (2) a posting that accepts several years is excluded, for example "Open to MBA
+  students graduating in May 2026 or May 2027".
+- Cycle 3 of 3 is used. #52 stays open and unmerged. No further fix cycle without a new explicit authorization from the user.
+  Its changes are not adopted elsewhere (not into #46). #51 is Codex-authored and outside this count.
+
+## October 21 PR #46 integration with main — repair/review cycle 1 of 3
+
+- Starting head `d6ab247e5e406f16109bc2557302d3399a1ac01f`; the fetched remote `claude/handoff-oct19` still equalled it (no
+  ownership race). Merged main `15976f0e814537a145034fb7322840c53a50b7ba` (merge base `f71464f`) in a new merge commit `eeb6a2c`
+  (no rebase, no force push), plus one follow-up docs commit.
+- Earlier attempts, kept as historical failures (not review cycles; counters not reset): a GitHub Action integration attempt was
+  denied the fetch/merge and made no edits, and a CI run failed on its actor check. This attempt used a different path: an
+  authenticated local checkout on macOS by Claude as the sole implementation owner.
+- Conflicts were the two expected, both in docs. `docs/ATTEMPTS.md`: both sides added an October 21 entry; both kept.
+  `docs/PENDING.md`: this branch had rewritten the file into sections 0 to 7 while main edited the old layout. Kept the new
+  layout and carried main's additions into it: A3 (routine only after a checked manual run) and the A5 rolling-window note in
+  section 2, the run-modes table in section 5. A1, A5, A6 (#40 wording) and A2, A8 (#46 wording) were already there.
+- Follow-up commit: main's `docs/FIRST_LIVE_TEST.md` and `docs/ROUTINE_PROMPT.md` lacked the A18 LinkedIn hold and the pinned-uv
+  PATH line; both added (as in `docs/LIVE_RUN_PROMPT.md`). PENDING 0.3, the review queue and the handoff record merged #40 to #45,
+  #49, #50; open #46, #47, #48; stopped #52.
+- Local offline evidence (macOS, uv 0.13.1) on the merge commit: `uv sync --locked --extra social`; `uv run --locked --extra
+  social python -m pytest -q`: 1066 passed, 1 skipped, 10 subtests passed. The skip is `tests/test_linkedin_collect.py:395`
+  ("browser unavailable"; no Playwright Chromium here). `git diff --check` clean. No live source, cookie, Sheet or cloud run.
+  A fresh exact-head Codex review and CI are required before merge.
+
 ## October 21 PR #46 Codex review repair, round 1 of 3
 
 - Codex reviewed `148eec68ba3c3a5ef0dd49b1c89cfe09c7a468d8`: the earlier pinned-uv repair was correct; one P2 remained.

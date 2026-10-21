@@ -29,6 +29,11 @@ stretch from about 16:10. Check or raise the limit at https://chatgpt.com/codex/
 (merge `main` into each first); `#48` last (it carries `#43`). Small PRs first so credits are not spent on a stack that
 is still moving. Do not spam: one request per PR, then wait.
 
+**Status October 21, 2026 (from `main`'s merge history):** #40, #41, #42, #43, #44, #45, #49 and #50 are merged into `main`
+(`15976f0`). Still waiting for an exact-head Codex review: #46 (after `main` was merged into it), #47 and #48. #52 is stopped
+after three review cycles and needs the user's new go-ahead before any further fix (`docs/ATTEMPTS.md`); do not request another
+review of it. #51 is Codex-authored (Claude reviews it). The table below is the October 19 snapshot, kept as history.
+
 ## Snapshot (heads as of October 19, 2026, about 22:15 UTC)
 
 | PR | What it is | Base | Head (full SHA) | Codex so far |
