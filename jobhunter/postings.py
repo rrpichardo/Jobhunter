@@ -806,7 +806,10 @@ def dedupe(postings):
     for posting in ordered:
         if posting.job_id in by_id:  # the very same job found again (e.g. by two searches of one board): one row
             if by_id[posting.job_id]["posting"].source_id != posting.source_id:
-                by_id[posting.job_id]["also"].append(posting.source_id)
+                entry = by_id[posting.job_id]
+                entry["also"].append(posting.source_id)
+                entry['seen'][posting.source_id] = min(entry['seen'].get(posting.source_id, posting.captured_at),
+                                                       posting.captured_at)
             continue
         key = canonical_key(posting.apply_url)
         if (verified_requisition(key) and key in by_key
