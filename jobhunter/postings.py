@@ -218,6 +218,17 @@ ROLE_FAMILIES = (
                            r'(?:manager|director|head|vp) (?:of )?(?:corporate |business )?strategy)\b', re.I)),
     ('Entrepreneurship', re.compile(r'\b(?:entrepreneur|founder) in residence\b', re.I)),
     ('Project management', re.compile(r'\bproject (?:manager|management lead|director)\b', re.I)),
+    # "Forward-Deployed AI Strategist" and its variants: forward deployed / FDE next to strategist or strategy within
+    # one title, in either order ("AI Strategist, Forward Deployed"), plus "AI Deployment Strategist" and "AI
+    # Implementation Strategist" (the user's other names for it) and the bare "Deployment Strategist". Forward-deployed
+    # ENGINEER titles do not match.
+    # "FDE" is itself short for forward deployed ENGINEER, so next to it only the noun "strategist" counts ("FDE Strategist"),
+    # never the bare word "strategy" ("FDE - AI Strategy" is an engineering title).
+    ('Forward-deployed strategy', re.compile(r'\bforward[- ]?deployed\b[^,;|\n]{0,40}?\bstrateg(?:ist|y)\b|'
+                                             r'\bFDE\b[^,;|\n]{0,40}?\bstrategist\b|'
+                                             r'\bstrateg(?:ist|y)\b[^;|\n]{0,40}?\bforward[- ]?deployed\b|'
+                                             r'\bstrategist\b[^;|\n]{0,40}?\bFDE\b|'
+                                             r'\b(?:(?:AI|GenAI|applied AI)\s+(?:deployment|implementation)|deployment)\s+strategist\b', re.I)),
 )
 
 # Free-text scan (Hacker News comments, social posts): the same families as above, built from ROLE_FAMILIES so
@@ -228,10 +239,18 @@ ROLE_TEXT = re.compile("|".join(
     for family, pattern in ROLE_FAMILIES), re.I)
 
 
+# A title that names an engineer or developer is an engineering role, even when "strategy" sits within 40 characters of
+# "forward deployed" ("Forward-Deployed Engineer - AI Strategy"), so it never counts as the strategist family.
+FORWARD_DEPLOYED_ENGINEER = re.compile(r'\b(?:engineers?|engineering|engr?|developers?|dev|SWEs?|SDEs?)\b|\bsoftware development\b', re.I)
+
+
 def role_family(title: str) -> str | None:
     if ROLE_EXCLUSIONS.search(title):
         return None
-    return next((family for family, pattern in ROLE_FAMILIES if pattern.search(title)), None)
+    for family, pattern in ROLE_FAMILIES:
+        if pattern.search(title) and not (family == 'Forward-deployed strategy' and FORWARD_DEPLOYED_ENGINEER.search(title)):
+            return family
+    return None
 
 
 def collection_region(location: str, *, remote: bool = False) -> str | None:
