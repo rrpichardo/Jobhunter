@@ -17,6 +17,7 @@ import httpx
 
 from jobhunter.artifacts import SYNC_MAX_BYTES, new_artifact_path, read_artifact, safe_error_code, write_artifact
 from jobhunter.fetch import FetchError, JsonFetcher
+from jobhunter.post_facts import format_trace
 from jobhunter.hn_hiring import (CANDIDATE_SAFETY_STOP, ITEM_URL, SEARCH_URL, SOURCE_ID, build_result,
                                  candidate_comments, select_threads)
 
@@ -102,6 +103,7 @@ def main(argv=None, *, client=None, sleep=time.sleep, now=lambda: datetime.now(t
         source = result['source']
         print(f"status={source['status']} valid={source['valid_jobs']} delivered={source['selected_for_m0']} "
               f"rejected={source['rejected_items']} held_for_retry={len(held)}")
+        print(format_trace(result))
         print(f'hn_result_sha256={digest}')
         return 0
     except FetchError as exc:

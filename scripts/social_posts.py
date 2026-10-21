@@ -13,7 +13,7 @@ post-URL lead come from code, and nothing here touches a social site or a Sheet.
 import argparse
 
 from jobhunter.artifacts import read_artifact, safe_error_code, write_artifact
-from jobhunter.post_facts import SOCIAL, clean_social_candidates, social_result
+from jobhunter.post_facts import SOCIAL, clean_social_candidates, format_trace, social_result
 
 
 def main(argv=None) -> int:
@@ -52,6 +52,7 @@ def main(argv=None) -> int:
         source = result['source']
         print(f"status={source['status']} valid={source['valid_jobs']} delivered={source['selected_for_m0']} "
               f"rejected={source['rejected_items']} held_for_retry={len(held)}")
+        print(format_trace(result))
         print(f'social_result_sha256={digest}')
         return 0
     except (ValueError, TypeError, KeyError, OSError) as exc:

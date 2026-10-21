@@ -258,8 +258,6 @@ def test_listing_only_counters():
     assert p.count_hn(hn, CTX)["listed"] == 393
     with pytest.raises(ValueError):
         p.count_hn({"hits": []}, CTX)
-    a16z = '<a href="/jobs/komodo/8868-principal-product-manager-ai">x</a><a href="/jobs/komodo">y</a>'
-    assert p.count_a16z(a16z, CTX) == {"listed": 1, "pm_titles": 1}
 
 
 def make(job_id, source, url, title="Senior Product Manager, AI", company="Acme"):

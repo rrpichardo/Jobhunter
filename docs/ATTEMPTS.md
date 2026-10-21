@@ -1,5 +1,110 @@
 # Implementation attempt log
 
+## October 21 PR #47 (Ali Rohde newsletter) integration with main — repair/review cycle 1 of 3
+
+- Starting head `716f3fce90a6d627e73e828ad8dd2eaf7dbe7b2b`; the fetched remote `claude/newsletter-alirohde` still equalled
+  it (no ownership race). Merged main `d2e4f38b81b2a6251a1b039933eb09b95c8ed7f1` (merge base `e2ce21d`) in a new merge
+  commit (no rebase, no force push), by Claude as the sole implementation owner in a local macOS checkout.
+- Earlier #47 repair rounds are kept, not reset: `9400d18` (jobs keyed by application link, unreadable counts, slug limit)
+  and `716f3fc` (after a Codex review: verified employer requisition instead of tracking link; unique legacy rows reused
+  with their user cells; several matches stop). This integration is cycle 1 of 3 under the current authorization.
+- Conflicts were the two expected. `jobhunter/post_facts.py`: kept main's fixed reason codes (`_reason` whitelist, known
+  item ids only in `rejections`, item counts in the trace) and #47's `link_ids` parameter, verified-requisition ID and
+  generic company/title fallback. `docs/ROUTINE_PROMPT.md`: kept main's `trace:` paragraph in section 1 and #47's newsletter
+  step 1b, which now also says to copy its `trace:` lines; the stale "Ali Rohde feeds: not set up" line now points at 1b.
+  Main's A18 LinkedIn hold and pinned-uv PATH lines came through unchanged.
+- Checks: every file that differs from main is one #47 changed, and every file that differs from `716f3fc` is one main
+  changed; the test-function set is exactly the union of both sides (532; none lost) and no test line was removed except
+  main's own reviewed edits; `sources/v0_sources.yaml` has no duplicate ids and loses none except `a16z-ai-pm`, which main's
+  #45 replaced on purpose; `SOCIAL` keeps `x-twscrape`, `linkedin-login`, `alirohde-rss`; `DETAIL_SOURCES` keeps
+  `a16z`, `builtin`, `getro`, `waas`, `yc`.
+- Status docs: merged #40 to #46, #49, #50; pending #47, #48, #52. #52's cap was lifted by the user on October 21 (entry
+  below); its earlier 3-of-3 stop stays as dated history and nothing on #52 is fixed here. #51 is Codex-authored and outside.
+- Local offline evidence (macOS, uv 0.13.1): `uv sync --locked --extra social`; `uv run --locked --extra social python -m
+  pytest -q`: 1082 passed, 1 skipped, 10 subtests passed. The skip is `tests/test_linkedin_collect.py:395` ("browser
+  unavailable"; no Playwright Chromium here). `git diff --check` clean. No live source, cookie, Sheet or cloud run; the new
+  head has not run live. A fresh exact-head Codex review and CI are required before merge.
+
+## October 21 PR #46 Codex review repair — integration cycle 2 of 3
+
+- Codex reviewed `eb9021c5d626908133ced3ce94bbe41dde575e9d` and found one P2 at `docs/PENDING.md:97`: the integration had
+  shortened A1 in section 2 and lost main's (`15976f0`) approved concrete methods and its ban on retrying private-request
+  inspection. Before editing, the fetched remote `claude/handoff-oct19` still equalled `eb9021c` (no ownership race).
+- Repair (docs only): section 2 A1 again states Work at a Startup by headless browser with saved cookies, visible job cards only;
+  LinkedIn by headless browser with `li_at`; X by `twscrape` with `auth_token`/`ct0`; all read-only with random pauses; reading
+  private requests from the logged-in tab was blocked earlier and must not be retried. The A18 LinkedIn hold is unchanged. No
+  other policy changed.
+- Counters (not reset): this is integration cycle 2 of 3. The earlier A18 prompt repair (round 1 above) is kept, so #46 has had
+  three reviewed repair rounds in total under the current authorization. A fresh exact-head Codex review and CI are required
+  before merge.
+
+## October 21 PR #52 — reopened by the user (cap lifted)
+
+- The user wrote, in a new message: "dont worrya bout the three cylce limit we need to have 52 well". This explicitly lifts the
+  three-cycle cap for #52 and authorizes further Claude fixes and Codex reviews on it.
+- The earlier 3-of-3 stop below stays as history; its counters are not reset (the next #52 repair is cycle 4). The two Codex
+  findings from review 5601000995 remain open. Nothing on #52 was fixed in this change, and its branch is not adopted into #46.
+- Ownership: the cloud session that owned #52 was told to hold; the local Claude session is the sole implementation owner.
+
+## October 21 PR #52 — STOP: review cycles exhausted (3 of 3) (historical; superseded by the reopening above)
+
+- The third and final Codex review, on `70f332c8155cf4eb6a070d92998cbc2fc13cfbd7` (review 5601000995), still found false
+  exclusions: (1) an unrelated negation earlier in the text excludes the posting, for example "Experience is not required, open
+  to MBA students graduating in May 2027"; (2) a posting that accepts several years is excluded, for example "Open to MBA
+  students graduating in May 2026 or May 2027".
+- Cycle 3 of 3 is used. #52 stays open and unmerged. No further fix cycle without a new explicit authorization from the user.
+  Its changes are not adopted elsewhere (not into #46). #51 is Codex-authored and outside this count.
+
+## October 21 PR #46 integration with main — repair/review cycle 1 of 3
+
+- Starting head `d6ab247e5e406f16109bc2557302d3399a1ac01f`; the fetched remote `claude/handoff-oct19` still equalled it (no
+  ownership race). Merged main `15976f0e814537a145034fb7322840c53a50b7ba` (merge base `f71464f`) in a new merge commit `eeb6a2c`
+  (no rebase, no force push), plus one follow-up docs commit.
+- Earlier attempts, kept as historical failures (not review cycles; counters not reset): a GitHub Action integration attempt was
+  denied the fetch/merge and made no edits, and a CI run failed on its actor check. This attempt used a different path: an
+  authenticated local checkout on macOS by Claude as the sole implementation owner.
+- Conflicts were the two expected, both in docs. `docs/ATTEMPTS.md`: both sides added an October 21 entry; both kept.
+  `docs/PENDING.md`: this branch had rewritten the file into sections 0 to 7 while main edited the old layout. Kept the new
+  layout and carried main's additions into it: A3 (routine only after a checked manual run) and the A5 rolling-window note in
+  section 2, the run-modes table in section 5. A1, A5, A6 (#40 wording) and A2, A8 (#46 wording) were already there.
+- Follow-up commit: main's `docs/FIRST_LIVE_TEST.md` and `docs/ROUTINE_PROMPT.md` lacked the A18 LinkedIn hold and the pinned-uv
+  PATH line; both added (as in `docs/LIVE_RUN_PROMPT.md`). PENDING 0.3, the review queue and the handoff record merged #40 to #45,
+  #49, #50; open #46, #47, #48; stopped #52.
+- Local offline evidence (macOS, uv 0.13.1) on the merge commit: `uv sync --locked --extra social`; `uv run --locked --extra
+  social python -m pytest -q`: 1066 passed, 1 skipped, 10 subtests passed. The skip is `tests/test_linkedin_collect.py:395`
+  ("browser unavailable"; no Playwright Chromium here). `git diff --check` clean. No live source, cookie, Sheet or cloud run.
+  A fresh exact-head Codex review and CI are required before merge.
+
+## October 21 PR #46 Codex review repair, round 1 of 3
+
+- Codex reviewed `148eec68ba3c3a5ef0dd49b1c89cfe09c7a468d8`: the earlier pinned-uv repair was correct; one P2 remained.
+  The rerun prompt `docs/LIVE_RUN_PROMPT.md` collected LinkedIn unconditionally although LinkedIn is on hold pending A18.
+- Repair (docs only): the prompt now skips every LinkedIn step, records "held, A18 open" and makes no request unless the user adds
+  the A18 line; the handoff says so. A18 is not resolved by this change.
+- First repair cycle of the newly authorized round (maximum three). All older counters below are unchanged. No live collector,
+  credential or Sheet was touched. A fresh exact-head Codex review is required before merge.
+
+## October 21 PR #45 (a16z) integration with main — repair/review cycle 1 of 3
+
+- Starting head `aa9ee551c0bdb833dba4a53ede1dd85b17f6ac84` (reviewed clear by Codex at this exact SHA); the fetched
+  remote `claude/a16z` still equalled it. Merged main `66fbb868e8271474ccfc001d4969cc81b76e951e` in a new merge commit
+  (no rebase, no force push).
+- Earlier, one GitHub Action integration attempt (run 39606228524) stopped because fetch/merge was denied; it made no
+  edits. That is a permission failure, not a review cycle; counters were not reset. This is cycle 1 of the newly
+  authorized maximum of three.
+- Conflicts were the two the merge plan predicted, both "each side added entries": `DETAIL_SOURCES` in
+  `jobhunter/postings.py` and `detail_sources` in `sources/v0_sources.yaml`. Both kept: `waas` and `a16z` parsers,
+  both `waas-*` and all four `a16z-*` lines. Main's #42 title rules, earliest-discovery-time repair (the same fix as
+  this branch's `aa9ee55`, merged without duplication), eval guard, trace allowlist, X/LinkedIn cleanup, run-window
+  guard and collector limits came through unchanged: apart from the a16z files, the merged tree equals main.
+- Registry check: no duplicate ids; no id lost from either side except `a16z-ai-pm`, which this PR replaced on purpose
+  with the four a16z searches; every detail kind has a parser.
+- Local offline evidence (macOS, uv 0.13.1): `uv sync --locked --extra social`; `uv run --locked --extra social python
+  -m pytest -q`: 1066 passed, 1 skipped, 10 subtests passed. The skip is `tests/test_linkedin_collect.py:395`
+  ("browser unavailable"): no Playwright Chromium on this computer, so the real-browser session test did not run.
+  `git diff --check` clean. No live source, cookie, Sheet or cloud run. Fresh Codex review of the merge head and CI
+  are still required before merge.
+
 ## October 19 Codex review rounds on the Claude-written stack (#19 to #30)
 
 - Round 1: Codex reviewed every Claude-written PR at its exact head and found seven problems (R1 to R7) in #19,
