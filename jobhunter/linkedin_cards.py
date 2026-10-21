@@ -181,3 +181,54 @@ def extract_post_cards(html):
                       'created_at': created})
     stats['cards'] = len(cards)
     return cards, shape(cards, stats)
+
+
+JOB_HREF = re.compile(r'/jobs/view/(?:[^/?#]*?-)?(\d{6,13})(?=[/?#]|$)|[?&]currentJobId=(\d{6,13})')
+JOB_ATTR_NAMES = {'data-job-id', 'data-occludable-job-id', 'data-entity-urn', 'data-urn', 'data-id'}
+JOB_URN = re.compile(r'urn:li:(?:fsd_)?jobPosting:(\d{6,13})')
+AGE = re.compile(r'\b(\d{1,3})\s*(minute|hour|day|week|month)s?\s+ago\b', re.I)
+AGE_DAYS = {'minute': 0, 'hour': 0, 'day': 1, 'week': 7, 'month': 30}
+JOB_NO_RESULTS = re.compile(r'\bno (?:matching )?(?:results|jobs) found\b', re.I)
+
+
+def _job_refs(tag):
+    """(job id, kind) pairs named by one element's attributes (links and data attributes)."""
+    refs = []
+    for name, text in _values(tag):
+        if name == 'href':
+            found = JOB_HREF.search(text)
+            if found:
+                refs.append((found[1] or found[2], 'job'))
+        elif name in JOB_ATTR_NAMES:
+            found = JOB_URN.search(text)
+            if found:
+                refs.append((found[1], 'job'))
+            elif name in {'data-job-id', 'data-occludable-job-id'} and re.fullmatch(r'\d{6,13}', text.strip()):
+                refs.append((text.strip(), 'job'))
+    return refs
+
+
+def extract_job_cards(html):
+    """(cards, stats) for a job search page. Each card: id, url, text (the card's own lines), age_days (from "3 days
+    ago" style text, or None). Card boundaries are found as for posts; the fields are NOT guessed here: the text goes to
+    the AI read step and code accepts only values found word for word in it.
+
+    stats: job_ids, cards, empty, short_cards, median_chars, no_results, script_ids, login_form.
+    """
+    soup = BeautifulSoup(html, 'html.parser')
+    facts = page_facts(soup)
+    facts['no_results'] = facts['no_results'] or bool(JOB_NO_RESULTS.search(soup.get_text(' ')))
+    occurrences, under = scan(soup, _job_refs)
+    stats = {'job_ids': len(occurrences), 'cards': 0, 'empty': 0, **facts}
+    cards = []
+    for job_id, places in ([] if facts['no_results'] else occurrences.items()):
+        card = grow(places, job_id, under)
+        lines = card_lines(card, job_id, under)
+        if not lines:
+            stats['empty'] += 1
+            continue
+        age = AGE.search(' '.join(lines))
+        cards.append({'id': job_id, 'url': f'https://www.linkedin.com/jobs/view/{job_id}/', 'text': '\n'.join(lines),
+                      'age_days': int(age[1]) * AGE_DAYS[age[2].casefold()] if age else None})
+    stats['cards'] = len(cards)
+    return cards, shape(cards, stats)

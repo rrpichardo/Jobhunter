@@ -1,5 +1,59 @@
 # Implementation attempt log
 
+## October 21 PR #48 (LinkedIn job listings) integration repair — integration cycle 2 of 3
+
+- Starting head `4dfb8bb48b5c38a7fbd92dac67c9e294d609b37f`; the remote `claude/linkedin-jobs` equalled it when the
+  local fix `0407f09abf7b2a5e3107049b9b7378a1eba4bedd` was written. Before that was pushed, a cloud Claude session
+  pushed its own docs-only fix for the same finding, `a03ca85f7a06a8910dfdab7a3187e5ce30d9114e` (only
+  `docs/ROUTINE_PROMPT.md`), so the local push was rejected as non-fast-forward. Root then posted a coordination comment
+  on PR #48 asking cloud and other sessions to hold pushes, with Claude local as sole implementation owner. No force push
+  or history rewrite: the remote head was re-fetched (still `a03ca85`) and merged normally into `0407f09`, keeping both
+  commits. The only conflict, `docs/ROUTINE_PROMPT.md`, kept the local wording (Haiku subagent, this session validates,
+  fallback to reading itself) and carried over `a03ca85`'s sentence that creating the routine is still gate A3 and
+  LinkedIn stays off until A18. Same repair, same cycle 2; no new review cycle. Cycle 1 (merge of main `8c81341`) and
+  all older counters are kept.
+- Codex integration review (P2): the `docs/ROUTINE_PROMPT.md` section 1 "Which model reads" note added by #48 still told
+  the routine to read on the session model (Sonnet) and not to use Haiku, contradicting merged #49, A11 and the user's
+  acceptance of Haiku; a routine following it would never use the approved cheaper reader. Cycle 1 had only reworded it.
+- Fix: the note now says Haiku reads every free-text source in a `model: haiku` subagent given the work file path, the
+  exact fact format and the rules; this session runs the validation; if the file is rejected (or the subagent fails) the
+  session reads those items itself. The 100/100 eval is named as the reason Haiku was accepted, not as proof that new
+  items are read correctly. Matching current notes updated: the LinkedIn job-card step in `ROUTINE_PROMPT.md`, the
+  override in `LIVE_RUN_PROMPT.md` (no longer calls the note out of date), the A3 "do next" item in `CLAUDE_HANDOFF.md`,
+  the reading-model row in `PARAMETERS.md` and the way-C model line in `SOURCES_HOW_READ.md`. Dated historical
+  evidence (first live run on Sonnet, eval records, earlier ATTEMPTS entries) left unchanged.
+- Unchanged: CLI collector validation, the A18 LinkedIn hold, limits and permissions; no code or tests touched; no model
+  or paid test rerun. Checks: `git diff --check` clean; static search of current docs for Sonnet-first or "do not use
+  Haiku" instructions finds none. The full suite was last run on `4dfb8bb` (1,095 passed, 1 skipped, 10 subtests) and the
+  code is unchanged; exact-head CI is the remaining check. Next: fresh exact-head Codex review.
+
+## October 21 PR #48 (LinkedIn job listings) integration with main — integration cycle 1 of 3
+
+- Starting head `b79585ab1cd42562cfb1d8741719995d1125fa37`; the fetched remote `claude/linkedin-jobs` still equalled it (no
+  ownership race). GitHub refused that head as conflicting although a local merge was clean, because it had two merge bases
+  with main (`45aa52f`, `62fc1be`). Merged main `8c81341210ef233e75ae0de7b0d79081d6756124` (#40 to #47, #49, #50) in a normal
+  new merge commit (no rebase, no force push, no bypass), by Claude as the sole implementation owner in a local macOS checkout.
+- Earlier #48 rounds are kept, not reset: `2f45414` (feature), `4a59b4c`/`f3bbc37`/`4e86e41`/`42d109d`/`9a86668` (docs and
+  runbook), `45aa52f` and `b79585a` (close the browser after workbook or reservation failures; reject two spellings of one
+  output file before the allowance is used; reserve the day with the collector's own clock). This integration is cycle 1 of 3;
+  all older counters above are kept. #51/#52 content is not imported and no merged fix is reverted.
+- Conflicts were three. `jobhunter/post_facts.py` `SOCIAL`: kept both `linkedin-jobs` and `alirohde-rss` (with its
+  `max_chars` and `link_ids`); main's trace reason allowlist and verified-requisition identity came through unchanged.
+  `docs/SOURCES_HOW_READ.md`: kept main's two newsletter rows and #48's "LinkedIn job listings" row (now "built but held",
+  A18), dropped the stale "Next Play, Ali Rohde ... not built" and "LinkedIn job listings: not built" lines.
+  `docs/ROUTINE_PROMPT.md`: LinkedIn job listings are "built but held" under the same A18 hold, session and allowance as
+  the posts, with their `trace:` lines to copy once allowed; main's newsletter step 1b, trace paragraph, A18 hold and
+  pinned-uv lines kept. Also corrected #48's stale "Haiku eval NOT RUN YET" note (it ran; A11 accepted; switch waits for A3).
+- Checks: `uv sync --locked --extra social` (uv 0.13.1), `uv run --locked --extra social python -m pytest -q`: 1,095 passed,
+  1 skipped (`tests/test_linkedin_collect.py:396`, the real-browser smoke test: no Chromium here), 10 subtests passed.
+  `git diff --check` clean. Test-function set is the union of both sides (537; none lost); no file deleted against either
+  parent; the direct diff against main touches only #48's files plus the three docs above; `SOCIAL` keeps `x-twscrape`,
+  `linkedin-login`, `linkedin-jobs`, `alirohde-rss`; source registry and `social_queries.yaml` lose no entry.
+- Offline evidence only: no live LinkedIn, X, Sheet, cookie or routine action. LinkedIn stays held (A18). Next: fresh
+  exact-head Codex review of the pushed head and green CI before Codex merges.
+- Status docs: merged #40 to #47, #49, #50; #48 integration review pending; #52 reopened (cap lifted, 3-of-3 history and
+  counters kept); #51 Codex-authored and outside.
+
 ## October 21 PR #47 (Ali Rohde newsletter) integration with main — repair/review cycle 1 of 3
 
 - Starting head `716f3fce90a6d627e73e828ad8dd2eaf7dbe7b2b`; the fetched remote `claude/newsletter-alirohde` still equalled

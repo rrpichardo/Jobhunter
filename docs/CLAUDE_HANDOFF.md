@@ -17,7 +17,10 @@ a16z and the boards worked; **LinkedIn was refused at login** (A18). Results and
 
 **Update October 21, 2026:** #40, #41, #42, #43, #44, #45, #49 and #50 are merged into `main` (`15976f0`), then #46
 (`d2e4f38`). `main` `d2e4f38` was merged into #47 (`claude/newsletter-alirohde`; conflicts in `jobhunter/post_facts.py` and
-`docs/ROUTINE_PROMPT.md`, both sides kept; `docs/ATTEMPTS.md`). Open: #47, #48 (Codex review pending); #52 stopped after three review cycles, then was
+`docs/ROUTINE_PROMPT.md`, both sides kept; `docs/ATTEMPTS.md`), and #47 then merged (`8c81341`). `main` `8c81341` was merged
+into #48 (`claude/linkedin-jobs`; GitHub had refused the old head `b79585a` as conflicting because of two merge bases; conflicts in
+the `SOCIAL` dict, `docs/SOURCES_HOW_READ.md` and `docs/ROUTINE_PROMPT.md`, both sides kept; `docs/ATTEMPTS.md`, integration cycle
+1 of 3). Open: #48 (exact-head Codex review pending; LinkedIn job listings built but held, A18); #52 stopped after three review cycles, then was
 reopened by the user on October 21 with the cap lifted (history and counters kept in `docs/ATTEMPTS.md`; its two findings are
 not fixed yet; the local Claude session owns it, the cloud session was told to hold); #51 is Codex-authored. Merged code does not lift the LinkedIn hold: A18 still gates every live
 LinkedIn step, and every runbook installs the pinned uv 0.13.1 and puts it first on PATH. The table below is the October 19 snapshot.
@@ -47,7 +50,7 @@ Each social source spends one attempt per New York day; never retry a spent day;
 
 **Do next, in order, once the user answers:** (1) A12 "go": request Codex on one PR at a time (`docs/CODEX_REVIEW_QUEUE.md`), fix
 findings in new commits, merge in the order below. (2) A3: create the routine with the agreed sources (LinkedIn off unless A18 says
-otherwise) and name Haiku for the reading step in `docs/ROUTINE_PROMPT.md`. (3) One small PR per decided rule fix (A13, A16, A17, A19)
+otherwise); `docs/ROUTINE_PROMPT.md` section 1 already names Haiku for the reading step (#48). (3) One small PR per decided rule fix (A13, A16, A17, A19)
 and per tracing item (A20). Commits omit the `Claude-Session:` line (PENDING section 6).
 
 ### Merge plan, checked by a trial replay (October 19, about 22:00 UTC)

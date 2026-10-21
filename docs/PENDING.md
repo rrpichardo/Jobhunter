@@ -1,8 +1,8 @@
 # Pending items: your decisions, your tasks, Codex, and what Claude does next
 
 Created October 18, 2026; rewritten and re-checked against GitHub and the Sheet on October 19, 2026, about 23:30 UTC;
-PR states in 0.3 updated October 21, 2026 from `main`'s merge history (merged: #40 to #46, #49, #50); #52 reopened the same day;
-`main` (`d2e4f38`) merged into #47 the same day.
+PR states in 0.3 updated October 21, 2026 from `main`'s merge history (merged: #40 to #47, #49, #50); #52 reopened the same day;
+`main` (`8c81341`) merged into #48 the same day (integration), then a docs fix for Codex's Haiku-note finding (review of the new head pending).
 When the user asks "what is pending", "what do you need from me" or "where are we", Claude reads section 0 first,
 checks it against GitHub, answers in plain language, and fixes this file if it is out of date. Nothing here is a claim
 that work exists unless its status says so.
@@ -18,7 +18,7 @@ column. Fill it in (or answer in chat); Claude copies each answer back here. The
 | --- | --- | --- | --- |
 | A18 | **LinkedIn: what now?** The first live run was refused at login on its first search (`social_login_failed`, a redirect loop). A fresh cookie fixes only one possible cause, so nothing guarantees it works next time. Options: (a) read your LinkedIn job-alert emails through Gmail (needs B1); (b) rely on JSearch and Jooble, which already bring LinkedIn listings into the Sheet; (c) one diagnostic try: Claude first makes the collector say what page it was sent to, then you refresh the cookie; (d) run the LinkedIn collector on your own computer (your home internet and browser) instead of the cloud; (e) drop the LinkedIn collectors (close #43 and #48); (f) your own proposal. | (a) plus (b) now; keep #43 and #48 open but on hold; remove `LINKEDIN_LI_AT` from JobHunterEnv until you decide, so the daily routine does not knock with a bad cookie. | open |
 | A3 | **Create the daily routine?** First look at the new rows the first run added to the Sheet (505 jobs, 94 of them X leads) and say whether they are useful. Then Claude creates `JobHunter Daily` (06:07 New York, 3-day window, Haiku reads, LinkedIn off unless A18 says otherwise). | Yes, after you look at the Sheet. | open (needs your look at the Sheet) |
-| A12 | **Codex "go".** Done for #40 to #46, #49 and #50 (merged October 21). #47, #48 and #52 still need a Codex review of their exact head before they merge; Claude requests one PR at a time in the order in `docs/CODEX_REVIEW_QUEUE.md`. | Go when credits are available. | partly done |
+| A12 | **Codex "go".** Done for #40 to #47, #49 and #50 (merged October 21). #48 and #52 still need a Codex review of their exact head before they merge; Claude requests one PR at a time in the order in `docs/CODEX_REVIEW_QUEUE.md`. | Go when credits are available. | partly done |
 | A16 | **X posts that name no company** (E8). 39 facts from 34 X posts were rejected only because the company was empty (a person posting "we are hiring a Chief of Staff, DM me"). | Fill the company with the poster's `@handle` in code (not by the AI) and show the row as a lead; needs a PR and Codex. | open |
 | A17 | **Pay written like `$190k-$220k`** (E7). The pay filter reads `USD 50,000 per year` but not plain `$Nk-$Mk`, so those jobs are kept as "pay unresolved" and the floors ($140k US, $70k Latin America) rarely act on X and Hacker News posts. | Count `$Nk-$Mk` as annual USD when no hourly or monthly word or other currency is next to it; anything else stays "unresolved". | open |
 | A13 | **Plural titles** ("Product Managers"). Today the plural is dropped and the singular collected; it also keeps such posts from being read at all on Hacker News. | Yes, accept plurals. | open |
@@ -47,7 +47,8 @@ Decisions already made are listed in section 2 so they are not asked again.
 ### 0.3 Waiting on Codex (your "go", A12)
 
 **Merged into `main` (October 21):** #42 roles, #44 Work at a Startup, #49 Haiku test, #50 rejection reasons, #40 X collector,
-#41 run modes, #43 LinkedIn post collector (code only; LinkedIn stays on hold, A18), #45 a16z, #46 status and handoff documentation.
+#41 run modes, #43 LinkedIn post collector (code only; LinkedIn stays on hold, A18), #45 a16z, #46 status and handoff documentation,
+#47 Ali Rohde newsletter (`8c81341`).
 Merging code does not lift a hold: no live LinkedIn request until A18 is answered.
 
 Still open. Each Claude-written PR needs a Codex review of its exact head plus green CI before it may merge. Heads, history and a
@@ -55,8 +56,7 @@ ready-to-paste request for each are in `docs/CODEX_REVIEW_QUEUE.md`.
 
 | PR | What | Note |
 | --- | --- | --- |
-| #47 | Ali Rohde newsletter | ran live on October 19 (an earlier head; worked). Its Codex finding (tracking links and shared generic links) was fixed in `716f3fc`; `main` (`d2e4f38`) was merged in on October 21 (offline tests only, no live run of the new head); needs a fresh Codex review of the new head |
-| #48 | LinkedIn job listings | live login failed (A18); on hold until A18 |
+| #48 | LinkedIn job listings | `main` (`8c81341`) merged in on October 21 (integration; GitHub had refused the old head as conflicting). Conflicts in the `SOCIAL` dict, `docs/SOURCES_HOW_READ.md` and `docs/ROUTINE_PROMPT.md`, both sides kept; offline tests only. Then a docs-only fix for Codex's finding: the routine prompt now says Haiku reads (A11), with this session validating and reading itself if a file is rejected. **Needs a fresh Codex review of the new head.** Code merging does not lift the hold: built but held, no live LinkedIn step until A18 |
 | #52 | Claude-written PR; its open findings are postings wrongly excluded | **Reopened October 21** by your message "dont worrya bout the three cylce limit we need to have 52 well": the three-cycle cap is lifted for #52 and further Claude fixes and Codex reviews are allowed. Its earlier stop after three cycles (third review on `70f332c`, Codex review 5601000995, two wrong exclusions still open) stays in `docs/ATTEMPTS.md` as history; counters are not reset. Not fixed yet; open and unmerged. |
 
 #51 is Codex-authored and outside this list (it gets a Claude review, not Codex).
@@ -137,7 +137,7 @@ every command exited 0. The Sheet was backed up first (A15).
 | Work at a Startup logged-in lists (the public page shows only 24 of 241 jobs) | B10 |
 | LinkedIn collectors (#43, #48) | A18 |
 | The daily routine | A3 |
-| Merging #47, #48 (and #52 once fixed) | A12 (Codex) |
+| Merging #48 (and #52 once fixed) | A12 (Codex) |
 | Fixing the two open #52 findings | nothing from you: reopened October 21 (cap lifted); Claude fixes, then a fresh Codex review |
 | The small rule fixes | A13, A16, A17, A19 |
 

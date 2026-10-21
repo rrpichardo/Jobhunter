@@ -26,7 +26,8 @@ or use `LINKEDIN_LI_AT`) and record LinkedIn as "held, A18 open". A held source 
 
 ```
 uv run --locked --extra social python -m scripts.x_collect --run-id $RUN-x --output $DIR/x_cand.json --lookback-days 28
-uv run --locked --extra social python -m scripts.linkedin_collect --run-id $RUN-li --output $DIR/li_cand.json --lookback-days 28
+uv run --locked --extra social python -m scripts.linkedin_collect --run-id $RUN-li --output $DIR/li_cand.json \
+    --jobs-output $DIR/li_jobs.json --lookback-days 28
 ```
 
 (The second command only when A18 allows LinkedIn that day; see the hold at the top.)
@@ -37,14 +38,18 @@ Read the printed lines (they hold numbers and fixed words only):
 | --- | --- | --- |
 | `x_collected: queries_run=10 posts=N error=none` | posts above 0 | `social_login_failed`: the X cookies are wrong or expired; `social_rate_limited`: stop for the day; `social_collector_error`: a defect, report it |
 | `linkedin_collected: queries_run=5 posts=N error=none` | posts above 0 | same words |
-| `search_N: status=200 wall=False ready=True post_ids=A cards=B short_cards=0 median_chars=N ...` | `cards` close to `post_ids`, `short_cards` 0 and `median_chars` in the hundreds (a card of a few characters means the card boundary was misread; the run then fails with `social_collector_error` instead of feeding Claude page furniture); `ready=False` means no result appeared within 25 s | `wall=True` or status 999/403: LinkedIn sent the session to a login or check page (log in yourself, refresh `li_at`); `post_ids=0` with `no_results=False`: the page layout was not recognised (the day is spent, report the `search_N` lines so the reader can be adjusted); `undated` above 0: ids without a believable date |
+| `linkedin_jobs_collected: queries_run=5 jobs=N error=none` (printed after the post lines; the job searches run in the same session and use the same allowance) | jobs above 0 | same words; if the post searches were refused (`social_login_failed` or `social_rate_limited`) the job searches are not attempted and this line repeats that word |
+| `search_N: kind=posts status=200 wall=False ready=True post_ids=A cards=B short_cards=0 median_chars=N ...` | `cards` close to `post_ids`, `short_cards` 0 and `median_chars` in the hundreds (a card of a few characters means the card boundary was misread; the run then fails with `social_collector_error` instead of feeding Claude page furniture); `ready=False` means no result appeared within 25 s | `wall=True` or status 999/403: LinkedIn sent the session to a login or check page (log in yourself, refresh `li_at`); `post_ids=0` with `no_results=False`: the page layout was not recognised (the day is spent, report the `search_N` lines so the reader can be adjusted); `undated` above 0: ids without a believable date |
+
+The five job searches also print `search_N: kind=jobs status=200 wall=False path=/jobs ready=True job_ids=A cards=B empty=0 no_results=False script_ids=C login_form=False short_cards=0 median_chars=N outside_window=D undated=E` lines after the post searches. Healthy: `cards` close to `job_ids`, `short_cards` 0, `median_chars` in the hundreds, `login_form=False`. `undated` counts cards with no readable age ("3 days ago"); those take the capture day, so a few are normal. `wall=True`, status 999/403 or `login_form=True` means the same as for posts: stop and tell the user. `job_ids=0` with `no_results=False` means the job page layout was not recognised (the day is spent; report the lines).
 
 Exit codes: 0 candidates written, 3 allowance already spent today (nothing collected), 4 cookies, library or browser
 not set up (including a browser that cannot start with that cookie value; nothing spent), 2 anything else (nothing collected). Do NOT retry a spent day.
 
 ## Step 2: read and deliver (only if step 1 gave posts)
 
-For each source (`x-twscrape` with `$DIR/x_cand.json`, `linkedin-login` with `$DIR/li_cand.json`):
+For each source (`x-twscrape` with `$DIR/x_cand.json`, `linkedin-login` with `$DIR/li_cand.json`, `linkedin-jobs` with
+`$DIR/li_jobs.json`; the last two come from ONE LinkedIn session and ONE allowance):
 
 ```
 uv run --locked python -m scripts.ai_queue pull --source <source> --candidates <file> --candidates-sha256 <digest> \
@@ -60,11 +65,11 @@ the usual options, `sheets_sync --input-sha256 <probe digest> --run-id $RUN`, an
 
 ## What to look at afterwards
 
-- Sources tab: `x-twscrape` and `linkedin-login` show OK, OK-zero-jobs, blocked (account refused) or failed. Once a result is
+- Sources tab: `x-twscrape`, `linkedin-login` and `linkedin-jobs` show OK, OK-zero-jobs, blocked (account refused) or failed. Once a result is
   delivered they replace the "needs setup" placeholders `x-hiring-posts` and `linkedin-logged-in`, so those two names are NOT
   what to look for (they stay visible only for a source whose result was not delivered). Checked on October 19 by driving the
   collect, queue, validate, probe and Sheet-writer steps offline with stand-in pages and an in-memory sheet.
-- Jobs tab: rows whose Job ID starts with `x:` or `linkedin-post:` are leads with the post URL; check three by hand.
+- Jobs tab: rows whose Job ID starts with `x:`, `linkedin-post:` or `linkedin-job:` are leads (the post or job-card link); check three by hand.
 - `_State` tab: `allowance/x-twscrape/<date>` and `allowance/linkedin-login/<date>` hold ok, zero, blocked or failed.
 
 ## Stop conditions

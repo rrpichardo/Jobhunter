@@ -60,6 +60,16 @@ keys or tokens. Do not call any paid service.
 
 ## 1. Free-text sources you read yourself (Hacker News)
 
+> **Which model reads.** The reading steps (Hacker News comments, X and LinkedIn posts, LinkedIn job cards, newsletter
+> editions) are done by Haiku, which the user accepted (A11 in `docs/PENDING.md`). For each source, start a subagent with
+> `model: haiku` and give it the work file path, the exact fact format and the rules in this prompt for that source; it
+> writes the facts file. Then run that source's validation yourself in this session. If validation rejects the file
+> (or the subagent fails), read those same items yourself and write the facts file again, and say so in the report.
+> The earlier eval (100 of 100 items agreed with Sonnet; `docs/evals/HAIKU_READING_EVAL.md`) is why Haiku was accepted;
+> it is not proof that any new item is read correctly, so the word-for-word validation stays the gate for every fact.
+> Creating and scheduling the routine is still a separate gate (A3), and LinkedIn stays off until the user decides A18; this
+> note does not create or schedule anything.
+
 Run, saving each printed digest:
 
 ```
@@ -200,8 +210,15 @@ is harmless because jobs collapse by Job ID.
   linkedin-login --id-field item_id`, Claude reads, `social_posts validate --source linkedin-login`, `source_probe
   --social-result`, delivery, then `ai_queue commit`. It prints one `search_N:` line per search (numbers only); paste
   them into the report. Exit 3 = allowance spent, exit 4 = not set up. Never print or ask for the cookie value.
-- LinkedIn job listings: not built. The daily allowance command (`scripts.allowance`) is shared with the post collector
-  (one live LinkedIn session per day). Never log in or open this site in this routine except through the collector.
+- LinkedIn job listings: built but held. They run inside the same collector run as the posts (`linkedin_collect ...
+  --jobs-output $DIR/li_jobs.json`: up to 5 job searches in the SAME session and under the SAME single daily allowance,
+  `scripts.allowance`, one live LinkedIn session per day), so the A18 hold above covers them too: never run them until
+  A18 allows it, and report them as "held, A18 open". Only then do the job cards go through the same read step as posts:
+  `ai_queue pull --source linkedin-jobs --id-field item_id`, Claude (the Haiku subagent, validated by this session; see the note at the
+  top of section 1) copies title, company, place and pay word for word from each card's text, `social_posts validate --source
+  linkedin-jobs` (copy its `trace:` lines into the report like every other source), `source_probe --social-result`,
+  delivery, `ai_queue commit`. A job card shows an age ("3 days ago"), not a date, so its posted date is the capture day
+  minus that age (day precision). Never log in or open this site in this routine except through the collector.
 - Work at a Startup (logged in), Cosign, school and MBA sites, Next Play feed: not set up
   (the Ali Rohde feed is step 1b).
 - a16z: listing-only, delivers no jobs.

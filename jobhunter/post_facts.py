@@ -184,6 +184,10 @@ SOCIAL = {
                        'prefix': 'linkedin-post', 'registry_id': 'linkedin-logged-in',
                        'path': re.compile(r'/(?:feed/update/urn:li:(?:activity|ugcPost|share):(\d{5,25})/?'
                                           r'|posts/[A-Za-z0-9_%.\-]+-(?:activity|ugcPost|share)-(\d{5,25})-[A-Za-z0-9_]{1,10}/?)')},
+    # LinkedIn job listings: one candidate per job card, read by the AI like a post (the card's own text is the only
+    # source of title, company and place), so code never guesses at LinkedIn's markup.
+    'linkedin-jobs': {'hosts': {'www.linkedin.com', 'linkedin.com'}, 'prefix': 'linkedin-job',
+                      'registry_id': 'linkedin-jobs', 'path': re.compile(r'/jobs/view/(\d{6,13})/?')},
     # Ali Rohde Jobs (weekly Substack edition listing chief of staff, BizOps and VC roles): one "post" per edition,
     # read like a social post. Public feed, no login, no allowance.
     'alirohde-rss': {'hosts': {'alirohdejobs.substack.com'}, 'prefix': 'alirohde', 'registry_id': 'alirohde-rss',

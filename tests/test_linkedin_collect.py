@@ -134,8 +134,9 @@ class FakeSession:
     def __init__(self, pages):
         self.pages, self.urls, self.closed = list(pages), [], False
 
-    def get(self, url):
+    def get(self, url, **options):
         self.urls.append(url)
+        self.options = options
         return self.pages[min(len(self.urls), len(self.pages)) - 1]
 
     def close(self):
@@ -270,9 +271,9 @@ def test_the_allowance_is_reserved_before_the_first_request(tmp_path):
     store = MemoryStore()
 
     class Spy(FakeSession):
-        def get(self, url):
+        def get(self, url, **options):
             seen.append(json.loads(store.tables['_State'][1][1])['state'])
-            return super().get(url)
+            return super().get(url, **options)
     run(tmp_path, li.LinkedInFetcher(Spy([ok()]), since_day='2026-09-21'), store=store)
     assert seen and seen[0] == 'reserved'
 
@@ -407,3 +408,142 @@ def test_the_browser_session_loads_scrolls_expands_and_returns_the_page_with_the
     cards, _ = lc.extract_post_cards(result.html)
     assert result.status == 200 and [c['id'] for c in cards] == [pid]
     assert 'li_at=secret-li-at-value' in seen['cookie'] and result.ready  # the page had a result, so no 25 s wait ran out
+
+
+# ---- job listings (same session, same single allowance) ---------------------------------------------------
+
+def job(number, *, title='Senior Product Manager, AI', age='3 days ago', style='href', extra=''):
+    ident = 3900000000 + number
+    ref = (f'<a href="/jobs/view/{ident}/?trackingId=abc&currentJobId={ident}">{title}</a>' if style == 'href'
+           else f'<div data-occludable-job-id="{ident}"><span>{title}</span></div>')
+    return ident, (f'<li>{ref}<span>{title} with verification</span><span>Acme Corp</span>'
+                   f'<span>San Francisco, CA (Hybrid)</span><span>$180K/yr - $240K/yr</span><span>{age}</span>'
+                   f'<button>Easy Apply</button>{extra}</li>')
+
+
+def jobs_page(*cards):
+    return li.Page('https://www.linkedin.com/jobs/search/?keywords=x', 200,
+                   f'<html><body><nav>Jobs Messaging</nav><main><ul>{"".join(cards)}</ul></main></body></html>')
+
+
+def test_job_cards_are_found_by_job_id_with_their_own_text_and_age():
+    first, one = job(1)
+    second, two = job(2, title='Chief of Staff', age='2 weeks ago', style='attr')
+    cards, stats = lc.extract_job_cards(jobs_page(one, two).html)
+    assert [c['id'] for c in cards] == [str(first), str(second)]
+    assert (stats['job_ids'], stats['cards'], stats['empty'], stats['short_cards']) == (2, 2, 0, 0)
+    assert cards[0]['url'] == f'https://www.linkedin.com/jobs/view/{first}/' and cards[0]['age_days'] == 3
+    assert cards[1]['age_days'] == 14 and 'Acme Corp' in cards[0]['text'] and 'Jobs Messaging' not in cards[0]['text']
+
+
+def test_a_job_search_keeps_cards_inside_the_window_and_those_with_no_readable_age():
+    cards = [job(1)[1], job(2, age='3 months ago')[1], job(3, age='Actively recruiting')[1]]
+    f = li.LinkedInFetcher(FakeSession([jobs_page(*cards)]), since_day='2026-09-21',
+                           captured=datetime(2026, 10, 19, 16, tzinfo=timezone.utc))
+    found = f.search_jobs('q', 10)
+    assert [j['url'][-11:-1] for j in found] == ['3900000001', '3900000003']
+    assert found[0]['created_at'].startswith('2026-10-16') and found[1]['created_at'].startswith('2026-10-19')
+    assert f.diagnostics[0]['outside_window'] == 1 and f.diagnostics[0]['undated'] == 1 and f.diagnostics[0]['kind'] == 'jobs'
+    assert f.session.options['expand'] is False and 'jobs/view' in f.session.options['ready']
+
+
+@pytest.mark.parametrize('page,expected', [
+    (li.Page('https://www.linkedin.com/checkpoint/challenge/x', 200, ''), sc.FetchBlocked),
+    (li.Page('https://www.linkedin.com/jobs/search/', 429, ''), sc.FetchRateLimited),
+    (li.Page('https://www.linkedin.com/jobs/search/', 200, '<html><body>something new</body></html>'), RuntimeError)])
+def test_job_search_walls_map_to_fixed_failures(page, expected):
+    with pytest.raises(expected):
+        li.LinkedInFetcher(FakeSession([page]), since_day='2026-09-21').search_jobs('q', 5)
+
+
+def test_a_job_page_that_says_no_jobs_found_is_a_genuine_zero():
+    empty = li.Page('https://www.linkedin.com/jobs/search/', 200, '<html><body><main><h2>No matching jobs found</h2></main></body></html>')
+    assert li.LinkedInFetcher(FakeSession([empty]), since_day='2026-09-21').search_jobs('q', 5) == []
+
+
+def run_both(tmp_path, f, *, store=None):
+    out = tmp_path.parent / (tmp_path.name + '_li.json')
+    jobs = tmp_path.parent / (tmp_path.name + '_jobs.json')
+    store = MemoryStore() if store is None else store
+    code = li.main(['--run-id', 'r1', '--output', str(out), '--jobs-output', str(jobs)], store=store, fetcher=f,
+                   environ=COOKIES, now=lambda: NOW, sleep=lambda s: None, rng=lambda: 0.5)
+    return code, out, jobs, store
+
+
+def test_one_session_and_one_allowance_cover_posts_and_jobs(tmp_path, capsys):
+    post_pages = [ok(card(1)[1])] + [ok()] * 4
+    job_pages = [jobs_page(job(n)[1]) for n in range(1, 6)]
+    f = li.LinkedInFetcher(FakeSession(post_pages + job_pages), since_day='2026-09-21',
+                           captured=datetime(2026, 10, 19, 16, tzinfo=timezone.utc))
+    code, out, jobs, store = run_both(tmp_path, f)
+    posts_payload, jobs_payload = json.loads(out.read_text()), json.loads(jobs.read_text())
+    text = capsys.readouterr().out
+    assert code == 0 and len(posts_payload['candidates']) == 1 and len(jobs_payload['candidates']) == 5
+    assert jobs_payload['source_id'] == 'linkedin-jobs' and jobs_payload['stats']['queries_run'] == 5
+    assert [r['kind'] for r in jobs_payload['stats']['searches']] == ['jobs'] * 5
+    assert [r['kind'] for r in posts_payload['stats']['searches']] == ['posts'] * 5
+    assert len([k for k in rows(store) if k.startswith('allowance/')]) == 1  # one reservation for the whole session
+    assert rows(store)['allowance/linkedin-login/2026-10-19']['state'] == 'ok' and 'secret' not in text + jobs.read_text()
+    assert 'linkedin_jobs_candidates_sha256=' in text and f.session.closed
+
+
+def test_a_refused_post_search_skips_the_job_searches_and_records_the_same_word_for_both(tmp_path):
+    wall = li.Page('https://www.linkedin.com/login', 200, '')
+    f = li.LinkedInFetcher(FakeSession([wall]), since_day='2026-09-21')
+    code, out, jobs, store = run_both(tmp_path, f)
+    assert code == 0 and len(f.session.urls) == 1  # the job pages were never requested
+    assert json.loads(out.read_text())['error'] == json.loads(jobs.read_text())['error'] == 'social_login_failed'
+    assert rows(store)['allowance/linkedin-login/2026-10-19']['state'] == 'blocked'
+
+
+def test_a_browser_that_cannot_start_spends_nothing_for_either_file(tmp_path, monkeypatch):
+    def broken(*args, **kwargs):
+        raise RuntimeError('token=secret-li-at-value')
+    monkeypatch.setitem(sys.modules, 'playwright', object())
+    monkeypatch.setattr(li, 'BrowserSession', broken)
+    code, out, jobs, store = run_both(tmp_path, None)
+    assert code == 4 and '_State' not in store.tables and not out.exists() and not jobs.exists()
+
+
+def test_the_two_output_files_must_differ_and_a_doomed_jobs_path_spends_nothing(tmp_path):
+    store = MemoryStore()
+    same = tmp_path.parent / (tmp_path.name + '_same.json')
+    assert li.main(['--run-id', 'r1', '--output', str(same), '--jobs-output', str(same)], store=store, fetcher=fetcher(ok()),
+                   environ=COOKIES, now=lambda: NOW) == 2 and '_State' not in store.tables
+    existing = tmp_path.parent / (tmp_path.name + '_exists.json')
+    existing.write_text('keep')
+    assert li.main(['--run-id', 'r1', '--output', str(tmp_path.parent / (tmp_path.name + '_new.json')),
+                    '--jobs-output', str(existing)], store=store, fetcher=fetcher(ok()), environ=COOKIES,
+                   now=lambda: NOW) == 2 and '_State' not in store.tables
+
+
+def test_the_job_queries_respect_the_limit_and_each_names_a_collected_role():
+    from jobhunter.postings import role_family
+    queries = sc.load_queries('sources/social_queries.yaml', li.JOBS_QUERY_KEY, limit=sc.LIMITS[li.SOURCE]['job_searches'])
+    assert 1 <= len(queries) <= 5 and all(role_family(q) for q in queries), queries
+
+
+def test_a_job_card_flows_through_the_queue_and_the_validator_into_a_lead(tmp_path, capsys):
+    ident, one = job(1)
+    f = li.LinkedInFetcher(FakeSession([ok()] * 5 + [jobs_page(one)] + [jobs_page()] * 4), since_day='2026-09-21',
+                           captured=datetime(2026, 10, 19, 16, tzinfo=timezone.utc))
+    f.session.pages[5:] = [jobs_page(one)] + [li.Page('https://www.linkedin.com/jobs/search/', 200,
+                                                    '<html><body><main>No jobs found</main></body></html>')] * 4
+    code, out, jobs, store = run_both(tmp_path, f)
+    digest = hashlib.sha256(jobs.read_bytes()).hexdigest()
+    work = tmp_path.parent / (tmp_path.name + '_work.json')
+    assert queue_cli.main(['pull', '--source', 'linkedin-jobs', '--candidates', str(jobs), '--candidates-sha256', digest,
+                           '--output', str(work), '--id-field', 'item_id'], store=MemoryStore()) == 0
+    work_digest = capsys.readouterr().out.split('work_sha256=')[1].split()[0]
+    item = json.loads(work.read_text())['candidates'][0]
+    assert item['item_id'] == str(ident) and item['created_at'].startswith('2026-10-16')
+    facts = tmp_path.parent / (tmp_path.name + '_facts.json')
+    facts.write_text(json.dumps({'processed': [str(ident)], 'facts': [{
+        'item_id': str(ident), 'title': 'Senior Product Manager, AI', 'company': 'Acme Corp',
+        'location': 'San Francisco, CA (Hybrid)', 'salary': '$180K/yr - $240K/yr',
+        'description_quote': 'Acme Corp', 'apply_url': ''}]}))
+    result = tmp_path.parent / (tmp_path.name + '_result.json')
+    assert social_posts.main(['validate', '--source', 'linkedin-jobs', '--candidates', str(work), '--candidates-sha256',
+                              work_digest, '--extractions', str(facts), '--output', str(result)]) == 0
+    posting = json.loads(result.read_text())['postings'][0]
+    assert posting['job_id'].startswith(f'linkedin-job:{ident}:') and posting['apply_url'] == f'https://www.linkedin.com/jobs/view/{ident}/'
