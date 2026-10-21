@@ -8,6 +8,8 @@ that work exists unless its status says so.
 
 ## 0. At a glance
 
+**Short plain version for the user: `docs/START_HERE.md` (what you answer, do and approve; what Codex and Claude do). It is this section at a smaller size; update both together.**
+
 **Fill-out form:** every question in 0.1 and every task in 0.2 is also in `docs/DECISIONS_FORM.md`, with an empty "Your answer"
 column. Fill it in (or answer in chat); Claude copies each answer back here. The IDs are the same.
 
