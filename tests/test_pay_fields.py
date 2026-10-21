@@ -165,3 +165,52 @@ def test_the_generic_sales_disclaimer_in_the_blurb_does_not_turn_a_base_range_in
              'role’s On Target Earnings ("OTE") range, meaning that the range includes both commissions and base salary.</p>')
     ranges = [{"min_cents": 30500000, "max_cents": 38500000, "currency_type": "USD", "title": "Annual Salary:", "blurb": blurb}]
     assert p.greenhouse_pay(ranges) == "305,000 - 385,000 USD year"
+
+
+# Codex re-review of PR 52 (October 21, cycle 2): the clause after the range and explicit blurb periods.
+@pytest.mark.parametrize("text", [
+    "The annual base salary range is $90,000 - $120,000 (CAD).",
+    "The annual base salary range is $90,000 - $120,000 [CAD].",
+    "Salary range: $90,000 - $120,000 including bonus and equity.",
+    "Salary range: $90,000 - $120,000, inclusive of bonus.",
+    "The salary range is $40,000 - $50,000, paid monthly.",
+    "The salary range is $40,000 - $50,000 per month.",
+    "The base salary range is $90,000 - $120,000 per year (EUR).",
+])
+def test_the_whole_clause_after_the_range_keeps_unsupported_pay_unresolved(text):
+    assert p.salary_from_text(text) == ""
+
+
+@pytest.mark.parametrize("text", [
+    "The base salary range is $150,000 - $190,000 per year, plus bonus and equity.",
+    "The salary range is $150,000 - $190,000/year. Total compensation includes bonus and equity.",
+    "The annual base salary range is $150,000 - $190,000 (USD).",
+])
+def test_extra_pay_on_top_of_base_or_in_the_next_sentence_does_not_block_a_base_range(text):
+    assert p.salary_from_text(text) == "150,000 - 190,000 USD year"
+
+
+def test_an_explicit_per_month_blurb_makes_an_unlabeled_greenhouse_range_unresolved():
+    ranges = [{"min_cents": 1000000, "max_cents": 1500000, "currency_type": "USD", "title": "Salary range",
+               "blurb": "<p>The range is per month.</p>"}]
+    assert p.greenhouse_pay(ranges) == "10,000 - 15,000 USD month"
+    posting = p.parse_greenhouse({"jobs": [gh_job(ranges)]}, CTX)[0][0]
+    assert p.annual_usd_salary_ceiling(posting.salary) is None and p.collection_reason(posting) == ""
+
+
+@pytest.mark.parametrize("blurb,unit", [
+    ("The range is paid monthly.", "month"), ("Amounts are per week.", "week"), ("The hourly rate range is shown.", "hour"),
+    ("Figures are daily.", "day"),
+])
+def test_explicit_period_wording_in_the_blurb_is_honored(blurb, unit):
+    ranges = [{"min_cents": 1000000, "max_cents": 1500000, "currency_type": "USD", "title": "Pay Range", "blurb": blurb}]
+    assert p.greenhouse_pay(ranges).endswith("USD " + unit)
+
+
+@pytest.mark.parametrize("blurb", [
+    "<p>The annual compensation range for this role is listed below.</p><p>For sales roles, the range provided is the role’s On Target Earnings (\"OTE\") range, meaning that the range includes both the sales commissions/sales bonuses target and annual base salary for the role.</p>",
+    "<p>Pay may vary by location, experience and level.</p>", "",
+])
+def test_generic_blurb_text_does_not_change_a_yearly_range(blurb):
+    ranges = [{"min_cents": 15000000, "max_cents": 19000000, "currency_type": "USD", "title": "Pay Range", "blurb": blurb}]
+    assert p.greenhouse_pay(ranges) == "150,000 - 190,000 USD year"

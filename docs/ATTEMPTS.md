@@ -1003,3 +1003,18 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
   PR branches #40, #41, #43, #44, #45, #46, #47, #48, #49 and #50 as NEW commits (heads `e2ce21d`, `40fda94`, `45aa52f`, `7e4088a`, `aa9ee55`,
   `148eec6`, `716f3fc`, `b79585a`, `96f14eb`, `3214479`), each branch tested on its own; their Codex re-reviews hit the usage limit and
   are still owed.
+
+- **Cycle 2 of 3 (Codex re-review of `8943862`, October 21):** four remaining P2 findings, all fixed in NEW commits (no history rewritten) with Codex's
+  exact examples as regression tests. (1) A hiring verb no longer lets the product's users become the applicants: only applicant descriptors
+  (current, recent, talented, graduating, a year, "and/or") may sit between the lead and the MBA noun; the "2027 class without MBA" label uses the same rule.
+  (2) Every applicant statement is read before deciding, and the year comes from the whole sentence or whole title: a program year anywhere in the
+  title counts, and an unqualified title match such as "Product Manager (MBA)" can no longer hide a description that says "graduating in spring 2028 only";
+  a statement naming 2027 still qualifies a posting that also names another class. (3) The pay reader inspects the clause after the range: a currency in
+  brackets, "including bonus and equity", and "paid monthly" / "per month" leave the cell blank, while "plus bonus" (extra on top of base) and a next sentence
+  about total compensation do not block a base range. (4) A Greenhouse blurb that says the range is "per month/week/day/hour" or "paid monthly" now sets the unit
+  (generic sales/OTE disclaimer text still has no effect). A self-check found and fixed one regression of my own in this round: the "(MBA)" title marker
+  also matched the degree line "Master of Business Administration (MBA) or Juris Doctor (JD)" in descriptions (it now applies to titles only; tested).
+  Verification: `uv run --locked --extra social python -m pytest -q`: 1,226 passed, 10 subtests passed. Real-data re-checks unchanged: 2 of 6,812 board
+  postings meet the rule (Sierra's "MBA Grad 2027" and an MBA internship), pay read as yearly USD unchanged, cleanup dry run unchanged (1/3/164/542).
+  No live source, Sheet access, cookie, paid service, deployment, merge, re-cut, or edit of any other PR. A new GitHub Action job (run 39606761531)
+  was started by the authorization comment; the cloud session did the work, and the branch was checked before pushing.

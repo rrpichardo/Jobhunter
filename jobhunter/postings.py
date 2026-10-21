@@ -348,21 +348,27 @@ _APPLICANT_LEAD = (r"(?:role|position|program(?:me)?|opening|opportunity|job|int
                    r"available\s+to|restricted\s+to|limited\s+to)"
                    r"|open\s+(?:only\s+)?to|(?:we\s+(?:are\s+|'re\s+)?)?(?:recruiting|hiring|seeking|targeting|inviting)"
                    r"|(?:applicants?|candidates?)\s+(?:must|should|need\s+to)\s+be|eligibility:?|eligible:?")
-MBA_APPLICANT = re.compile(rf"\b(?:{_APPLICANT_LEAD})\b[^.;\n]{{0,40}}?\b(?:{_MBA_PEOPLE})", re.I)
+# Only words that DESCRIBE the applicants may sit between a lead and the MBA noun. A verb phrase such as "a PM to build products for"
+# describes the job or the customers, so it cannot make the MBA students applicants.
+_APPLICANT_WORDS = (r"(?:(?:the|a|an|our|these|top|talented|rising|motivated|exceptional|current|incoming|recent|new|graduating|"
+                    r"full[- ]time|part[- ]time|rotational|summer|fall|spring|winter|20\d\d|class\s+of|and|or|only|:|,)\s*)*")
+MBA_APPLICANT = re.compile(rf"\b(?:{_APPLICANT_LEAD})\b\s*{_APPLICANT_WORDS}\b(?:{_MBA_PEOPLE})", re.I)
 MBA_STANDALONE = tuple(re.compile(pattern, re.I) for pattern in (
     rf"\b{_MBA}\s+class(?:\s+of)?\b",
     rf"\b{_MBA}\s+grad(?:uate)?s?\b\s*(?:\(?20\d\d|class)",
     rf"\b{_MBA}\s+(?:leadership|rotational|rotation|associate|early[- ]career|development)\s+(?:development\s+)?program(?:me)?\b",
     rf"\bpost[- ]{_MBA}\s+(?:role|hires?|position|associate|product|opportunit\w+)\b",
     rf"\b{_MBA}\s+(?:campus\s+)?recruit(?:ing|ment|s)\b",
-    rf"\(\s*(?:full[- ]time\s+|part[- ]time\s+)?{_MBA}\s*\)",  # "Business Leadership Development Program (Full-Time MBA)"
     rf"\b(?:applicants?|candidates?)\s+(?:must|should)\s+(?:be|have)\s+(?:currently\s+)?(?:pursuing|enrolled\s+in|completing)\s+an?\s+{_MBA}\b",
 ))
+# In a TITLE, "(MBA)" or "(Full-Time MBA)" marks the program; in a description the same words are usually a degree requirement
+# ("Master of Business Administration (MBA) or Juris Doctor (JD) degree"), so this marker is read in titles only.
+MBA_TITLE_MARKER = re.compile(rf"\(\s*(?:full[- ]time\s+|part[- ]time\s+)?{_MBA}\s*\)", re.I)
 MBA_PEOPLE_IN_TITLE = re.compile(rf"\b(?:{_MBA_PEOPLE})", re.I)
 CLASS_2027_ONLY = re.compile(r"\bclass(?:es)? of 2027\b|\bnew[- ]grad(?:uate)?s?\b[^.;\n]{0,30}\b2027\b|"
                              r"\byou\s+(?:will\s+)?graduat\w*[^.;\n]{0,80}\b2027\b|"
                              r"\b(?:expected\s+)?graduation(?:\s+date)?\b[^.;\n]{0,60}\b2027\b|\b2027\b\s+(?:graduates?|grads?)\b|"
-                             r"\b(?:open\s+to|seeking|recruiting|hiring)\b[^.;\n]{0,40}\b(?:students|graduates)\b[^.;\n]{0,40}\b2027\b|"
+                             rf"\b(?:open\s+to|seeking|recruiting|hiring)\s*{_APPLICANT_WORDS}\b(?:students|graduates)\b[^.;\n]{{0,40}}\b2027\b|"
                              r"\bearly[- ]career\b[^.;\n]{0,30}\b2027\b", re.I)
 
 
@@ -372,27 +378,46 @@ def _statements(title: str, text: str):
         for source in (title, text):
             for match in pattern.finditer(source):
                 yield source, match
+    for match in MBA_TITLE_MARKER.finditer(title):
+        yield title, match
     for match in MBA_PEOPLE_IN_TITLE.finditer(title):  # a title such as "Strategist (MBA Graduates 2027)" names the applicants
         yield title, match
     for match in MBA_APPLICANT.finditer(text):
         yield text, match
 
 
+def _sentence(source: str, match) -> str:
+    """The sentence (or the whole title) that holds a match: from the previous . ; or line break to the next one."""
+    before = re.split(r'[.;\n]', source[max(0, match.start() - 240):match.start()])[-1]
+    after = re.split(r'[.;\n]', source[match.end():match.end() + 240])[0]
+    return before + source[match.start():match.end()] + after
+
+
 def mba_class_evidence(title: str, text: str) -> tuple[str, str]:
     """(kind, quote): `mba` when the posting says it is for MBA students or graduates of 2027, with those words;
-    `other_year` when it is for MBAs but names another graduating year in the same statement; `class_only` when it is
-    for the 2027 graduating class without an MBA; otherwise ''."""
-    other = False
+    `other_year` when every statement that names a graduating year names another one; `class_only` when it is for the
+    2027 graduating class without an MBA; otherwise ''.
+
+    Every applicant statement is read before deciding: a statement that names 2027 qualifies the posting; otherwise any
+    statement that names another year (the program year in a title, an explicit class in the description) disqualifies it,
+    even when another statement names no year at all ("Product Manager (MBA)" plus "graduating in spring 2028 only").
+    """
+    explicit, other, unqualified = None, False, None
     for source, match in _statements(title, text):
-        end = re.search(r'[.;\n]', source[match.end():match.end() + 120])
-        span = source[max(0, match.start() - 14):match.end() + (end.start() if end else 120)]
-        years = set(re.findall(r'\b(20[2-3]\d)\b', span))
-        if years and '2027' not in years:
+        years = set(re.findall(r'\b(20[2-3]\d)\b', _sentence(source, match)))
+        quote = ' '.join(source[max(0, match.start() - 40):match.end() + 60].split())
+        if '2027' in years:
+            explicit = explicit or quote
+        elif years:
             other = True
-            continue
-        return 'mba', ' '.join(source[max(0, match.start() - 40):match.end() + 60].split())
+        else:
+            unqualified = unqualified or quote
+    if explicit:
+        return 'mba', explicit
     if other:
         return 'other_year', ''
+    if unqualified:
+        return 'mba', unqualified
     return ('class_only', '') if CLASS_2027_ONLY.search(f'{title}. {text}') else ('', '')
 
 
@@ -522,6 +547,25 @@ def _pay_unit(label):
     return 'year'
 
 
+_BLURB_PERIODS = (
+    r'\bper\s+(month|week|day|hour)\b', r'\b(?:a|each|every)\s+(month|week|day|hour)\b',
+    r'\b(?:paid|payable|quoted|given|stated|listed)\s+(monthly|weekly|bi-?weekly|daily|hourly)\b',
+    r'\b(?:range|amount|salary|pay|rate|figures?|compensation)\s+(?:is|are)\s+(monthly|weekly|bi-?weekly|daily|hourly)\b',
+    r'\b(monthly|weekly|bi-?weekly|hourly|daily)\s+(?:salary|pay|rate|range|compensation|amount|figures?)\b',
+)
+_PERIOD_UNIT = {'month': 'month', 'monthly': 'month', 'week': 'week', 'weekly': 'week', 'biweekly': 'week', 'bi-weekly': 'week',
+                'day': 'day', 'daily': 'day', 'hour': 'hour', 'hourly': 'hour'}
+
+
+def _blurb_period(blurb):
+    """month, week, day or hour when the blurb explicitly says the range is per month and so on; None otherwise."""
+    for pattern in _BLURB_PERIODS:
+        match = re.search(pattern, blurb, re.I)
+        if match:
+            return _PERIOD_UNIT[match.group(1).lower()]
+    return None
+
+
 def greenhouse_pay(ranges):
     """Pay Greenhouse publishes beside a posting (`pay_input_ranges`, amounts in cents), as one Salary cell.
 
@@ -541,10 +585,8 @@ def greenhouse_pay(ranges):
             continue
         title = plain(item.get('title'))
         unit = _pay_unit(title)
-        if unit == 'year':  # the blurb is generic text ("for sales roles ... OTE"), so only a plain period phrase counts
-            blurb = clean_html(item.get('blurb'))
-            match = re.search(r'\b(monthly|weekly|bi-?weekly|hourly|daily)\s+(?:salary|pay|rate|range|compensation)\b', blurb, re.I)
-            unit = _pay_unit(match.group(0)) if match else 'year'
+        if unit == 'year':  # the blurb is mostly generic text ("for sales roles ... OTE"), so only explicit period wording counts
+            unit = _blurb_period(clean_html(item.get('blurb'))) or 'year'
         found.setdefault((plain(item.get('currency_type')).upper() or 'USD', unit), []).append((low, high))
     for currency, unit in sorted(found, key=lambda key: (key != ('USD', 'year'), key[1] != 'year', key)):
         low, high = _union(found[(currency, unit)])
@@ -590,24 +632,32 @@ def _pay_number(text):
     return float(digits) * (1000 if re.search(r'[kK]\s*$', text.strip()) else 1)
 
 
+_TAIL_PERIOD = re.compile(r'\b(?:monthly|weekly|bi-?weekly|daily|hourly|per\s+(?:month|week|day|hour)|a\s+month|each\s+month|'
+                          r'paid\s+(?:monthly|weekly|bi-?weekly|daily|hourly))\b|/\s*(?:mo|month|wk|week|hr|hour|day)\b', re.I)
+_TAIL_INCLUDES = re.compile(r'\b(?:including|inclusive\s+of|incl\.?|includes|total|OTE|on[- ]target)\b[^.;\n]*?'
+                            r'\b(?:bonus(?:es)?|commissions?|equity|stock|rsus?|variable|incentives?|compensation)\b', re.I)
+_TAIL_CURRENCY = re.compile(rf'(?:^|[\s(\[,/-]){_CURRENCY_CODE}(?![A-Za-z])', re.I)
+
+
 def salary_from_text(text):
     """A yearly USD base-pay range written in a posting ("The salary range is $160,000 - $200,000"), or "".
 
-    Deliberately narrow, and it reads the whole compensation sentence: two amounts of at least 30,000; a base-pay word
-    (salary, base pay, pay range ...) earlier in the same sentence; nothing in that sentence that makes the amount total
-    compensation, OTE, bonus, equity, commission or a monthly, weekly, daily or hourly figure; no other currency before or
-    right after the range; no period word or bonus word right after it. Anything else stays unresolved. Several ranges
-    (one per location tier) are merged into one.
+    Deliberately narrow, and it reads the whole compensation sentence on both sides of the range: two amounts of at least
+    30,000; a base-pay word (salary, base pay, pay range ...) earlier in the sentence; nothing before the range that makes it
+    total compensation, OTE, bonus, equity, commission or a monthly, weekly, daily or hourly figure; nothing after it in the
+    same sentence that gives another currency, a period ("per month", "paid monthly") or says the range INCLUDES bonus, equity
+    or commission ("plus bonus" is extra on top of base and is fine). Anything else stays unresolved. Several ranges (one per
+    location tier) are merged into one.
     """
     text = text or ''
     ranges = []
     for match in _PAY_RANGE.finditer(text):
         sentence = re.split(r'[.;\n]', text[max(0, match.start() - 200):match.start()])[-1]
-        after = text[match.end():match.end() + 40]
-        if (not _PAY_CUE.search(sentence) or _NOT_BASE_PAY.search(sentence) or _OTHER_CURRENCY.search(text[max(0, match.start() - 8):match.start()])
-                or re.match(rf'\s*{_CURRENCY_CODE}', after, re.I)
-                or re.match(r'\s*(?:/\s*|per\s+|an?\s+)?(?:hour|hr|month|mo\b|week|wk|day)', after, re.I)
-                or re.match(r'\s*(?:in\s+)?(?:bonus|commission|equity|OTE|total)', after, re.I)):
+        tail = re.split(r'(?<!\d)[.;\n]|\.(?!\d)', text[match.end():match.end() + 160])[0]
+        if (not _PAY_CUE.search(sentence) or _NOT_BASE_PAY.search(sentence)
+                or _OTHER_CURRENCY.search(text[max(0, match.start() - 8):match.start()])
+                or _TAIL_CURRENCY.search(tail[:60]) or _TAIL_PERIOD.search(tail) or _TAIL_INCLUDES.search(tail)
+                or re.match(r'\s*(?:in\s+)?(?:bonus|commission|equity|OTE|total)', tail, re.I)):
             continue
         low, high = _pay_number(match.group(1)), _pay_number(match.group(2))
         if 30_000 <= low <= high:

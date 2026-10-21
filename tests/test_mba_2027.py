@@ -148,3 +148,46 @@ def test_a_title_that_marks_the_program_as_mba_qualifies(title):
 
 def test_mba_in_parentheses_as_a_preference_does_not_qualify():
     assert p.mba_class_evidence('Product Manager', 'Experience (MBA preferred) in payments.')[0] == ''
+
+
+# Codex re-review of PR 52 (October 21, cycle 2): ordinary wording variants of the same defects.
+@pytest.mark.parametrize('text', [
+    'We are hiring a PM to build products for MBA students graduating in spring 2027.',
+    'We are hiring a product manager to build tools for MBA candidates graduating in 2027.',
+    'We are seeking engineers to support recruiting for MBA graduates in 2027.',
+])
+def test_a_hiring_verb_does_not_make_the_products_users_the_applicants(text):
+    assert p.collection_reason(job(text=text)) == 'not_mba_2027'
+
+
+@pytest.mark.parametrize('text', [
+    'We are hiring MBA students graduating in spring 2027.',
+    'We are recruiting talented recent MBA graduates for summer 2027.',
+    'We are seeking current MBA candidates, class of 2027.',
+])
+def test_a_hiring_verb_directly_followed_by_the_applicants_still_qualifies(text):
+    assert p.collection_reason(job(text=text)) == ''
+
+
+def test_the_program_year_anywhere_in_the_title_counts():
+    posting = job(title='2028 North America Business Leadership Development Program (Full-Time MBA)', text='Join our program.')
+    assert p.mba_class_evidence(posting.title, posting.text)[0] == 'other_year'
+    ok = job(title='2027 North America Business Leadership Development Program (Full-Time MBA)', text='Join our program.')
+    assert p.mba_class_evidence(ok.title, ok.text)[0] == 'mba'
+
+
+def test_an_unqualified_title_match_cannot_hide_an_explicit_other_class_in_the_description():
+    assert p.mba_class_evidence('Product Manager (MBA)', 'Open to MBA students graduating in spring 2028 only.')[0] == 'other_year'
+    assert p.mba_class_evidence('Product Manager (MBA)', 'Open to MBA students graduating in spring 2027.')[0] == 'mba'
+    assert p.mba_class_evidence('Product Manager (MBA)', 'Join us.')[0] == 'mba'
+    # a posting for both classes qualifies through the 2027 statement
+    assert p.mba_class_evidence('Associate', 'Open to MBA students graduating in 2026. Also open to MBA students graduating in 2027.')[0] == 'mba'
+
+
+@pytest.mark.parametrize('text', [
+    'Education: Master of Business Administration (MBA) or Juris Doctor (JD) degree, with preference of JD.',
+    "Bachelor's degree; Master of Business Administration (MBA) strongly preferred.",
+    'A graduate degree (MBA) is helpful.',
+])
+def test_a_degree_requirement_in_parentheses_in_the_description_does_not_qualify(text):
+    assert p.mba_class_evidence('Deal Team - Business Affairs', text)[0] == ''
