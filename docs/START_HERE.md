@@ -1,7 +1,7 @@
 # START HERE: what you answer, what you do, what you approve, what Codex does, what Claude does
 
 Updated October 21, 2026. Plain language. This is the short version of `docs/PENDING.md` section 0 (same IDs, kept in step with it).
-Your answer sheet is `docs/DECISIONS_FORM.md`; you can also just answer in chat.
+Your answer sheet is `docs/DECISIONS_FORM.md`, or the Excel version `docs/JobHunter_Questions.xlsx` (questions, tasks, approvals, yellow cells to fill in); you can also just answer in chat.
 
 ## Where we are, in five lines
 
