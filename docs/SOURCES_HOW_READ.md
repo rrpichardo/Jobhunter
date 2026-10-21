@@ -36,7 +36,7 @@ choose it. The plan's idea of using Haiku for this step has not been built or te
 | Built In | B | `stubs_builtin`, `detail_builtin` | Ran |
 | Getro boards (Accel, Primary) | B | `stubs_getro`, `detail_getro` | Primary ran; Accel was flagged failed by a bug fixed in PR #29 |
 | Hacker News "Who is hiring?" | C | `jobhunter/hn_hiring.py` plus the shared checker in `jobhunter/post_facts.py` | Ran: 28 comments read, 14 jobs delivered |
-| a16z portfolio jobs | none yet | `count_a16z` counts links only | Listing-only: delivers no jobs |
+| a16z portfolio jobs (four searches: product manager, chief of staff, strategy, founder in residence) | B | `stubs_a16z`, `detail_a16z` | Read live without a login on October 19: first page (about 25 jobs) of each search; 24 product, 11 chief-of-staff and 7 strategy jobs matched the rules and were parsed with company, place, pay and posting date. Later pages need the site's scripts and are not read |
 | Gmail job alerts | C | `jobhunter/gmail_alerts.py` | Not live: no forwarded alert yet and the connector adapter is not built |
 | Newsletters: Next Play, Ali Rohde | C (planned) | not built | Needs verified feed URLs |
 | LinkedIn job listings | none yet | not built | Needs your approval (A1) and a first run (A2) |
