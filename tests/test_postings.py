@@ -8,7 +8,7 @@ CTX = {"board": "acme", "company": "Acme", "tag": "other", "source_id": "greenho
        "captured_at": "2026-10-18T00:00:00+00:00"}
 
 
-def posting(title="Senior Product Manager, AI", location="San Francisco, CA", text="Build AI agents.",
+def posting(title="Senior Product Manager, AI", location="San Francisco, CA", text="Build AI agents. This role is open to MBA students graduating in spring 2027.",
             tag="other"):
     return p.Posting("greenhouse:acme:1", "greenhouse:acme", "Acme", title, location, text,
                      "https://example.com/1", CTX["captured_at"], tag=tag)
@@ -131,16 +131,16 @@ def test_duplicate_ids_fail_the_source():
 
 
 @pytest.mark.parametrize('fields', [
-    {'lists': [{'text': 'Responsibilities', 'content': '<li>Lead the AI platform roadmap.</li>'}]},
-    {'additionalPlain': 'Lead the AI platform roadmap.'},
-    {'additional': '<p>Lead the AI platform roadmap.</p>'},
+    {'lists': [{'text': 'Responsibilities', 'content': '<li>Lead the AI platform roadmap. This role is open to MBA students graduating in spring 2027.</li>'}]},
+    {'additionalPlain': 'Lead the AI platform roadmap. This role is open to MBA students graduating in spring 2027.'},
+    {'additional': '<p>Lead the AI platform roadmap. This role is open to MBA students graduating in spring 2027.</p>'},
 ])
 def test_lever_ai_signal_in_description_sections_is_used_for_filtering(fields):
     data = [{'id': 'role-1', 'text': 'Product Manager', 'categories': {'location': 'United States'},
              'descriptionPlain': 'Join our product team.', 'hostedUrl': 'https://example.com/jobs/role-1', **fields}]
     jobs, rejected, _ = p.parse_lever(data, CTX)
     assert rejected == 0
-    assert 'Lead the AI platform roadmap.' in jobs[0].text
+    assert 'Lead the AI platform roadmap. This role is open to MBA students graduating in spring 2027.' in jobs[0].text
     assert p.ai_pm_match(jobs[0])
 
 
@@ -174,7 +174,7 @@ YC_LISTING = ('<div data-page="{&quot;props&quot;:{&quot;jobPostings&quot;:[{&qu
               '&quot;San Francisco, CA&quot;,&quot;companyName&quot;:&quot;Acme&quot;,&quot;salaryRange&quot;:'
               '&quot;$150K - $200K&quot;},{&quot;title&quot;:&quot;broken, no id&quot;}]}}"></div>')
 YC_DETAIL = ('<script type="application/ld+json">{"@type":"JobPosting","description":'
-             '"\\u003cp\\u003eBuild AI agents.\\u003c/p\\u003e"}</script>')
+             '"\\u003cp\\u003eBuild AI agents. This role is open to MBA students graduating in spring 2027.\\u003c/p\\u003e"}</script>')
 
 
 def test_yc_stubs_and_detail_description():
@@ -182,7 +182,7 @@ def test_yc_stubs_and_detail_description():
     assert rejected == 1 and stubs == [{"job_id": "yc-product:7", "company": "Acme", "title": "Product Manager, AI",
         "location": "San Francisco, CA", "url": "https://www.ycombinator.com/companies/acme/jobs/abc-pm",
         "salary": "$150K - $200K", "posted_at": ""}]
-    assert p.detail_yc(YC_DETAIL) == {"text": "Build AI agents.", "posted_at": ""}
+    assert p.detail_yc(YC_DETAIL) == {"text": "Build AI agents. This role is open to MBA students graduating in spring 2027.", "posted_at": ""}
     assert p.detail_yc("<html>no structured data</html>") == {"text": "", "posted_at": ""}
 
 
@@ -203,7 +203,7 @@ BUILTIN_LIST = ('<script type="application/ld&#x2B;json">{"@graph":[{"@type":"It
                 '{"name":"Principal Product Manager, AI","url":"https://builtin.com/job/principal-product-manager-ai/11735619",'
                 '"description":"short"},{"name":"bad","url":"https://builtin.com/not-a-job"}]}]}</script>')
 BUILTIN_JOB = ('<script type="application/ld&#x2B;json">{"@context":"https://schema.org","@type":"JobPosting",'
-               '"description":"<p>Lead AI roadmap.</p>","hiringOrganization":{"name":"Expedia Group"},'
+               '"description":"<p>Lead AI roadmap. This role is open to MBA students graduating in spring 2027.</p>","hiringOrganization":{"name":"Expedia Group"},'
                '"jobLocation":{"address":{"addressLocality":"Seattle","addressRegion":"Washington","addressCountry":"USA"}},'
                '"baseSalary":{"currency":"USD","value":{"minValue":150000,"maxValue":200000,"unitText":"YEAR"}}}</script>')
 
@@ -211,14 +211,14 @@ BUILTIN_JOB = ('<script type="application/ld&#x2B;json">{"@context":"https://sch
 def test_builtin_listing_and_job_page():
     stubs, rejected = p.stubs_builtin(BUILTIN_LIST, {"source_id": "builtin-product"})
     assert rejected == 1 and stubs[0]["job_id"] == "builtin-product:11735619"
-    assert p.detail_builtin(BUILTIN_JOB) == {"text": "Lead AI roadmap.", "company": "Expedia Group", "posted_at": "",
+    assert p.detail_builtin(BUILTIN_JOB) == {"text": "Lead AI roadmap. This role is open to MBA students graduating in spring 2027.", "company": "Expedia Group", "posted_at": "",
         "location": "Seattle, Washington, USA", "salary": "150,000 - 200,000 USD YEAR"}
     assert p.detail_builtin("<html></html>")["text"] == ""
 
 
 @pytest.mark.parametrize('currency', ['COP', 'DOP', ''])
 def test_builtin_salary_keeps_source_currency_instead_of_assuming_usd(currency):
-    data = {'@type': 'JobPosting', 'description': 'Build AI.',
+    data = {'@type': 'JobPosting', 'description': 'Build AI. This role is open to MBA students graduating in spring 2027.',
             'baseSalary': {'currency': currency, 'value': {'minValue': 70000, 'unitText': 'YEAR'}}}
     detail = p.detail_builtin('<script type="application/ld+json">' + json.dumps(data) + '</script>')
     assert 'USD' not in detail['salary']
@@ -228,7 +228,7 @@ def test_builtin_salary_keeps_source_currency_instead_of_assuming_usd(currency):
 
 def test_explicit_ashby_remote_flag_keeps_regional_remote_role_with_original_location():
     data = {'jobs': [{'id': 'remote-1', 'title': 'Product Manager, AI', 'location': 'Colombia',
-                     'descriptionPlain': 'Build AI products.', 'jobUrl': 'https://example.com/remote-1',
+                     'descriptionPlain': 'Build AI products. This role is open to MBA students graduating in spring 2027.', 'jobUrl': 'https://example.com/remote-1',
                      'isRemote': True}]}
     job = p.parse_ashby(data, CTX)[0][0]
     assert p.ai_pm_match(job)
@@ -237,15 +237,15 @@ def test_explicit_ashby_remote_flag_keeps_regional_remote_role_with_original_loc
 
 @pytest.mark.parametrize('kind,data', [
     ('remotive', {'jobs': [{'id': 1, 'title': 'Product Manager, AI', 'company_name': 'Acme',
-                           'candidate_required_location': 'Brazil', 'description': 'Build AI.',
+                           'candidate_required_location': 'Brazil', 'description': 'Build AI. This role is open to MBA students graduating in spring 2027.',
                            'url': 'https://example.com/jobs/1'}]}),
     ('remoteok', [{'id': 1, 'position': 'Product Manager, AI', 'company': 'Acme', 'location': 'Brazil',
-                   'description': 'Build AI.', 'url': 'https://example.com/jobs/1'}]),
+                   'description': 'Build AI. This role is open to MBA students graduating in spring 2027.', 'url': 'https://example.com/jobs/1'}]),
     ('himalayas', {'jobs': [{'guid': '1', 'title': 'Product Manager, AI', 'companyName': 'Acme',
-                            'locationRestrictions': ['Brazil'], 'description': 'Build AI.',
+                            'locationRestrictions': ['Brazil'], 'description': 'Build AI. This role is open to MBA students graduating in spring 2027.',
                             'applicationLink': 'https://example.com/jobs/1'}]}),
     ('jobicy', {'jobs': [{'id': 1, 'jobTitle': 'Product Manager, AI', 'companyName': 'Acme',
-                         'jobGeo': 'Brazil', 'jobDescription': 'Build AI.', 'url': 'https://example.com/jobs/1'}]}),
+                         'jobGeo': 'Brazil', 'jobDescription': 'Build AI. This role is open to MBA students graduating in spring 2027.', 'url': 'https://example.com/jobs/1'}]}),
 ])
 def test_remote_only_board_contract_keeps_regional_remote_jobs(kind, data):
     job = p.PARSERS[kind](data, CTX)[0][0]
@@ -261,7 +261,7 @@ def test_listing_only_counters():
 
 
 def make(job_id, source, url, title="Senior Product Manager, AI", company="Acme"):
-    return p.Posting(job_id, source, company, title, "Remote", "Build AI.", url, CTX["captured_at"])
+    return p.Posting(job_id, source, company, title, "Remote", "Build AI. This role is open to MBA students graduating in spring 2027.", url, CTX["captured_at"])
 
 
 @pytest.mark.parametrize("url,key", [
@@ -367,7 +367,7 @@ def test_regional_salary_uses_currency_linked_amounts_only(salary, expected):
 def test_lever_preserves_explicit_remote_workplace_type(workplace, remote):
     data = [{'id': 'regional-1', 'text': 'Product Manager, AI',
              'categories': {'location': 'Latin America'}, 'workplaceType': workplace,
-             'descriptionPlain': 'Build AI products.', 'hostedUrl': 'https://jobs.lever.co/acme/regional-1'}]
+             'descriptionPlain': 'Build AI products. This role is open to MBA students graduating in spring 2027.', 'hostedUrl': 'https://jobs.lever.co/acme/regional-1'}]
     job = p.parse_lever(data, CTX | {'source_id': 'lever:acme'})[0][0]
     assert job.remote is remote
     assert p.ai_pm_match(job) is remote
@@ -379,7 +379,7 @@ def test_lever_preserves_explicit_remote_workplace_type(workplace, remote):
 def test_wwr_remote_feed_keeps_regional_location_without_salary():
     rss = ('<rss><channel><item><title>Acme: Product Manager, AI</title>'
            '<link>https://weworkremotely.com/jobs/regional-1</link><region>Costa Rica</region>'
-           '<description>Build AI products.</description></item></channel></rss>')
+           '<description>Build AI products. This role is open to MBA students graduating in spring 2027.</description></item></channel></rss>')
     job = p.parse_wwr_rss(rss, CTX | {'source_id': 'weworkremotely'})[0][0]
     assert job.remote and p.ai_pm_match(job)
     row = p.to_row(job)

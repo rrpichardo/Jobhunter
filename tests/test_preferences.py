@@ -6,11 +6,12 @@ import pytest
 
 from jobhunter import postings as p
 from scripts import source_probe
+from mba_fixtures import mba
 
 
 def job(**changes):
     base = p.Posting('lever:acme:1', 'lever:acme', 'Acme', 'Product Manager',
-                     'United States', 'Build billing products.', 'https://jobs.lever.co/acme/1',
+                     'United States', mba('Build billing products. This role is open to MBA students graduating in spring 2027.'), 'https://jobs.lever.co/acme/1',
                      '2026-10-18T00:00:00+00:00', salary='USD 140,000 annually')
     return replace(base, **changes)
 
@@ -83,7 +84,7 @@ def test_matching_salary_is_a_preference_check_not_full_eligibility():
 
 def test_broader_roles_flow_through_probe_without_ai_signal():
     data = [{'id': str(i), 'text': title, 'categories': {'location': 'United States'},
-             'descriptionPlain': 'Build billing products.', 'hostedUrl': f'https://jobs.lever.co/acme/{i}'}
+             'descriptionPlain': 'Build billing products. This role is open to MBA students graduating in spring 2027.', 'hostedUrl': f'https://jobs.lever.co/acme/{i}'}
             for i, title in enumerate(['Product Manager', 'Chief of Staff', 'Project Manager', 'Engineer'])]
     client = httpx.Client(transport=httpx.MockTransport(lambda request: httpx.Response(200, json=data)))
     entry = {'id': 'lever:acme', 'kind': 'lever', 'board': 'acme', 'company': 'Acme', 'url': 'https://test.example/jobs'}
@@ -231,7 +232,7 @@ def test_unresolved_salary_check_is_in_details_not_next_step():
 def test_every_board_match_is_kept_with_product_roles_first():
     titles = ['Project Manager'] * 8 + ['Chief of Staff', 'Product Manager, AI']
     data = [{'id': str(i), 'text': title, 'categories': {'location': 'United States'},
-             'descriptionPlain': 'Build products.', 'hostedUrl': f'https://jobs.lever.co/acme/{i}'}
+             'descriptionPlain': 'Build products. This role is open to MBA students graduating in spring 2027.', 'hostedUrl': f'https://jobs.lever.co/acme/{i}'}
             for i, title in enumerate(titles)]
     with httpx.Client(transport=httpx.MockTransport(lambda req: httpx.Response(200, json=data))) as client:
         _, jobs, _ = source_probe.probe_source(client, {'id':'lever:acme', 'kind':'lever',
@@ -248,7 +249,7 @@ def test_detail_pages_are_fetched_for_every_match_with_product_roles_first():
                  'location':'United States', 'companyName':'Acme', 'salaryRange':''}
                 for i, title in enumerate(titles)]
     listing = '<div data-page="' + html.escape(json.dumps({'props':{'jobPostings':postings}}), quote=True) + '"></div>'
-    detail = '<script type="application/ld+json">{"@type":"JobPosting","description":"Build products."}</script>'
+    detail = '<script type="application/ld+json">{"@type":"JobPosting","description":"Build products. This role is open to MBA students graduating in spring 2027."}</script>'
     seen = []
     def serve(request):
         seen.append(str(request.url))

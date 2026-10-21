@@ -18,7 +18,7 @@ DETAIL = ('<html><head><script type="application/ld+json">{"@type":"BreadcrumbLi
           '{"@type":"ListItem","position":3,"name":"Product Manager"}]}</script></head><body><nav>Sign in Portfolio Team</nav>'
           '<main><h1>Product Manager,  Startup Products</h1><dl><div><dt>Location</dt><dd>NYC, Chicago</dd></div>'
           '<div><dt>Compensation</dt><dd>USD 180,000–240,000 (Annual)</dd></div></dl><h2>About the role</h2>'
-          '<span>Posted</span>   <span>Sep 11, 2026</span><p>Own the <b>startup</b> roadmap.</p></main><footer>Disclosures</footer></body></html>')
+          '<span>Posted</span>   <span>Sep 11, 2026</span><p>Own the <b>startup</b> roadmap. This role is open to MBA students graduating in spring 2027.</p></main><footer>Disclosures</footer></body></html>')
 
 
 def test_listing_rows_use_link_text_dedupe_by_id_and_skip_non_job_links():
@@ -38,7 +38,7 @@ def test_a_job_page_gives_company_place_pay_date_and_the_description_without_the
     found = p.detail_a16z(DETAIL)
     assert found['company'] == 'Stripe' and found['location'] == 'NYC, Chicago'
     assert found['salary'] == 'USD 180,000–240,000 (Annual)' and found['posted_at'] == '2026-09-11T00:00:00+00:00'
-    assert 'Own the startup roadmap.' in found['text'] and 'Sign in' not in found['text'] and 'Disclosures' not in found['text']
+    assert 'Own the startup roadmap. This role is open to MBA students graduating in spring 2027.' in found['text'] and 'Sign in' not in found['text'] and 'Disclosures' not in found['text']
 
 
 @pytest.mark.parametrize('page', ['<html><body><h1>x</h1></body></html>', '<html><body><h2>About the role</h2></body></html>'])

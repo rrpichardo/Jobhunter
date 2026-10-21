@@ -13,7 +13,7 @@ def test_harvest_saves_bounded_sample_and_truthful_coverage(tmp_path):
     from scripts.v0_harvest import main
     config = tmp_path / "sources.yaml"
     config.write_text("board: example\ncompany: Example\nai_company: true\n")
-    item = {"id": 101, "title": "AI Product Manager", "content": "Build AI products.",
+    item = {"id": 101, "title": "AI Product Manager", "content": "Build AI products. This role is open to MBA students graduating in spring 2027.",
             "absolute_url": "https://example.com/jobs/101"}
     client = httpx.Client(transport=httpx.MockTransport(lambda req: httpx.Response(
         200, json={"jobs": [item, item | {"id": 102}], "meta": {"total": 2}})))

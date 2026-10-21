@@ -332,12 +332,50 @@ def collection_stub_match(title: str, location: str, salary: str) -> bool:
                 and (amount is None or amount >= (70_000 if region == 'unresolved' else floor)))
 
 
+# The user graduates with an MBA in May 2027, so a role is collected only when the posting itself says it is meant for
+# MBA graduates. "MBA preferred" or "MBA or equivalent experience" is a qualification, not a target, and a plain "New
+# Grad 2027" role asks for a bachelor's or master's in a technical field, so neither counts. Job seniority does not
+# matter: a Senior Product Manager role open to MBAs graduating in 2027 qualifies.
+_MBA = r"(?:MBA|M\.B\.A\.?|master(?:'?s)? of business administration)s?"
+MBA_TARGETED = tuple(re.compile(pattern, re.I) for pattern in (
+    rf"\b{_MBA}\b[^.;\n]{{0,100}}\b2027\b|\b2027\b[^.;\n]{{0,100}}\b{_MBA}\b",
+    rf"\b{_MBA}\s+(?:graduates?|grads?|candidates?|students?|associates?|rotational|leadership|recruit\w*|hires?|"
+    rf"program(?:me)?|internship)\b",
+    rf"\b(?:recent|new|upcoming|graduating|soon[- ]to[- ]be|incoming)\s+{_MBA}\b",
+    rf"\bpost[- ]{_MBA}\b",
+    rf"\b(?:leadership development|rotational|rotation)\s+program(?:me)?\b[^.;\n]{{0,100}}\b{_MBA}\b|"
+    rf"\b{_MBA}\b[^.;\n]{{0,100}}\b(?:leadership development|rotational|rotation)\s+program",
+    rf"\b(?:pursuing|enrolled in|completing|currently in)\s+an?\s+{_MBA}\b",
+))
+OTHER_CLASS_YEAR = re.compile(r"\b(?:class(?:es)? of|graduat\w*\s+(?:in|by|before|between)?|new[- ]grad(?:uate)?s?\s*\(?)\s*"
+                              r"(?:\w+\s+)?(?:2024|2025|2026|2028|2029|2030)\b", re.I)
+CLASS_2027_ONLY = re.compile(r"\bclass(?:es)? of 2027\b|\bnew[- ]grad(?:uate)?s?\b[^.;\n]{0,30}\b2027\b|"
+                             r"\bgraduat\w*[^.;\n]{0,80}\b2027\b|\b2027\b\s+(?:graduates?|grads?)\b|"
+                             r"\bearly[- ]career\b[^.;\n]{0,30}\b2027\b", re.I)
+
+
+def mba_class_evidence(title: str, text: str) -> tuple[str, str]:
+    """(kind, quote): `mba` when the posting is meant for MBA graduates, with the words that say so; otherwise
+    `other_year` (MBA wording but another graduating class), `class_only` (graduating class 2027 without an MBA) or ''."""
+    blob = f'{title}. {text}'
+    for pattern in MBA_TARGETED:
+        match = pattern.search(blob)
+        if match:
+            if OTHER_CLASS_YEAR.search(blob) and '2027' not in blob:
+                return 'other_year', ''
+            return 'mba', ' '.join(blob[max(0, match.start() - 40):match.end() + 60].split())
+    return ('class_only', '') if CLASS_2027_ONLY.search(blob) else ('', '')
+
+
 def collection_reason(posting: Posting) -> str:
     """Why the collection filter drops a posting (a fixed code), or "" when it is collected."""
     if not role_family(posting.title):
         return 'role_not_in_scope'
     if collection_region(posting.location, remote=posting.remote) is None:
         return 'place_excluded'
+    kind = mba_class_evidence(posting.title, posting.text)[0]
+    if kind != 'mba':
+        return {'other_year': 'mba_other_class_year', 'class_only': 'class_2027_without_mba'}.get(kind, 'not_mba_2027')
     if salary_preference(posting)[0] == 'below floor':
         return 'pay_below_floor'
     return ''
@@ -945,6 +983,9 @@ def to_row(posting: Posting, note: str = "") -> dict:
         details += '\nWork mode: Remote (source metadata)'
     preference, floor = salary_preference(posting)
     details += f'\nRole family: {role_family(posting.title) or "Unclassified"}'
+    mba_quote = mba_class_evidence(posting.title, posting.text)[1]
+    if mba_quote:
+        details += f'\nMBA 2027 evidence: {mba_quote}'
     details += f'\nSalary preference: {preference} (annual USD floor {floor})'
     if preference == 'unresolved':
         details += f'\nCheck first: verify annual USD base salary reaches {floor:,}'

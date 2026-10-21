@@ -17,7 +17,7 @@ from test_backfill import artifact
 JOBS = [{'id': i, 'title': 'Product Manager', 'url': f'/companies/acme/jobs/{i}', 'location': 'United States',
          'companyName': 'Acme'} for i in range(1, 6)]
 LISTING = '<div data-page="' + escape(json.dumps({'props': {'jobPostings': JOBS}}), quote=True) + '"></div>'
-PAGE = '<script type="application/ld+json">{"@type":"JobPosting","description":"Build things."}</script>'
+PAGE = '<script type="application/ld+json">{"@type":"JobPosting","description":"Build things. This role is open to MBA students graduating in spring 2027."}</script>'
 
 
 def probe_cli(tmp_path, capsys, *flags):

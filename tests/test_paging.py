@@ -12,7 +12,7 @@ STAMP = '2026-10-18T12:00:00+00:00'
 
 def muse_job(number, date='2026-10-10T00:00:00Z'):
     return {'id': number, 'name': 'Product Manager', 'company': {'name': f'Co{number}'},
-            'locations': [{'name': 'Remote'}], 'contents': 'Build.', 'publication_date': date,
+            'locations': [{'name': 'Remote'}], 'contents': 'Build. This role is open to MBA students graduating in spring 2027.', 'publication_date': date,
             'refs': {'landing_page': f'https://www.themuse.com/jobs/{number}'}}
 
 
@@ -100,7 +100,7 @@ JOBICY = {'id': 'jobicy', 'kind': 'jobicy', 'url': 'https://jobicy.com/api/v2/re
 
 
 def jobicy_job(number, date):
-    return {'id': number, 'jobTitle': 'Product Manager', 'companyName': f'Co{number}', 'jobDescription': 'Build.',
+    return {'id': number, 'jobTitle': 'Product Manager', 'companyName': f'Co{number}', 'jobDescription': 'Build. This role is open to MBA students graduating in spring 2027.',
             'url': f'https://jobicy.com/jobs/{number}', 'pubDate': date, 'jobGeo': 'USA'}
 
 

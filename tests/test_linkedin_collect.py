@@ -24,7 +24,7 @@ def post_id(when=WHEN, low=5):
     return str((int(when.timestamp() * 1000) << 22) | low)
 
 
-def card(number, when=WHEN, *, text='Acme is hiring a Senior Product Manager, AI (Remote US).', style='href'):
+def card(number, when=WHEN, *, text='Acme is hiring a Senior Product Manager, AI (Remote US) for MBA students graduating in spring 2027.', style='href'):
     pid = post_id(when, number)
     reference = (f'<a href="/feed/update/urn:li:activity:{pid}/?utm_source=share">3d</a>' if style == 'href'
                  else f'<span data-urn="urn:li:activity:{pid}"></span>')
@@ -524,7 +524,7 @@ def test_the_job_queries_respect_the_limit_and_each_names_a_collected_role():
 
 
 def test_a_job_card_flows_through_the_queue_and_the_validator_into_a_lead(tmp_path, capsys):
-    ident, one = job(1)
+    ident, one = job(1, extra='<span>Open to MBA students graduating in spring 2027</span>')
     f = li.LinkedInFetcher(FakeSession([ok()] * 5 + [jobs_page(one)] + [jobs_page()] * 4), since_day='2026-09-21',
                            captured=datetime(2026, 10, 19, 16, tzinfo=timezone.utc))
     f.session.pages[5:] = [jobs_page(one)] + [li.Page('https://www.linkedin.com/jobs/search/', 200,
@@ -541,7 +541,7 @@ def test_a_job_card_flows_through_the_queue_and_the_validator_into_a_lead(tmp_pa
     facts.write_text(json.dumps({'processed': [str(ident)], 'facts': [{
         'item_id': str(ident), 'title': 'Senior Product Manager, AI', 'company': 'Acme Corp',
         'location': 'San Francisco, CA (Hybrid)', 'salary': '$180K/yr - $240K/yr',
-        'description_quote': 'Acme Corp', 'apply_url': ''}]}))
+        'description_quote': 'Open to MBA students graduating in spring 2027', 'apply_url': ''}]}))
     result = tmp_path.parent / (tmp_path.name + '_result.json')
     assert social_posts.main(['validate', '--source', 'linkedin-jobs', '--candidates', str(work), '--candidates-sha256',
                               work_digest, '--extractions', str(facts), '--output', str(result)]) == 0

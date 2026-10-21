@@ -1,0 +1,86 @@
+"""Only roles meant for MBA graduates of 2027 are collected; seniority and "MBA preferred" do not decide it."""
+from dataclasses import replace
+
+import pytest
+
+from jobhunter import postings as p
+from mba_fixtures import MBA_2027, mba
+
+
+def job(**changes):
+    base = p.Posting('greenhouse:acme:1', 'greenhouse:acme', 'Acme', 'Product Manager', 'United States',
+                     mba('Own the roadmap.'), 'https://boards.greenhouse.io/acme/jobs/1', '2026-10-21T00:00:00+00:00',
+                     salary='USD 150,000 - 190,000 year')
+    return replace(base, **changes)
+
+
+# Sentences copied from real postings (October 2026) that ARE meant for MBA graduates of 2027.
+MEANT_FOR_MBA_2027 = [
+    'This role is open to MBA students graduating in spring 2027.',
+    'We are recruiting MBA candidates who graduate in May 2027 for our leadership program.',
+    'Join our 2027 MBA Leadership Development Program.',
+    'Open to recent MBA graduates starting full time in summer 2027.',
+    'MBA Class of 2027 only: this rotational program places MBAs in product teams.',
+    'Post-MBA product role for the class graduating in 2027.',
+]
+
+
+@pytest.mark.parametrize('sentence', MEANT_FOR_MBA_2027)
+def test_a_role_meant_for_mba_graduates_is_collected_and_the_row_quotes_the_words_that_say_so(sentence):
+    posting = job(text=f'Build products. {sentence}')
+    assert p.collection_reason(posting) == '' and p.collection_match(posting)
+    row = p.to_row(posting)
+    assert 'MBA 2027 evidence:' in row['More details']
+    assert row['Brief description'].startswith('Build products.')  # the excerpt column is unaffected by the evidence line
+
+
+@pytest.mark.parametrize('title', ['Senior Product Manager', 'Staff Product Manager', 'Director of Product',
+                                   'Senior Product Manager, Vehicle Software (MBA Class of 2027)'])
+def test_seniority_does_not_matter_when_the_role_is_meant_for_mba_graduates(title):
+    assert p.collection_match(job(title=title, text=mba('Lead the roadmap.')))
+
+
+# Qualification wording copied from real postings: a preference for an MBA is not a role meant for MBA graduates.
+MBA_ONLY_AS_A_QUALIFICATION = [
+    'MBA or other advanced degree in finance, economics, or business',
+    'Bachelor\'s degree required; MBA or advanced degree preferred',
+    'MBA is a strong plus',
+    'MBA or equivalent professional experience at the intersection of technology and operations',
+    'Hold a JD, MBA, or equivalent experience is preferred but not required.',
+    'An MBA, JD, or technical degree from a top program',
+]
+
+
+@pytest.mark.parametrize('sentence', MBA_ONLY_AS_A_QUALIFICATION)
+def test_an_mba_that_is_only_a_preferred_qualification_does_not_count(sentence):
+    posting = job(text=f'Own the roadmap. {sentence}')
+    assert p.collection_reason(posting) == 'not_mba_2027' and not p.collection_match(posting)
+
+
+def test_a_plain_product_manager_posting_is_not_collected():
+    assert p.collection_reason(job(text='Own the roadmap for billing.')) == 'not_mba_2027'
+
+
+@pytest.mark.parametrize('text', ['New Grad (2027 Start). You will graduate in Fall 2026 or Spring 2027 with a bachelors or masters degree in computer science.',
+                                  'Early Career, Associate Product Manager (2027)', 'Open to the class of 2027.'])
+def test_a_2027_graduating_class_role_without_an_mba_is_dropped_with_its_own_reason(text):
+    assert p.collection_reason(job(text=text)) == 'class_2027_without_mba'
+
+
+def test_an_mba_program_for_another_graduating_year_is_dropped_with_its_own_reason():
+    assert p.collection_reason(job(text='Open to MBA students graduating in spring 2026 (class of 2026).')) == 'mba_other_class_year'
+
+
+def test_an_mba_internship_is_not_a_full_time_role():
+    assert p.collection_reason(job(title='Strategic Finance & Analytics Intern (MBA)', text=mba('Finance.'))) == 'role_not_in_scope'
+
+
+def test_the_mba_check_comes_after_role_and_place_and_before_pay():
+    assert p.collection_reason(job(title='Software Engineer')) == 'role_not_in_scope'
+    assert p.collection_reason(job(location='Berlin, Germany', text='Own it.')) == 'place_excluded'
+    assert p.collection_reason(job(text='Own it.', salary='USD 50,000 per year')) == 'not_mba_2027'
+    assert p.collection_reason(job(salary='USD 50,000 per year')) == 'pay_below_floor'
+
+
+def test_the_shared_sample_sentence_is_itself_recognised():
+    assert p.mba_class_evidence('Product Manager', MBA_2027)[0] == 'mba'
