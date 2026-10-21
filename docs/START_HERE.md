@@ -54,13 +54,15 @@ Small ones (each has a default if you say "take your recommendations"):
 | When | What |
 | --- | --- |
 | Now | **A22**: erasing the old rows (item 1 above). I will not touch the Sheet without it. |
-| Now | **Codex review of my own new pull request** (the MBA 2027 rule, the pay fix, the checker). Claude wrote it, so Codex must review it. Say "go" and I post the request. |
+| When Codex has credits | **Codex review of my own new pull request #52** (the MBA 2027 rule, the pay fix, the checker). Claude wrote it, so Codex must review it. Tell me Codex is back and I post the request. |
 | After items 1 and 2 | A **real run** (writes new rows to the Sheet and uses that day's single X attempt). It also proves the run report copies the `trace:` lines, the last unproven piece. |
 | After the real run | **A3**: creating the daily routine. |
 | Later | The **first merge into `main`**, only when Codex has reviewed the exact version and the automatic checks are green. I will ask before the first one. |
 | Later | Closing **PR #51** (Codex's repair PR). Its fixes are now on the real PRs, so it is no longer needed once Codex finishes. |
 
 ## 4. What CODEX does now (and nothing else)
+
+**October 21: Codex has no credits right now.** So no Codex review will happen until credits return. The requests already posted below will wait (or get a "usage limit" reply, which is not a review and does not count). The request for my new PR #52 has **not** been posted; you said to hold it. When you tell me Codex has credits again, I check each request, re-post any that got only a usage-limit reply, and post the #52 request. Nothing can be merged into `main` meanwhile.
 
 Codex only reviews; it does not write code in this round. Requests are already posted:
 

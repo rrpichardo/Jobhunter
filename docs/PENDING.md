@@ -55,6 +55,7 @@ Decisions already made are listed in section 2 so they are not asked again.
 **How the next Codex round is grouped (your decision, October 21: split grouping).** Group 1, reviewed together in one request: the X collector
 stack #40, #41, #43, #47 and #48. Group 2, each reviewed separately: #42, #44, #45, #46, #49 and #50. #51 needs Claude's review, not Codex's. The
 request comments are posted only after your "go" for that round. Details and order: `docs/CODEX_REVIEW_QUEUE.md`.
+**Codex has no credits (told by the user, October 21):** the requests below wait for credits; a usage-limit reply is not a review. The request for #52 was held at the user's instruction and is not posted. When credits return, Claude checks each request, re-posts any that got only a usage-limit reply, and posts the #52 request.
 **Codex requests posted (October 21, after your "go").** Claude backported the ten repairs plus the clock fix onto the original PR branches as new commits (no history rewritten), tested each branch on its own, and then posted the requests. Group 1, one request for the X stack on #40 (pointer comments on #41, #43, #47, #48): `e2ce21d` (#40), `40fda94` (#41), `45aa52f` (#43), `716f3fc` (#47), `b79585a` (#48). Group 2, one request each: #44 `7e4088a`, #45 `aa9ee55`, #46 `148eec6`, #49 `96f14eb`, #50 `3214479`. #42 is unchanged (`b90c1d2`, Codex clean), so no request. Next: wait for Codex; fix findings in new commits; merge only with an exact-head review and green CI. PR #51's fixes are now on the branches it was meant for.
 
 All eleven original PRs received exact-head Codex reviews; two were clean and nine have ten findings. The user then
@@ -73,7 +74,7 @@ feature branches must receive the appropriate commits and fresh reviews before m
 | #46 | This status and handoff documentation | 1 finding: pinned uv in run prompt; implemented on repair branch; Claude review pending |
 | #49 | Haiku-vs-Sonnet reading test (ran: 100 of 100 agree) | 1 finding: do not score unread items as agreement; implemented on repair branch; Claude review pending |
 | #50 | E4: a reason for every rejected fact and every filter drop | 1 finding: do not echo unknown item text in traces; implemented on repair branch; Claude review pending |
-| #52 | Claude-written, draft: MBA 2027 rule, pay fix, blank-cell checker, START_HERE (review vehicle on top of #51's branch; never merged as is) | needs a Codex review of its exact head after your "go" |
+| #52 | Claude-written, draft: MBA 2027 rule, pay fix, blank-cell checker, START_HERE (review vehicle on top of #51's branch; never merged as is) | needs a Codex review of its exact head once Codex has credits (request not posted yet) |
 | #51 | Codex-written repair PR: the ten review fixes (head `76e7788`, also in the run branch) | Claude review posted October 21 on `76e7788`: one finding (date-dependent tests) and one question; waits for Codex to fix and backport |
 | #40 | X collector | 1 finding: dispose of cookie session after startup failures; implemented on repair branch; Claude review pending |
 | #41 | Run modes: 28 days by hand, 3 days daily, refuses after a gap | No new findings on 4c0fe90; depends on #40 repairs |
