@@ -62,7 +62,7 @@ Small ones (each has a default if you say "take your recommendations"):
 
 ## 4. What CODEX does now (and nothing else)
 
-**October 21 update: Codex reviewed my pull request #52 and found five real problems; all five are fixed (new commits, with Codex's own examples as tests) and a fresh review is requested on version `63727b2`. The six earlier requests were re-posted too, but Codex ran out of credits again right after its one review, so all of them wait for credits.** Earlier note:
+**October 21 update: Codex has reviewed my pull request #52 several times. Each round found a few real problems and Claude fixed them in new commits, with Codex's own examples as tests. The latest round (the fifth, which you allowed for exactly three remaining gaps) is fixed and pushed; the final check of that exact version waits for Codex credits. No further repair round happens without your say-so. The six earlier requests were re-posted too, but Codex ran out of credits again, so all of them wait.** Earlier note:
 
 **October 21: Codex had no credits earlier.** So no Codex review will happen until credits return. The requests already posted below will wait (or get a "usage limit" reply, which is not a review and does not count). The request for my new PR #52 has **not** been posted; you said to hold it. When you tell me Codex has credits again, I check each request, re-post any that got only a usage-limit reply, and post the #52 request. Nothing can be merged into `main` meanwhile.
 

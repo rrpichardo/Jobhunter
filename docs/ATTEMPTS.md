@@ -1042,3 +1042,12 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
   Verification: `uv run --locked --extra social python -m pytest -q`: 1,278 passed, 10 subtests passed; real-data re-checks unchanged (2 of 6,812 board postings meet the
   rule, 38 are class-of-2027 without an MBA, cleanup dry run 1 / 3 / 164 / 542). The unpublished local session commit `3252e0f` was not used or combined. No live
   source, Sheet access, cookie, model call, paid service, deployment, merge, re-cut or edit of any other PR. No further round is authorized.
+
+- **Fifth round (user authorization in chat, October 21, 2026: "One more round for these three"):** Codex's review of `b2e5c5a` found NOT CLEAR for exactly three remaining
+  gaps, and the user authorized a repair limited to them. (1) A denial stays in force across a parenthetical: a phrase in parentheses right after the negation word
+  ("not (at this time) open to ...") no longer hides it, and the same holds for a phrase enclosed in dashes ("not - for now - open to ...", the em-dash and double-hyphen
+  forms; a neighbour found by self-probe), while "Experience is not required - open to ..." still starts a new clause and qualifies. (2) "between X and Y" counts every
+  year in between ("between May 2026 and May 2028" includes 2027), while "2026 and 2028" as a plain list stays two years. (3) Range words are matched in any capitalization
+  ("THROUGH", "To", "Until"). Verification: `uv run --locked --extra social python -m pytest -q`: 1,303 passed, 10 subtests passed; a 17-case neighbour probe matched;
+  offline real-data re-checks unchanged (2 of 6,812 board postings meet the rule, 38 are class-of-2027 without an MBA). No live source, Sheet access, cookie, model call,
+  paid service, deployment, merge, re-cut or edit of any other PR. This closes the fifth round; no further round is authorized.

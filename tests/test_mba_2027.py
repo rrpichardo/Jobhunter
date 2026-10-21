@@ -284,3 +284,56 @@ def test_a_denial_in_the_statements_own_clause_still_cancels_it(text):
 ])
 def test_every_year_of_a_graduation_list_or_range_counts_but_unrelated_years_do_not(text, expected):
     assert p.collection_reason(job(text=text)) == expected
+
+
+# Codex final review of PR 52 (fifth round, authorized by the user in chat): three gaps in the same helpers.
+@pytest.mark.parametrize('text', [
+    'This role is not, at this time, open to MBA students graduating in May 2027.',
+    'This role is not, under any circumstances, open to MBA students graduating in May 2027.',
+    'This role is not, however, open to MBA students graduating in May 2027.',
+    'We do not, as a rule, recruit MBA candidates graduating in 2027.',
+    'This role is NOT, at this time, open to MBA students graduating in May 2027.',
+])
+def test_a_denial_stays_in_force_across_any_comma_enclosed_parenthetical(text):
+    assert p.collection_reason(job(text=text)) == 'not_mba_2027'
+
+
+@pytest.mark.parametrize('text', [
+    'Experience is not required, open to MBA students graduating in May 2027.',
+    'Experience is not required, for example, open to MBA students graduating in May 2027.',
+    'A degree is not enough, as always, but this role is open to MBA students graduating in 2027.',
+])
+def test_a_comma_that_starts_a_new_clause_still_ends_the_earlier_negation(text):
+    assert p.collection_reason(job(text=text)) == ''
+
+
+@pytest.mark.parametrize('text,expected', [
+    ('Open to MBA students graduating between May 2026 and May 2028.', ''),
+    ('Open to MBA students graduating between 2026 and 2028.', ''),
+    ('Open to MBA students graduating between 2025 and 2026.', 'mba_other_class_year'),
+    ('Open to MBA students graduating between May 2028 and May 2030.', 'mba_other_class_year'),
+    ('Open to MBA students graduating in 2025 THROUGH 2028.', ''),
+    ('Open to MBA students graduating in 2025 Through 2028.', ''),
+    ('Open to MBA students graduating in 2025 TO 2028.', ''),
+    ('Open to MBA students graduating in 2025 UNTIL 2028.', ''),
+    ('Open to MBA students graduating in 2026 OR 2028.', 'mba_other_class_year'),   # alternatives stay endpoints only
+    ('Open to MBA students graduating in 2026 and 2028.', 'mba_other_class_year'),
+    ('Open to MBA students graduating in 2026, 2027 AND 2028.', ''),
+])
+def test_between_and_a_range_word_in_any_capitalization_include_the_years_in_between(text, expected):
+    assert p.collection_reason(job(text=text)) == expected
+
+
+@pytest.mark.parametrize('text', [
+    'This role is not (at this time) open to MBA students graduating in May 2027.',
+    'This role is not — for now — open to MBA students graduating in May 2027.',
+    'This role is not – for now – open to MBA students graduating in May 2027.',
+    'This role is not - for now - open to MBA students graduating in May 2027.',
+    'This role is not -- for now -- open to MBA students graduating in May 2027.',
+])
+def test_a_denial_stays_in_force_across_a_parenthesis_or_dash_enclosed_phrase(text):
+    assert p.collection_reason(job(text=text)) == 'not_mba_2027'
+
+
+def test_a_dash_that_starts_a_new_clause_still_ends_the_earlier_negation():
+    assert p.collection_reason(job(text='Experience is not required — open to MBA students graduating in May 2027.')) == ''

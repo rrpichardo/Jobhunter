@@ -399,10 +399,10 @@ def _sentence(source: str, match) -> str:
     return before + source[match.start():match.end()] + after
 
 
+_NEGATION_WORDS = r"\b(?:not|never|no\s+longer|cannot|can't|won't|unable|isn't|aren't|doesn't|don't)\b"
+_DASH = r"(?:\s*[\u2014\u2013]|\s+-\s|\s*--)"
 _NEGATION = re.compile(r"\b(?:not|never|no\s+longer|isn't|aren't|cannot|can't|won't|unable|ineligible|excluded?|excluding|"
                        r"except|other\s+than|unless)\b|n't\b", re.I)
-
-
 _CLAUSE_BREAK = re.compile(r"[,:\u2014\u2013]|\s-\s|\b(?:but|and|while|although|though|however|whereas|so)\b", re.I)
 
 
@@ -411,7 +411,12 @@ def _negated(source: str, match) -> bool:
     "and", "but" ...) and the statement, or the statement itself. "This role is NOT open to MBA students" is denied;
     "Experience is not required, open to MBA students" is not, because the "not" belongs to the earlier clause."""
     before = re.split(r'[.;\n]', source[max(0, match.start() - 80):match.start()])[-1]
-    before = re.sub(r',\s*(?:however|of course|in fact|generally|currently|usually|typically|normally|for now|at present)\s*,', ' ', before, flags=re.I)
+    # "not, at this time, open to ..." / "not, under any circumstances, open to ...": a comma-enclosed phrase straight after the
+    # negation word is a parenthetical inside the same clause, whatever its words. ("not required, open to ..." has no comma
+    # right after the "not", so its comma still starts a new clause.)
+    before = re.sub(rf'({_NEGATION_WORDS})\s*,[^,;:]{{1,60}},\s*$', r'\1 ', before, flags=re.I)
+    # The same holds for a dash-enclosed phrase: "not \u2014 for now \u2014 open to ...", "not - for now - open to ...".
+    before = re.sub(rf'({_NEGATION_WORDS}){_DASH}[^\u2014\u2013;:]{{1,60}}?{_DASH}\s*$', r'\1 ', before, flags=re.I)
     clause = _CLAUSE_BREAK.split(before)[-1]
     return bool(_NEGATION.search(clause[-30:] + ' ' + match.group(0)))
 
@@ -432,11 +437,17 @@ _COHORT_YEAR = tuple(re.compile(pattern, re.I) for pattern in (
 _START_YEAR = re.compile(r"\b(?:start(?:s|ing)?|begin(?:s|ning)?)\b[^.;\n]{0,20}?\b(20[2-3]\d)\b", re.I)
 
 
+_RANGE_WORDS = ('to', 'through', 'until', '-', '\u2013', '\u2014')
+
+
 def _graduation_years(sentence: str) -> set:
     """Every year of each graduation or class list: the first year after the cue plus the ones joined to it by
-    a comma, or/and/&, or a range word. Application, start or launch years that follow other words are not joined."""
+    a comma, or/and/&, or a range word. A range includes the years between its ends: "2025 to 2028", "2025 THROUGH 2028",
+    and "between May 2026 and May 2028" (where "and" joins the two ends of a range, not two alternatives).
+    Application, start or launch years that follow other words are not joined."""
     years = set()
     for cue in _GRADUATION_CUE.finditer(sentence):
+        between = bool(re.search(r'\bbetween\b', cue.group(0), re.I))
         last, position = int(cue.group(1)), cue.end()
         years.add(last)
         while True:
@@ -444,8 +455,9 @@ def _graduation_years(sentence: str) -> set:
             if not more or not (more.group(1) or more.group(2)):
                 break
             year = int(more.group(3))
-            years.update(range(last, year + 1) if more.group(2) in ('to', 'through', 'until', '-', '\u2013', '\u2014') and year > last
-                         else (year,))
+            operator = (more.group(2) or '').lower()
+            is_range = operator in _RANGE_WORDS or (between and operator == 'and')
+            years.update(range(last, year + 1) if is_range and year > last else (year,))
             last, position = year, more.end()
     return {str(year) for year in years}
 
