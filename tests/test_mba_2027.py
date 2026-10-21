@@ -84,3 +84,21 @@ def test_the_mba_check_comes_after_role_and_place_and_before_pay():
 
 def test_the_shared_sample_sentence_is_itself_recognised():
     assert p.mba_class_evidence('Product Manager', MBA_2027)[0] == 'mba'
+
+
+def test_the_probe_says_how_many_approved_roles_were_dropped_and_why():
+    import httpx
+    from scripts import source_probe
+    data = [{'id': '1', 'text': 'Product Manager', 'categories': {'location': 'United States'},
+             'descriptionPlain': mba('Build.'), 'hostedUrl': 'https://jobs.lever.co/acme/1'},
+            {'id': '2', 'text': 'Senior Product Manager', 'categories': {'location': 'United States'},
+             'descriptionPlain': 'Build billing. MBA preferred.', 'hostedUrl': 'https://jobs.lever.co/acme/2'},
+            {'id': '3', 'text': 'Chief of Staff', 'categories': {'location': 'Berlin, Germany'},
+             'descriptionPlain': mba('Chief of staff.'), 'hostedUrl': 'https://jobs.lever.co/acme/3'},
+            {'id': '4', 'text': 'Engineer', 'categories': {'location': 'United States'},
+             'descriptionPlain': mba('Code.'), 'hostedUrl': 'https://jobs.lever.co/acme/4'}]
+    client = httpx.Client(transport=httpx.MockTransport(lambda request: httpx.Response(200, json=data)))
+    entry = {'id': 'lever:acme', 'kind': 'lever', 'board': 'acme', 'company': 'Acme', 'url': 'https://test.example/jobs'}
+    record, jobs, note = source_probe.probe_source(client, entry, '2026-10-21T00:00:00+00:00')
+    assert [job.title for job in jobs] == ['Product Manager']
+    assert 'dropped=not_mba_2027:1,place_excluded:1' in note  # the engineer is not an approved role, so it is not counted

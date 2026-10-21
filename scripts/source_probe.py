@@ -8,6 +8,7 @@ request each and their keys are never recorded, printed or put in an error. The 
 separately with `scripts.sheets_sync`.
 """
 
+from collections import Counter
 import argparse
 from datetime import datetime, timedelta, timezone
 import json
@@ -23,7 +24,7 @@ import yaml
 
 from jobhunter.artifacts import SYNC_MAX_BYTES, read_artifact, safe_error_code, write_artifact
 from jobhunter.post_facts import SOCIAL, postings_from_result
-from jobhunter.postings import (AI_TERMS, DETAIL_SOURCES, LISTING_ONLY, PARSERS, Posting, collection_match,
+from jobhunter.postings import (AI_TERMS, DETAIL_SOURCES, LISTING_ONLY, PARSERS, Posting, collection_match, collection_reason,
                                 collection_stub_match, collection_priority, collection_title_priority,
                                 dedupe, parse_posted, role_family, to_row, within_lookback)
 
@@ -304,6 +305,9 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
     undated = sum(not p.posted_at for p in postings)
     candidates = [p for p in postings if role_family(p.title)]
     selected = sorted((p for p in postings if collection_match(p)), key=collection_priority)
+    # Why jobs with an approved role were not collected (fixed codes and counts), so nothing disappears silently.
+    drops = Counter(reason for p in postings if role_family(p.title) and (reason := collection_reason(p)))
+    drop_note = ('; dropped=' + ','.join(f'{name}:{count}' for name, count in sorted(drops.items()))) if drops else ''
     # A paged source is complete only when every page it offered (or every page inside the window) was read.
     coverage = ("complete-response" if entry.get("board") or (paging_note and "paging_stopped" not in paging_note)
                 else "partial-response")
@@ -311,7 +315,7 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
         candidates = shortlist
     if rejected:
         coverage += "-with-rejections"
-    skipped_note = ((f'; details_skipped={detail_skipped}' if detail_skipped else '') + paging_note
+    skipped_note = (drop_note + (f'; details_skipped={detail_skipped}' if detail_skipped else '') + paging_note
                     + (f'; already_delivered={len(delivered_before)}' if kind in DETAIL_SOURCES and known_ids else ''))
     if cutoff is not None:
         skipped_note += f'; outside_window={outside}; date_unknown={undated}'
