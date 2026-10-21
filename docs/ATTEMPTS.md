@@ -1,5 +1,37 @@
 # Implementation attempt log
 
+## October 21 PR #52 re-cut onto main — repair/review cycle 4 (cap lifted by the user)
+
+- Renewal: the user lifted the three-cycle cap for #52 ("dont worrya bout the three cylce limit we need to have 52 well"; entry
+  below). Counters are not reset: cycles 1 to 3 are the history below; this is **cycle 4**. Claude local is the sole
+  implementation owner; Codex reviews and, if clean with green CI, merges.
+- Main base: fresh branch `claude/mba-2027-main` from `origin/main` `fc77f2fcb0909fe9d34f6806d58c5364316d3139` (#40 to #50 all
+  merged). Original #52 (`70f332c8155cf4eb6a070d92998cbc2fc13cfbd7`, frozen review vehicle on Codex's #51 head
+  `76e778815e98e52c3d75aac8ba0ac86e8aba7994`) was not merged, rebased or copied wholesale; its remote branch is untouched.
+- Port list (selective patch of the direct diff `76e7788..70f332c`, applied cleanly with `git apply -3`): `jobhunter/postings.py`
+  (f63abc8 MBA filter, d71cd9c structured and written pay, repairs cbe4318, 4183ef4, 63727b2, bb9fb9a, 70f332c),
+  `scripts/source_probe.py` (659d6f9 drop counts, pay URLs), `scripts/field_audit.py` (cd0fef0), `tests/mba_fixtures.py`,
+  `tests/test_mba_2027.py`, `tests/test_pay_fields.py`, `tests/test_field_audit.py`, `tests/test_trace_prompts.py` (8c2822c) and the
+  fixture moves onto affirmative MBA 2027 wording in the existing tests. Not ported: 144859f (reserve clock, already on main), the
+  inherited `tests/test_review_repairs.py` (main split it into feature tests; `tests/test_newsletter_identity.py` got the same fixture
+  wording, identity assertions unchanged), and the obsolete credit and status commits (docs reconciled by hand instead).
+- Cycle 4 fixes for Codex review 5601000995, tests first: 20 new cases failed on the #52 logic (unrelated "Experience is not
+  required, open to MBA students graduating in May 2027" dropped; "MBA graduates 2027 should not apply" and title or standalone
+  matches beside an explicit denial still qualified; "May 2026 or May 2027" and graduation ranges read as one year). Fix: a negation
+  counts only when it governs the applicant predicate (lead-first "not open to / not recruiting / except", noun-first "... are not
+  eligible / should not apply"), and a denial covering 2027 or no year outweighs title and standalone matches; class years are read
+  as whole alternative and range groups once a graduation, class, cohort or start cue touches the group. Wrong-class controls (2028
+  with unrelated application, start or fiscal-year 2027) and all earlier #52 regressions still pass.
+- Docs: MBA rule, pay source, drop codes and trace instructions in PARAMETERS, TRACEABILITY, ROUTINE_PROMPT; A22 to A25 and B11
+  (all still open, none accepted) in PENDING, DECISIONS_FORM, START_HERE and the Excel sheet; `docs/MBA_CLEANUP_DRYRUN.md` carried
+  and marked historical and unverified (not re-run). Stale pointers to the combined run branch marked historical. The Excel sheet
+  was edited by a narrow stdlib zip/XML change (status cells only, new shared strings, answer cells untouched) because the bundled
+  artifact tool could not be run in this session; no rendered preview or recalculation in Excel was possible.
+- Checks: `uv sync --locked --extra social`; `uv run --locked --extra social python -m pytest -q`: 1,297 passed, 1 skipped
+  (`tests/test_linkedin_collect.py:396`, real-browser smoke test, no Chromium here), 10 subtests passed. `git diff --check` clean.
+  Offline only: no live source, Sheet read or write, cookie, model call, paid service, routine or deployment. The real-data
+  re-checks of earlier cycles (6,812 board postings, dry run) were not repeated. Next: exact-head Codex review and green CI.
+
 ## October 21 PR #48 (LinkedIn job listings) integration repair — integration cycle 2 of 3
 
 - Starting head `4dfb8bb48b5c38a7fbd92dac67c9e294d609b37f`; the remote `claude/linkedin-jobs` equalled it when the
@@ -108,6 +140,59 @@
   students graduating in May 2026 or May 2027".
 - Cycle 3 of 3 is used. #52 stays open and unmerged. No further fix cycle without a new explicit authorization from the user.
   Its changes are not adopted elsewhere (not into #46). #51 is Codex-authored and outside this count.
+
+## October 21 PR #52 cycles 1 to 3 on the original branch (carried verbatim from `70f332c`; historical)
+
+### PR #52 repair round (Codex review of `781741a`, October 21, 2026)
+
+- The user authorized Claude to fix the five P2 findings of Codex's review of PR #52 (maximum three repair/review cycles per PR;
+  Claude is the sole implementation owner; no live source, Sheet access, cookie, paid service, deployment or merge). Historical counters
+  above are retained; this round does not reset any of them.
+- **Cycle 1 of 3 (repair pushed):** findings 1 and 2 (applicant targeting and class year tied to the statement), 3 and 4 (pay currency,
+  period and type from the whole compensation sentence and the Greenhouse label), and 5 (the audit never prints or uses a Source cell it does
+  not know). New commits `cbe4318`, `4183ef4`, `63727b2`; docs and Excel `45a73da`. Each of Codex's synthetic counterexamples is a regression
+  test (`tests/test_mba_2027.py`, `tests/test_pay_fields.py`, `tests/test_field_audit.py`); the HN, X, newsletter, Jooble and other migrated
+  fixtures now use real applicant wording ("open to MBA students graduating in spring 2027") instead of a weaker rule. The user decisions A23 and A24
+  were not chosen: the class-of-2027-without-MBA drop reason is only tightened to the same applicant-statement standard, and the title list is unchanged.
+- Verification: `uv run --locked --extra social python -m pytest -q` at `63727b2`: 1,197 passed, 10 subtests passed. Real-data re-checks
+  (offline, saved public board data): the same 2 MBA postings qualify among 6,812; Greenhouse pay read as yearly USD unchanged (1,979 ranges); the
+  cleanup dry run is unchanged (1 keep, 3 maybe, 164 no, 542 cannot tell). No Sheet access or write, cookie or live source in this round.
+- Fresh review: requested on `63727b2`; Codex answered "You have reached your Codex usage limits" (a usage-limit reply is not a review and
+  consumes no cycle beyond the repair above). The review is still owed.
+- A separate GitHub Action job (`@claude` comment trigger, run 39546448264) started from the authorization comment, could not run tests, and
+  pushed nothing; the branch was verified unchanged afterwards.
+- Earlier the same day Claude backported the ten Codex repairs, plus a clock fix found in Claude's review of PR #51, onto the original
+  PR branches #40, #41, #43, #44, #45, #46, #47, #48, #49 and #50 as NEW commits (heads `e2ce21d`, `40fda94`, `45aa52f`, `7e4088a`, `aa9ee55`,
+  `148eec6`, `716f3fc`, `b79585a`, `96f14eb`, `3214479`), each branch tested on its own; their Codex re-reviews hit the usage limit and
+  are still owed.
+
+- **Cycle 2 of 3 (Codex re-review of `8943862`, October 21):** four remaining P2 findings, all fixed in NEW commits (no history rewritten) with Codex's
+  exact examples as regression tests. (1) A hiring verb no longer lets the product's users become the applicants: only applicant descriptors
+  (current, recent, talented, graduating, a year, "and/or") may sit between the lead and the MBA noun; the "2027 class without MBA" label uses the same rule.
+  (2) Every applicant statement is read before deciding, and the year comes from the whole sentence or whole title: a program year anywhere in the
+  title counts, and an unqualified title match such as "Product Manager (MBA)" can no longer hide a description that says "graduating in spring 2028 only";
+  a statement naming 2027 still qualifies a posting that also names another class. (3) The pay reader inspects the clause after the range: a currency in
+  brackets, "including bonus and equity", and "paid monthly" / "per month" leave the cell blank, while "plus bonus" (extra on top of base) and a next sentence
+  about total compensation do not block a base range. (4) A Greenhouse blurb that says the range is "per month/week/day/hour" or "paid monthly" now sets the unit
+  (generic sales/OTE disclaimer text still has no effect). A self-check found and fixed one regression of my own in this round: the "(MBA)" title marker
+  also matched the degree line "Master of Business Administration (MBA) or Juris Doctor (JD)" in descriptions (it now applies to titles only; tested).
+  Verification: `uv run --locked --extra social python -m pytest -q`: 1,226 passed, 10 subtests passed. Real-data re-checks unchanged: 2 of 6,812 board
+  postings meet the rule (Sierra's "MBA Grad 2027" and an MBA internship), pay read as yearly USD unchanged, cleanup dry run unchanged (1/3/164/542).
+  No live source, Sheet access, cookie, paid service, deployment, merge, re-cut, or edit of any other PR. A new GitHub Action job (run 39606761531)
+  was started by the authorization comment; the cloud session did the work, and the branch was checked before pushing.
+
+- **Cycle 3 of 3, the third and final cycle of this round (Codex re-review of `590131a`, October 21):** four remaining P2 findings, fixed in NEW commits with
+  positive and negative regressions. (1) Negation: an applicant statement denied earlier in its own sentence ("not open to", "do not recruit", "not for", "except",
+  "are not eligible to apply", "should not apply") is not evidence; a negative word elsewhere ("no travel", "not undergraduates") does not cancel it. (2) Noun-first
+  eligibility: "MBA students graduating in May 2027 are eligible / encouraged / welcome to apply", "... should apply" qualify, while customer or product wording
+  ("use our app and are eligible for a discount") still does not. (3) A year counts as the class or program year only when it is tied to graduating, a class, a cohort,
+  a program or a start; an application window, close date or launch in the same sentence is ignored, so "graduating in spring 2028 only, with applications opening in 2027"
+  is `mba_other_class_year`. (4) A currency named anywhere earlier in the compensation sentence ("(CAD):", "in EUR", "CAD $", "C$") keeps the pay unresolved; an explicit
+  USD keeps it. A self-probe of neighbours before pushing found one weakness in my own negation rule (a bare "no" earlier in the sentence cancelled valid statements);
+  it was removed and tested. Verification: `uv run --locked --extra social python -m pytest -q`: 1,260 passed, 10 subtests passed. Offline real-data re-checks unchanged:
+  2 of 6,812 board postings meet the rule, 38 are class-of-2027 without an MBA, yearly USD pay read unchanged (3,622 postings), cleanup dry run unchanged (1 / 3 / 164 / 542).
+  No live source, Sheet access, cookie, model call, paid service, deployment, merge, re-cut or edit of any other PR. This closes the three authorized cycles of this round;
+  any further change needs a new authorization.
 
 ## October 21 PR #46 integration with main — repair/review cycle 1 of 3
 

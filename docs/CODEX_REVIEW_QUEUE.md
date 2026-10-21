@@ -36,6 +36,15 @@ after three review cycles, then the user reopened it on October 21 and lifted th
 reset): fix its two open findings first, then request a fresh Codex review of the new head. #51 is Codex-authored (Claude
 reviews it). The table below is the October 19 snapshot, kept as history.
 
+**Update October 21, later (from `main`'s merge history):** #48 is merged too (`fc77f2f`), so every original PR #40 to #50 is in
+`main`. #52 stays open as a frozen review vehicle (its branch sits on top of the unreviewed combined stack and is never merged
+as is). Its own changes, plus cycle 4 fixes for the two open findings of Codex review 5601000995, were re-cut onto `main` as
+branch `claude/mba-2027-main` (successor PR linked from #52; read its live head from GitHub). That successor needs an exact-head
+Codex review and green CI before it merges. #51 is Codex-authored and excluded from this queue.
+
+**Successor of #52 (`claude/mba-2027-main`)**
+> @codex review <SHA> (base `main`). Re-cut of #52 onto `main`, with cycle 4 fixes for review 5601000995. Check: (1) `mba_class_evidence` in `jobhunter/postings.py`: a negation counts only when it governs the MBA applicant predicate ("not open to", "not recruiting", "except", "... are not eligible to apply", "... should not apply"), so "Experience is not required, open to MBA students graduating in May 2027" qualifies, and a denial covering 2027 (or naming no year) cannot be outweighed by a title or standalone match; (2) every graduation alternative and range is read ("May 2026 or May 2027", "between December 2026 and June 2027", "2026-2028"), while an application, launch, start-elsewhere or fiscal year never sets the class; (3) the earlier #52 rules hold: applicant statements only (not customers, products or "MBA preferred"), drop codes `not_mba_2027`, `class_2027_without_mba`, `mba_other_class_year`, evidence quoted in "More details"; (4) pay from Greenhouse `pay_input_ranges`, Ashby compensation and written ranges stays narrow (yearly USD base only); (5) `scripts/field_audit.py` never prints an unknown Source cell; (6) nothing on `main` was lost: source registry, `SOCIAL` entries (`x-twscrape`, `linkedin-login`, `linkedin-jobs`, `alirohde-rss`), limits, run-window guard and every existing regression test; (7) docs match the code and claim no live run, Sheet read or approval. Review only: do not implement fixes.
+
 ## Snapshot (heads as of October 19, 2026, about 22:15 UTC)
 
 | PR | What it is | Base | Head (full SHA) | Codex so far |
@@ -93,6 +102,7 @@ All of them end with: `Review only: do not implement fixes. Read AGENTS.md and d
 
 ## Not a Codex task
 
-A **combined run branch** (`claude/combined-live-run`, all ten PRs and #50 merged with the documented conflict fixes, 1,075 tests passing) exists
-only so the live test and first manual run can happen before these reviews. It is never merged to `main`; the individual PRs
-above are what get reviewed and merged. Running unreviewed code against real accounts was your decision on October 19.
+A **combined run branch** (`claude/combined-live-run`, all ten PRs and #50 merged with the documented conflict fixes, 1,075 tests passing) existed
+only so the live test and first manual run could happen before these reviews (your decision on October 19). It is never merged to `main`.
+**Historical:** every PR it carried is now in `main`, and it also carries unreviewed #51/#52 work, so do not run from it; future runs use
+reviewed `main`, and each still needs its own approval.

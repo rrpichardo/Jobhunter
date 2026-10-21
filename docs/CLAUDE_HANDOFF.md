@@ -25,6 +25,15 @@ reopened by the user on October 21 with the cap lifted (history and counters kep
 not fixed yet; the local Claude session owns it, the cloud session was told to hold); #51 is Codex-authored. Merged code does not lift the LinkedIn hold: A18 still gates every live
 LinkedIn step, and every runbook installs the pinned uv 0.13.1 and puts it first on PATH. The table below is the October 19 snapshot.
 
+**Update October 21, later:** #48 is merged too (`fc77f2f`); every original PR #40 to #50 is in `main`. #52 stays open as a frozen
+review vehicle (never merged or rebased; its remote branch is left untouched). Its own changes were re-cut onto `main` in branch
+`claude/mba-2027-main` (started from `fc77f2f`) by selective patches, not by merging the bundle: the MBA 2027 rule
+(`mba_class_evidence`, drop codes `not_mba_2027`, `class_2027_without_mba`, `mba_other_class_year`, `dropped=` counts in the probe
+note), pay from Greenhouse/Ashby fields and written ranges, `scripts/field_audit.py`, `tests/test_trace_prompts.py`, the MBA test
+fixtures, and these docs. Cycle 4 fixed the two findings of Codex review 5601000995 with failing-first tests (`docs/ATTEMPTS.md`).
+The successor PR is opened and linked from #52 by the coordinating session; it needs an exact-head Codex review and green CI before
+it merges. #51 is Codex-authored and excluded. Nothing here approves a live run, the Sheet clean-up (A22), the routine (A3) or spending.
+
 **Open PRs (all Claude-written; each needs a Codex review of its exact head and green CI before merging; nothing merges without
 the user's "go" for Codex, A12).** Heads at the time of writing (re-read them from GitHub before acting):
 
@@ -42,10 +51,10 @@ the user's "go" for Codex, A12).** Heads at the time of writing (re-read them fr
 | #49 | claude/haiku-eval | main | 82bd0d4 | Haiku-vs-Sonnet reading test (ran: 100 of 100 agree; Haiku accepted, A11) |
 | #50 | claude/trace-rejections | main | 40729d7 | E4: a reason for every rejected fact and filter drop; `docs/TRACEABILITY.md` |
 
-**Run branch** `claude/combined-live-run` = `main` + all eleven PRs with the conflict fixes in the Merge plan below; 1,075 tests pass.
-It exists only for real runs before Codex; never merge it. To run again: start a JobHunterEnv session (`env_01M9moVSWZBGvWAZYrqTm49s`,
-`source_revision` `claude/combined-live-run`) with the prompt in `docs/LIVE_RUN_PROMPT.md` (for a daily-style run use `--mode daily`).
-That prompt skips LinkedIn unless the user's A18 answer is added at its top; do not add that line on your own.
+**Run branch (historical, October 19)** `claude/combined-live-run` = `main` + all eleven PRs with the conflict fixes in the Merge plan below; 1,075 tests passed.
+It existed only for real runs before Codex; never merge it. **Do not run from it any more:** every PR it carried is now in `main`, and it
+also carries unreviewed #51/#52 work. A future run uses reviewed `main` in JobHunterEnv with the prompt in `docs/LIVE_RUN_PROMPT.md`,
+and only with the user's approval for that run. That prompt skips LinkedIn unless the user's A18 answer is added at its top; do not add that line on your own.
 Each social source spends one attempt per New York day; never retry a spent day; never print a cookie value.
 
 **Do next, in order, once the user answers:** (1) A12 "go": request Codex on one PR at a time (`docs/CODEX_REVIEW_QUEUE.md`), fix

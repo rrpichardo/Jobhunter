@@ -13,7 +13,7 @@ Nothing is estimated: numbers in a report are copied from tool output.
 | Collect (boards, X, LinkedIn, Hacker News, newsletter) | Counts printed by the collector (the X and LinkedIn collectors, once merged, print their query counts and an error word). | The run session's transcript. The Sheet's **Sources** tab keeps the latest counts and error word per source. | The transcript is the only place the per-search lines survive. |
 | Queue (`ai_queue pull`) | `queue:` line: new, already read, held, expired, oldest unread age. | The memory of what was read or is held is kept in the Sheet's hidden `_State` tab. | none |
 | Read and check (`social_posts validate`, `hn_hiring validate`) | **New (E4):** a `trace:` line saying how many facts were read, valid, duplicates, rejected (by reason code), how many posts were unreadable, how many valid facts the collection filter dropped (by reason) and how many were delivered or held; plus a `trace_rejected:` line with up to ten post ids and their reasons. | The run session's transcript, and the result file inside the run folder (`trace` and `rejections` keys, post ids and reason codes only; no post text). | The Sheet has no column for the reasons (see "Next steps"). The run folder is temporary. |
-| Probe (`source_probe`) | A table per source: status, fetched, matched, delivered, a note; `duplicates_merged`. | Transcript, and the Sources tab (counts). | For job boards the reason a job was dropped by the collection filter is not printed, only the counts. |
+| Probe (`source_probe`) | A table per source: status, fetched, matched, delivered, a note (now including `dropped=reason:count,...` for jobs with an approved role); `duplicates_merged`. | Transcript, and the Sources tab (counts). | The reasons are printed, not kept in the Sheet (E5). |
 | Write (`sheets_sync`) | `sync_verified: run_id=... batches=... unique_jobs=...` after a read-back. | The Sheet's **Run Log** tab (run id, start, end, jobs input, unique, status). | none |
 | Report | The run's final message. | The session transcript in the Claude app. | none, provided it copies the `trace:` lines (the routine prompt now requires it). |
 
@@ -24,7 +24,9 @@ IDs; unknown model-supplied IDs print `?`, not their raw text.
 
 Rejected fact: `invalid_post_facts` (wrong shape), `unknown_post`, `not_text:<field>`, `too_long:<field>`, `empty:<field>`,
 `not_in_post:<field>` (a value is not word for word in the post), `link_not_in_post_links`, `link_not_https`, `malformed_fact`.
-Dropped by the collection filter: `role_not_in_scope`, `place_excluded`, `pay_below_floor`.
+Dropped by the collection filter, in this order: `role_not_in_scope`, `place_excluded`, then the MBA 2027 check (`not_mba_2027`: the posting does not say it is
+meant for MBA graduates; `class_2027_without_mba`: it is meant for the 2027 graduating class but not for MBAs; `mba_other_class_year`: MBA
+wording but another graduating year), then `pay_below_floor`. Job boards print the same counts per source as `dropped=...` in the probe table's note.
 `<field>` is one of `title`, `company`, `location`, `salary`, `description_quote`, `apply_url`.
 
 How the numbers add up for one read: `facts = valid + duplicates + rejected facts`, and `valid = delivered + dropped by the filter`.
