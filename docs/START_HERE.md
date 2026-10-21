@@ -67,7 +67,7 @@ Codex only reviews; it does not write code in this round. Requests are already p
 - **Group 1, the X collector stack, one review:** request on PR #40 covering #40, #41, #43, #47 and #48 at the exact versions listed in `docs/CODEX_REVIEW_QUEUE.md`.
 - **Group 2, one review each:** PRs #44, #45, #46, #49 and #50.
 - PR #42 needs nothing (Codex already found it clean and it has not changed).
-- Next, after your "go": review my new pull request (see section 6).
+- Next, after your "go": review my new pull request, #52 (see section 6).
 
 If Codex finds problems, Claude fixes them in new commits and asks for a fresh review.
 
@@ -84,7 +84,7 @@ If Codex finds problems, Claude fixes them in new commits and asks for a fresh r
 | The real program | `main` | Unchanged. Nothing merged. |
 | Eleven original PRs (#40 to #50) | their own branches | All ten Codex findings are fixed on them (today). Fresh Codex reviews requested. |
 | Codex's repair PR | #51 | Its fixes are now on the branches above. Claude reviewed it. Close it later. |
-| **My new work** (MBA 2027 rule, pay fix, blank-cell checker, tests, these documents) | branch `claude/jobhunter-continuation-d35nmm`, new draft PR described in the chat | Not yet reviewed by Codex. It sits on top of the unreviewed stack, so it can only be merged after those PRs, or re-cut onto `main`. |
+| **My new work** (MBA 2027 rule, pay fix, blank-cell checker, tests, these documents) | branch `claude/jobhunter-continuation-d35nmm`, draft **PR #52** (review vehicle, never merged as is) | Not yet reviewed by Codex. It sits on top of the unreviewed stack, so it can only be merged after those PRs, or re-cut onto `main`. |
 | The run branch (only for real runs before review) | `claude/combined-live-run` | Always the same as my branch above. **Never merged.** |
 
 ## Words used

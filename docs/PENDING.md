@@ -73,6 +73,7 @@ feature branches must receive the appropriate commits and fresh reviews before m
 | #46 | This status and handoff documentation | 1 finding: pinned uv in run prompt; implemented on repair branch; Claude review pending |
 | #49 | Haiku-vs-Sonnet reading test (ran: 100 of 100 agree) | 1 finding: do not score unread items as agreement; implemented on repair branch; Claude review pending |
 | #50 | E4: a reason for every rejected fact and every filter drop | 1 finding: do not echo unknown item text in traces; implemented on repair branch; Claude review pending |
+| #52 | Claude-written, draft: MBA 2027 rule, pay fix, blank-cell checker, START_HERE (review vehicle on top of #51's branch; never merged as is) | needs a Codex review of its exact head after your "go" |
 | #51 | Codex-written repair PR: the ten review fixes (head `76e7788`, also in the run branch) | Claude review posted October 21 on `76e7788`: one finding (date-dependent tests) and one question; waits for Codex to fix and backport |
 | #40 | X collector | 1 finding: dispose of cookie session after startup failures; implemented on repair branch; Claude review pending |
 | #41 | Run modes: 28 days by hand, 3 days daily, refuses after a gap | No new findings on 4c0fe90; depends on #40 repairs |
