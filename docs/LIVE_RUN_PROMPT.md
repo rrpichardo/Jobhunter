@@ -30,8 +30,9 @@ Steps (stop and report at the first failure in A):
 
 A. Check the setup
 1. Print `git rev-parse HEAD` and the branch name.
-2. `python3 -m venv ~/uvvenv && ~/uvvenv/bin/pip install uv==0.13.1`, then `~/uvvenv/bin/uv sync --locked --extra social`.
-3. `~/uvvenv/bin/uv run --locked --extra social python -m pytest -q`: all tests must pass (1,075 expected on this branch). If not, stop.
+2. `python3 -m venv ~/uvvenv && ~/uvvenv/bin/pip install uv==0.13.1`, then `export PATH="$HOME/uvvenv/bin:$PATH"` and `uv sync --locked --extra social`. Keep that PATH for every
+   command below, including commands copied from the runbooks; plain `uv` must resolve to the installed 0.13.1 binary.
+3. `~/uvvenv/bin/uv run --locked --extra social python -m pytest -q`: all tests must pass. Report every skipped test; the historical 1,075 count predates the repair regressions. If a test fails, stop.
 4. Print which of these settings exist, by name only: `X_AUTH_TOKEN`, `X_CT0`, `LINKEDIN_LI_AT`, `JOBHUNTER_SPREADSHEET_ID`, `JSEARCH_API_KEY`,
    `JOOBLE_API_KEY`. Missing X or LinkedIn names mean skip that source; a missing `JOBHUNTER_SPREADSHEET_ID` means stop.
 5. `uv run --locked python -m scripts.run_window --mode manual` must print `window_days=28`; use 28 as `$WINDOW`.
