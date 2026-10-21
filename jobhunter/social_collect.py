@@ -15,7 +15,7 @@ from jobhunter.post_facts import clean_social_candidates
 # Starting limits from docs/PLAN.md (user-confirmed October 18); tune after the first live run.
 LIMITS = {
     'x-twscrape': {'queries': 10, 'posts': 200, 'per_query': 40},  # one busy search cannot starve the other nine
-    'linkedin-login': {'job_searches': 5, 'post_searches': 5, 'detail_views': 50},
+    'linkedin-login': {'job_searches': 5, 'post_searches': 5, 'detail_views': 50, 'posts': 100, 'per_query': 30},
 }
 DELAY_SECONDS = (3.0, 9.0)  # randomized pause between live requests
 
