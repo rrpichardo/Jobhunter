@@ -52,14 +52,17 @@ def _posting(fact, by_id, captured_at, *, source_id, id_field, id_prefix, permal
                    salary=fact['salary'], posted_at=candidate['created_at'])
 
 
-REASON = re.compile(r'[a-z_]{1,32}(?::[a-z_]{1,32})?')
+REASONS = frozenset({'invalid_post_facts', 'unknown_post', 'link_not_in_post_links', 'link_not_https',
+                     'invalid_posting', 'invalid_posting_text'} | {
+    f'{reason}:{field}' for reason in ('not_text', 'too_long', 'empty', 'not_in_post') for field in FACT_KEYS
+})
 MAX_TRACE_EXAMPLES = 200
 
 
 def _reason(exc):
     """A fixed reason code for a rejected fact: only our own codes pass; anything else is `malformed_fact`."""
     message = exc.args[0] if isinstance(exc, ValueError) and exc.args and isinstance(exc.args[0], str) else ''
-    return message if REASON.fullmatch(message) else 'malformed_fact'
+    return message if message in REASONS else 'malformed_fact'
 
 
 def _claimed_id(fact, id_field):
@@ -99,7 +102,7 @@ def build_result(source_id, candidates, facts, captured_at, *, id_field, id_pref
             reason = _reason(exc)
             rejected_reasons[reason] += 1
             if len(rejections) < MAX_TRACE_EXAMPLES:
-                rejections.append({'item_id': claimed if claimed and re.fullmatch(r'[A-Za-z0-9_.:-]{1,40}', claimed) else '',
+                rejections.append({'item_id': claimed if claimed in known and re.fullmatch(r'[A-Za-z0-9_.:-]{1,120}', claimed) else '',
                                    'reason': reason})
             if claimed is None:
                 unattributed = True  # cannot tell which item this fact was about

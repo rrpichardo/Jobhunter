@@ -246,7 +246,7 @@ def test_a_mistyped_social_id_holds_every_post_that_was_read_but_a_real_unread_o
 def test_every_rejected_fact_names_a_fixed_reason_and_the_post_it_was_about(changes, reason):
     result = build([fact(**changes)])
     assert result['trace']['rejected_facts'] == {reason: 1}
-    assert result['rejections'] == [{'item_id': changes.get('item_id', '1850000000000000001'), 'reason': reason}]
+    assert result['rejections'] == [{'item_id': '' if changes.get('item_id') == '999' else '1850000000000000001', 'reason': reason}]
 
 
 def test_a_fact_with_no_company_is_rejected_as_empty_company_and_holds_its_post():

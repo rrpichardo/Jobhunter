@@ -19,6 +19,9 @@ Nothing is estimated: numbers in a report are copied from tool output.
 
 ## Reason codes (fixed words, never post text)
 
+Rejection reasons use an explicit allowlist. Rejection examples emit only item IDs verified against the trusted candidate
+IDs; unknown model-supplied IDs print `?`, not their raw text.
+
 Rejected fact: `invalid_post_facts` (wrong shape), `unknown_post`, `not_text:<field>`, `too_long:<field>`, `empty:<field>`,
 `not_in_post:<field>` (a value is not word for word in the post), `link_not_in_post_links`, `link_not_https`, `malformed_fact`.
 Dropped by the collection filter: `role_not_in_scope`, `place_excluded`, `pay_below_floor`.
