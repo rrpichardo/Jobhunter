@@ -191,3 +191,59 @@ def test_an_unqualified_title_match_cannot_hide_an_explicit_other_class_in_the_d
 ])
 def test_a_degree_requirement_in_parentheses_in_the_description_does_not_qualify(text):
     assert p.mba_class_evidence('Deal Team - Business Affairs', text)[0] == ''
+
+
+# Codex re-review of PR 52 (October 21, cycle 3): negation, noun-first eligibility, unrelated years, positive and negative.
+@pytest.mark.parametrize('text', [
+    'This role is not open to MBA students graduating in spring 2027.',
+    'This role is NOT open to MBA students graduating in spring 2027.',
+    'We do not recruit MBA candidates graduating in 2027.',
+    'This position is not for MBA students graduating in 2027.',
+    'Not open to MBA students graduating in 2027.',
+    'Open to all except MBA students graduating in 2027.',
+    'MBA students graduating in 2027 are not eligible to apply.',
+    'MBA students graduating in 2027 should not apply.',
+])
+def test_a_denied_applicant_statement_is_not_evidence(text):
+    assert p.collection_reason(job(text=text)) == 'not_mba_2027'
+
+
+@pytest.mark.parametrize('text', [
+    'This role is open to MBA students graduating in spring 2027, not undergraduates.',
+    'No experience required. This role is open to MBA students graduating in spring 2027.',
+    'A role with no travel, open to MBA students graduating in spring 2027.',
+])
+def test_a_negative_word_elsewhere_does_not_cancel_an_applicant_statement(text):
+    assert p.collection_reason(job(text=text)) == ''
+
+
+@pytest.mark.parametrize('text', [
+    'MBA students graduating in May 2027 are eligible to apply.',
+    'MBA students graduating in May 2027 are encouraged to apply.',
+    'MBA candidates graduating in 2027 should apply.',
+    'Recent MBA graduates (class of 2027) are welcome to apply.',
+])
+def test_noun_first_eligibility_wording_qualifies(text):
+    assert p.collection_reason(job(text=text)) == ''
+
+
+@pytest.mark.parametrize('text', [
+    'MBA students graduating in 2027 use our app and are eligible for a discount.',
+    'Our customers, MBA students graduating in 2027, are eligible for free shipping.',
+])
+def test_noun_first_wording_about_customers_does_not_qualify(text):
+    assert p.collection_reason(job(text=text)) == 'not_mba_2027'
+
+
+@pytest.mark.parametrize('text,expected', [
+    ('Open to MBA students graduating in spring 2028 only, with applications opening in 2027.', 'mba_other_class_year'),
+    ('Open to MBA students graduating in 2028. Applications open in 2027.', 'mba_other_class_year'),
+    ('Open to recent MBA graduates starting in 2028.', 'mba_other_class_year'),
+    ('Open to MBA students graduating in spring 2027, with applications opening in 2026.', ''),
+    ('Open to MBA students graduating in 2027; applications close in 2028.', ''),
+    ('This role is open to MBA students graduating in 2027 and starting in 2028.', ''),
+    ('Open to MBA students, applications open in 2027.', ''),
+    ('Open to recent MBA graduates starting full time in summer 2027.', ''),
+])
+def test_only_the_class_or_program_year_counts_not_an_application_or_launch_year(text, expected):
+    assert p.collection_reason(job(text=text)) == expected

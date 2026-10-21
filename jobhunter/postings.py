@@ -364,6 +364,10 @@ MBA_STANDALONE = tuple(re.compile(pattern, re.I) for pattern in (
 # In a TITLE, "(MBA)" or "(Full-Time MBA)" marks the program; in a description the same words are usually a degree requirement
 # ("Master of Business Administration (MBA) or Juris Doctor (JD) degree"), so this marker is read in titles only.
 MBA_TITLE_MARKER = re.compile(rf"\(\s*(?:full[- ]time\s+|part[- ]time\s+)?{_MBA}\s*\)", re.I)
+# Noun-first wording: "MBA students graduating in May 2027 are eligible / encouraged / welcome to apply", "... should apply".
+MBA_SUBJECT_FIRST = re.compile(
+    rf"\b(?:{_MBA_PEOPLE})[^.;\n]{{0,60}}?\b(?:(?:are|is)\s+(?:also\s+|strongly\s+|especially\s+|warmly\s+)?"
+    rf"(?:eligible|encouraged|welcome|invited)\s+to\s+apply|(?:should|can|may)\s+apply|will\s+be\s+considered)\b", re.I)
 MBA_PEOPLE_IN_TITLE = re.compile(rf"\b(?:{_MBA_PEOPLE})", re.I)
 CLASS_2027_ONLY = re.compile(r"\bclass(?:es)? of 2027\b|\bnew[- ]grad(?:uate)?s?\b[^.;\n]{0,30}\b2027\b|"
                              r"\byou\s+(?:will\s+)?graduat\w*[^.;\n]{0,80}\b2027\b|"
@@ -384,6 +388,8 @@ def _statements(title: str, text: str):
         yield title, match
     for match in MBA_APPLICANT.finditer(text):
         yield text, match
+    for match in MBA_SUBJECT_FIRST.finditer(text):
+        yield text, match
 
 
 def _sentence(source: str, match) -> str:
@@ -391,6 +397,36 @@ def _sentence(source: str, match) -> str:
     before = re.split(r'[.;\n]', source[max(0, match.start() - 240):match.start()])[-1]
     after = re.split(r'[.;\n]', source[match.end():match.end() + 240])[0]
     return before + source[match.start():match.end()] + after
+
+
+_NEGATION = re.compile(r"\b(?:not|never|no\s+longer|isn't|aren't|cannot|can't|won't|unable|ineligible|excluded?|excluding|"
+                       r"except|other\s+than|unless)\b|n't\b", re.I)
+
+
+def _negated(source: str, match) -> bool:
+    """True when the words that lead into the statement (earlier in its sentence) or the statement itself deny it:
+    "This role is NOT open to MBA students graduating in spring 2027"."""
+    before = re.split(r'[.;\n]', source[max(0, match.start() - 80):match.start()])[-1]
+    return bool(_NEGATION.search(before[-30:] + ' ' + match.group(0)))
+
+
+# A year counts as the class or program year only when it is tied to graduating, a class, a cohort, a program or a start; an
+# application window, a launch or a fiscal year in the same sentence says nothing about who may apply.
+_COHORT_YEAR = tuple(re.compile(pattern, re.I) for pattern in (
+    r"\b(?:graduat\w*|graduation|class(?:es)?\s+of|cohort|completing|completes?|finishing|finishes)\b[^.;\n]{0,30}?\b(20[2-3]\d)\b",
+    r"\b(20[2-3]\d)\s+(?:north\s+america\s+)?(?:mba\s+)?(?:graduates?|grads?|graduating|class|cohort|program(?:me)?|intake)\b",
+    rf"\b{_MBA}\s+(?:grad(?:uate)?s?\s*)?(?:class\s+of\s+)?\(?(20[2-3]\d)\b",
+))
+_START_YEAR = re.compile(r"\b(?:start(?:s|ing)?|begin(?:s|ning)?)\b[^.;\n]{0,20}?\b(20[2-3]\d)\b", re.I)
+
+
+def _class_years(source: str, match, title: str) -> set:
+    """The graduating-class or program years a statement names. In a title every year is the program year."""
+    sentence = _sentence(source, match)
+    if source is title:
+        return set(re.findall(r'\b(20[2-3]\d)\b', sentence))
+    years = {y for pattern in _COHORT_YEAR for y in pattern.findall(sentence)}
+    return years or set(_START_YEAR.findall(sentence))
 
 
 def mba_class_evidence(title: str, text: str) -> tuple[str, str]:
@@ -404,7 +440,9 @@ def mba_class_evidence(title: str, text: str) -> tuple[str, str]:
     """
     explicit, other, unqualified = None, False, None
     for source, match in _statements(title, text):
-        years = set(re.findall(r'\b(20[2-3]\d)\b', _sentence(source, match)))
+        if _negated(source, match):
+            continue
+        years = _class_years(source, match, title)
         quote = ' '.join(source[max(0, match.start() - 40):match.end() + 60].split())
         if '2027' in years:
             explicit = explicit or quote
@@ -624,6 +662,7 @@ _NOT_BASE_PAY = re.compile(r'\b(?:total\s+(?:cash\s+|target\s+)?(?:compensation|
                            r'equity|stock|rsu|sign[- ]?on|signing|relocation|stipend|allowance|reimbursement|401|monthly|weekly|'
                            r'bi-?weekly|daily|hourly|per\s+(?:month|week|day|hour)|a\s+month|each\s+month)\b', re.I)
 _CURRENCY_CODE = r'(?:CAD|AUD|NZD|MXN|EUR|GBP|CHF|SGD|INR|BRL|JPY|CNY|AED|SEK|NOK|DKK|PLN|COP|ARS|CLP|ZAR|CA\$|C\$|A\$|\u20ac|\u00a3)'
+_CURRENCY_WORD = re.compile(r'\b(?:CAD|AUD|NZD|MXN|EUR|GBP|CHF|SGD|INR|BRL|JPY|CNY|AED|SEK|NOK|DKK|PLN|COP|ARS|CLP|ZAR)\b|CA\$|C\$|A\$|[\u20ac\u00a3]', re.I)
 _OTHER_CURRENCY = re.compile(rf'(?:\b{_CURRENCY_CODE})\s*$|[\u20ac\u00a3]\s*$', re.I)
 
 
@@ -654,7 +693,7 @@ def salary_from_text(text):
     for match in _PAY_RANGE.finditer(text):
         sentence = re.split(r'[.;\n]', text[max(0, match.start() - 200):match.start()])[-1]
         tail = re.split(r'(?<!\d)[.;\n]|\.(?!\d)', text[match.end():match.end() + 160])[0]
-        if (not _PAY_CUE.search(sentence) or _NOT_BASE_PAY.search(sentence)
+        if (not _PAY_CUE.search(sentence) or _NOT_BASE_PAY.search(sentence) or _CURRENCY_WORD.search(sentence)
                 or _OTHER_CURRENCY.search(text[max(0, match.start() - 8):match.start()])
                 or _TAIL_CURRENCY.search(tail[:60]) or _TAIL_PERIOD.search(tail) or _TAIL_INCLUDES.search(tail)
                 or re.match(r'\s*(?:in\s+)?(?:bonus|commission|equity|OTE|total)', tail, re.I)):

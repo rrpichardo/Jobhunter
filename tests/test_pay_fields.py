@@ -214,3 +214,25 @@ def test_explicit_period_wording_in_the_blurb_is_honored(blurb, unit):
 def test_generic_blurb_text_does_not_change_a_yearly_range(blurb):
     ranges = [{"min_cents": 15000000, "max_cents": 19000000, "currency_type": "USD", "title": "Pay Range", "blurb": blurb}]
     assert p.greenhouse_pay(ranges) == "150,000 - 190,000 USD year"
+
+
+# Codex re-review of PR 52 (October 21, cycle 3): a currency anywhere in the compensation sentence, before or after the range.
+@pytest.mark.parametrize("text", [
+    "Annual base salary range (CAD): $90,000-$120,000 per year.",
+    "Annual base salary range (CAD): $90,000 - $120,000.",
+    "Salary (in CAD) is $90,000 - $120,000 annually.",
+    "Base salary in EUR: $90,000 - $120,000.",
+    "Salary range: CAD $90,000 - $120,000.",
+    "For Canada the salary range is C$90,000 - C$120,000.",
+])
+def test_a_currency_named_anywhere_before_the_range_keeps_the_pay_unresolved(text):
+    assert p.salary_from_text(text) == ""
+
+
+@pytest.mark.parametrize("text", [
+    "The annual base salary range is $90,000 - $120,000 (USD).",
+    "Base salary range (USD): $90,000 - $120,000.",
+    "The base salary range is $90,000 - $120,000 per year, 100% paid in USD.",
+])
+def test_an_explicit_usd_currency_keeps_the_pay(text):
+    assert p.salary_from_text(text) == "90,000 - 120,000 USD year"

@@ -1018,3 +1018,16 @@ cloud public Greenhouse fetch succeeded and is recorded in V0_VERIFICATION.md.
   postings meet the rule (Sierra's "MBA Grad 2027" and an MBA internship), pay read as yearly USD unchanged, cleanup dry run unchanged (1/3/164/542).
   No live source, Sheet access, cookie, paid service, deployment, merge, re-cut, or edit of any other PR. A new GitHub Action job (run 39606761531)
   was started by the authorization comment; the cloud session did the work, and the branch was checked before pushing.
+
+- **Cycle 3 of 3, the third and final cycle of this round (Codex re-review of `590131a`, October 21):** four remaining P2 findings, fixed in NEW commits with
+  positive and negative regressions. (1) Negation: an applicant statement denied earlier in its own sentence ("not open to", "do not recruit", "not for", "except",
+  "are not eligible to apply", "should not apply") is not evidence; a negative word elsewhere ("no travel", "not undergraduates") does not cancel it. (2) Noun-first
+  eligibility: "MBA students graduating in May 2027 are eligible / encouraged / welcome to apply", "... should apply" qualify, while customer or product wording
+  ("use our app and are eligible for a discount") still does not. (3) A year counts as the class or program year only when it is tied to graduating, a class, a cohort,
+  a program or a start; an application window, close date or launch in the same sentence is ignored, so "graduating in spring 2028 only, with applications opening in 2027"
+  is `mba_other_class_year`. (4) A currency named anywhere earlier in the compensation sentence ("(CAD):", "in EUR", "CAD $", "C$") keeps the pay unresolved; an explicit
+  USD keeps it. A self-probe of neighbours before pushing found one weakness in my own negation rule (a bare "no" earlier in the sentence cancelled valid statements);
+  it was removed and tested. Verification: `uv run --locked --extra social python -m pytest -q`: 1,260 passed, 10 subtests passed. Offline real-data re-checks unchanged:
+  2 of 6,812 board postings meet the rule, 38 are class-of-2027 without an MBA, yearly USD pay read unchanged (3,622 postings), cleanup dry run unchanged (1 / 3 / 164 / 542).
+  No live source, Sheet access, cookie, model call, paid service, deployment, merge, re-cut or edit of any other PR. This closes the three authorized cycles of this round;
+  any further change needs a new authorization.
