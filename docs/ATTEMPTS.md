@@ -1,5 +1,30 @@
 # Implementation attempt log
 
+## October 21 PR #47 (Ali Rohde newsletter) integration with main — repair/review cycle 1 of 3
+
+- Starting head `716f3fce90a6d627e73e828ad8dd2eaf7dbe7b2b`; the fetched remote `claude/newsletter-alirohde` still equalled
+  it (no ownership race). Merged main `d2e4f38b81b2a6251a1b039933eb09b95c8ed7f1` (merge base `e2ce21d`) in a new merge
+  commit (no rebase, no force push), by Claude as the sole implementation owner in a local macOS checkout.
+- Earlier #47 repair rounds are kept, not reset: `9400d18` (jobs keyed by application link, unreadable counts, slug limit)
+  and `716f3fc` (after a Codex review: verified employer requisition instead of tracking link; unique legacy rows reused
+  with their user cells; several matches stop). This integration is cycle 1 of 3 under the current authorization.
+- Conflicts were the two expected. `jobhunter/post_facts.py`: kept main's fixed reason codes (`_reason` whitelist, known
+  item ids only in `rejections`, item counts in the trace) and #47's `link_ids` parameter, verified-requisition ID and
+  generic company/title fallback. `docs/ROUTINE_PROMPT.md`: kept main's `trace:` paragraph in section 1 and #47's newsletter
+  step 1b, which now also says to copy its `trace:` lines; the stale "Ali Rohde feeds: not set up" line now points at 1b.
+  Main's A18 LinkedIn hold and pinned-uv PATH lines came through unchanged.
+- Checks: every file that differs from main is one #47 changed, and every file that differs from `716f3fc` is one main
+  changed; the test-function set is exactly the union of both sides (532; none lost) and no test line was removed except
+  main's own reviewed edits; `sources/v0_sources.yaml` has no duplicate ids and loses none except `a16z-ai-pm`, which main's
+  #45 replaced on purpose; `SOCIAL` keeps `x-twscrape`, `linkedin-login`, `alirohde-rss`; `DETAIL_SOURCES` keeps
+  `a16z`, `builtin`, `getro`, `waas`, `yc`.
+- Status docs: merged #40 to #46, #49, #50; pending #47, #48, #52. #52's cap was lifted by the user on October 21 (entry
+  below); its earlier 3-of-3 stop stays as dated history and nothing on #52 is fixed here. #51 is Codex-authored and outside.
+- Local offline evidence (macOS, uv 0.13.1): `uv sync --locked --extra social`; `uv run --locked --extra social python -m
+  pytest -q`: 1082 passed, 1 skipped, 10 subtests passed. The skip is `tests/test_linkedin_collect.py:395` ("browser
+  unavailable"; no Playwright Chromium here). `git diff --check` clean. No live source, cookie, Sheet or cloud run; the new
+  head has not run live. A fresh exact-head Codex review and CI are required before merge.
+
 ## October 21 PR #46 Codex review repair — integration cycle 2 of 3
 
 - Codex reviewed `eb9021c5d626908133ced3ce94bbe41dde575e9d` and found one P2 at `docs/PENDING.md:97`: the integration had

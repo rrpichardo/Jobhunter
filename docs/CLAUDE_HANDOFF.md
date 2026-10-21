@@ -15,8 +15,9 @@ first manual run (28 days) from `claude/combined-live-run` (commit `846f3be`) in
 505 jobs from 51 sources written in four batches (readback verified; the Jobs tab now has 710 rows); X, the Ali Rohde newsletter,
 a16z and the boards worked; **LinkedIn was refused at login** (A18). Results and every number: PENDING section 1.
 
-**Update October 21, 2026:** #40, #41, #42, #43, #44, #45, #49 and #50 are merged into `main` (`15976f0`); `main` was merged
-into #46 (`docs/ATTEMPTS.md`). Open: #46, #47, #48 (Codex review pending); #52 stopped after three review cycles, then was
+**Update October 21, 2026:** #40, #41, #42, #43, #44, #45, #49 and #50 are merged into `main` (`15976f0`), then #46
+(`d2e4f38`). `main` `d2e4f38` was merged into #47 (`claude/newsletter-alirohde`; conflicts in `jobhunter/post_facts.py` and
+`docs/ROUTINE_PROMPT.md`, both sides kept; `docs/ATTEMPTS.md`). Open: #47, #48 (Codex review pending); #52 stopped after three review cycles, then was
 reopened by the user on October 21 with the cap lifted (history and counters kept in `docs/ATTEMPTS.md`; its two findings are
 not fixed yet; the local Claude session owns it, the cloud session was told to hold); #51 is Codex-authored. Merged code does not lift the LinkedIn hold: A18 still gates every live
 LinkedIn step, and every runbook installs the pinned uv 0.13.1 and puts it first on PATH. The table below is the October 19 snapshot.
