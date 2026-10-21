@@ -2,9 +2,16 @@
 
 ## October 21 PR #48 (LinkedIn job listings) integration repair — integration cycle 2 of 3
 
-- Starting head `4dfb8bb48b5c38a7fbd92dac67c9e294d609b37f`; the fetched remote `claude/linkedin-jobs` still equalled it
-  (no ownership race). Docs-only fix in a new commit (no rebase, no force push), by Claude as the sole implementation
-  owner. Cycle 1 (merge of main `8c81341`) and all older counters are kept.
+- Starting head `4dfb8bb48b5c38a7fbd92dac67c9e294d609b37f`; the remote `claude/linkedin-jobs` equalled it when the
+  local fix `0407f09abf7b2a5e3107049b9b7378a1eba4bedd` was written. Before that was pushed, a cloud Claude session
+  pushed its own docs-only fix for the same finding, `a03ca85f7a06a8910dfdab7a3187e5ce30d9114e` (only
+  `docs/ROUTINE_PROMPT.md`), so the local push was rejected as non-fast-forward. Root then posted a coordination comment
+  on PR #48 asking cloud and other sessions to hold pushes, with Claude local as sole implementation owner. No force push
+  or history rewrite: the remote head was re-fetched (still `a03ca85`) and merged normally into `0407f09`, keeping both
+  commits. The only conflict, `docs/ROUTINE_PROMPT.md`, kept the local wording (Haiku subagent, this session validates,
+  fallback to reading itself) and carried over `a03ca85`'s sentence that creating the routine is still gate A3 and
+  LinkedIn stays off until A18. Same repair, same cycle 2; no new review cycle. Cycle 1 (merge of main `8c81341`) and
+  all older counters are kept.
 - Codex integration review (P2): the `docs/ROUTINE_PROMPT.md` section 1 "Which model reads" note added by #48 still told
   the routine to read on the session model (Sonnet) and not to use Haiku, contradicting merged #49, A11 and the user's
   acceptance of Haiku; a routine following it would never use the approved cheaper reader. Cycle 1 had only reworded it.

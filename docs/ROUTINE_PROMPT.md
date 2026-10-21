@@ -67,6 +67,8 @@ keys or tokens. Do not call any paid service.
 > (or the subagent fails), read those same items yourself and write the facts file again, and say so in the report.
 > The earlier eval (100 of 100 items agreed with Sonnet; `docs/evals/HAIKU_READING_EVAL.md`) is why Haiku was accepted;
 > it is not proof that any new item is read correctly, so the word-for-word validation stays the gate for every fact.
+> Creating and scheduling the routine is still a separate gate (A3), and LinkedIn stays off until the user decides A18; this
+> note does not create or schedule anything.
 
 Run, saving each printed digest:
 
