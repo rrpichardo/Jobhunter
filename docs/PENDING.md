@@ -25,6 +25,10 @@ column. Fill it in (or answer in chat); Claude copies each answer back here. The
 | A7 | **X search wording after the first run.** The 10 searches gave 178 posts; some results are off-target listings from aggregator accounts (for example Ugandan, Kenyan and Indian job pages). | Keep the wording for a week of daily runs, then revise with numbers; first record which search found each post (E10). | open |
 | A20 | **More tracing** (E5, E6, E10): keep the rejection reasons in the Sheet (E5), print why job boards drop jobs (E6), record which search found each social post (E10). | Yes to E10 and E5; E6 later. | open |
 | A21 | **Order of the bigger deliverables** (E1 README, E2 control page, E3 one editable settings file). | E3 first, then E1, then E2. | open |
+| A22 | **Erase the existing rows that are not for MBA graduates of 2027?** You said yes. The dry run (`docs/MBA_CLEANUP_DRYRUN.md`): 1 row is clearly for MBA 2027, 3 are 2027 new-grad roles without an MBA, 164 were read in full and are not, and 542 cannot be judged because only 300 characters were stored. Nothing was changed yet. | Say "go": back up the Jobs tab, copy the rows to an archive tab, then remove them from Jobs (reversible). Or erase only the 164 and leave the 542. | open (needs your "go" on the list) |
+| A23 | **2027 new-grad roles that do not mention an MBA** (for example Databricks "Associate Product Manager, New Grad (2027 Start)", which asks for a bachelor's or master's in computer science). 55 of 6,812 board postings. | Keep them out (they are dropped with the reason `class_2027_without_mba`, so you can see the count in every run). | open |
+| A24 | **Roles outside the title list that are explicitly for MBA 2027**, for example Sierra "Strategist, Agent Development (MBA Grad 2027)". Today the title list decides first, so this one is dropped. | Accept any full-time business (non-engineering) role whose text says it is for MBA graduates of 2027. | open |
+| A25 | **Where do MBA 2027 roles come from?** The 24 company boards hold almost none (2 of 6,812, one an internship). Candidates: company MBA programs such as General Motors (your offer), school and MBA job sites (B3), Gmail alerts (B1, B2), LinkedIn (A18). | Name the companies and programs you want; Claude finds each program's public page and builds a reader. | open |
 
 Decisions already made are listed in section 2 so they are not asked again.
 
@@ -37,6 +41,7 @@ Decisions already made are listed in section 2 so they are not asked again.
 | B3 | Send the names and web addresses of the school/MBA job sites you want, and the correct Cosign address (`cosign.com` is a parked domain). If a site needs a login, log in yourself and put the cookie in JobHunterEnv. | open |
 | B4 | In the Claude Gmail connector settings, change Delete label, Mark spam, Trash and Remove labels from "Always allow" to "Needs approval". | open |
 | B9 | Tell Claude the web address of the Next Play newsletter you read (`nextplay.substack.com` is a 2021 publication, not it). Claude then builds its reader like the Ali Rohde one. | open |
+| B11 | Send the names of the company MBA programs you want watched (General Motors first) and, if you know them, the web addresses of their MBA recruiting pages (A25). | open |
 | B10 | Optional, only for the logged-in Work at a Startup lists: tell Claude the NAME of the cookie saved as `WAAS_SESSION_COOKIE` (or re-save it as `name=value`). Never paste the value in chat. | optional |
 | B8 | Optional: rotate the Google service-account key. | optional |
 | B5 | Re-copy a cookie into JobHunterEnv only if a source reports it is logged out (for LinkedIn see A18). Never paste a cookie in chat. | as needed |
@@ -62,6 +67,7 @@ feature branches must receive the appropriate commits and fresh reviews before m
 | #46 | This status and handoff documentation | 1 finding: pinned uv in run prompt; implemented on repair branch; Claude review pending |
 | #49 | Haiku-vs-Sonnet reading test (ran: 100 of 100 agree) | 1 finding: do not score unread items as agreement; implemented on repair branch; Claude review pending |
 | #50 | E4: a reason for every rejected fact and every filter drop | 1 finding: do not echo unknown item text in traces; implemented on repair branch; Claude review pending |
+| #51 | Codex-written: fixes ten October 19 review findings (head `76e7788`, now also in the run branch) | **waits for Claude's review**, not Codex; not reviewed yet |
 | #40 | X collector | 1 finding: dispose of cookie session after startup failures; implemented on repair branch; Claude review pending |
 | #41 | Run modes: 28 days by hand, 3 days daily, refuses after a gap | No new findings on 4c0fe90; depends on #40 repairs |
 | #43 | LinkedIn post collector | 1 finding: dispose of browser after startup failures; implemented on repair branch; Claude review pending; live collection held for A18 |
@@ -74,7 +80,8 @@ feature branches must receive the appropriate commits and fresh reviews before m
 - A12 answered: initial Codex reviews complete. Codex implements the authorized repairs in new commits, opens a fix-only
   PR for Claude review, and records its full head SHA. No merge or fresh cloud run is part of this repair request.
 - A16, A17, A13, A19, A20, A21: one small PR each, with tests, then Codex.
-- B9, B3, B10: builds or retests the source with the address or name you give.
+- B9, B3, B10, B11: builds or retests the source with the address or name you give.
+- A22: backs up the Jobs tab, archives, then removes the rows you approve. A23, A24: one small change each, with tests.
 
 ## 1. First live run and first manual run: results (October 19, 2026, about 22:17 to 22:36 UTC)
 
@@ -127,6 +134,10 @@ every command exited 0. The Sheet was backed up first (A15).
 | E9 | X replies: keep them and fix the wrong comment, or filter them | your call (A19) |
 | E10 | Record which search found each social post, so search wording can be tuned with numbers | proposed (A20) |
 | E11 | A Run Log column for the AI queue counts | proposed (part of E5) |
+| E12 | Only roles for MBA graduates of 2027 (`mba_class_evidence`), with drop reasons printed per source (`dropped=` in the probe table) | **built on the session branch** (not yet a PR); tests moved onto MBA 2027 wording |
+| E13 | Pay read from Greenhouse, Ashby and posting text; found by your California/Anthropic observation: 134 of 170 blank pay cells on job-board rows were pay the employer had published | **built on the session branch** (not yet a PR); old rows are not back-filled (your answer: new rows only) |
+| E14 | `scripts.field_audit`: flags a source that leaves a column blank far more than it publishes it, and `--cross-check` asks the live boards whether the blank cell was a gap in the source or in our reader | **built on the session branch** (not yet a PR); run it after every run, see PARAMETERS |
+| E15 | Date bug in the X and LinkedIn tests (14 tests only passed on October 19) | **fixed on the session branch** (commit `144859f`); PRs #40, #41, #43, #47, #48 still carry the bug: their CI was green on October 19 and will turn red on any re-run |
 
 ## 4. Work that waits on a decision or task
 
@@ -178,3 +189,29 @@ session, not re-verified.
 
 **Built earlier and now in `main`:** per-run safety-stop flags, paging for The Muse and Jobicy, skipping job pages already in the
 Sheet, the daily social allowance in `_State`, and the shared validator for Hacker News, X and LinkedIn posts.
+
+## 8. October 21, 2026 work log (what was checked and what is still unproven)
+
+**Checked from the run's own record (not just its summary).** The run session's transcript shows the tools printed `valid=117
+delivered=94 rejected=42 held_for_retry=34` (X) and `valid=66 delivered=45 rejected=0` (newsletter), and the probe table with 505 jobs
+from 51 sources and `sync_verified ... unique_jobs=505`. These match section 1. The validator printed **no reason**, which is why the
+empty-company cause rests on the run session's own reply ("all 39 failed for the same reason, the company field was empty; my brief told
+the reader to leave it blank when the post names none, but the code requires a company") plus an offline test that reproduces the
+rejection exactly. The saved fact files lived in a temporary folder that is gone, so they cannot be re-read. **Closed: no further re-check is
+needed or possible.**
+
+**The run session's declined re-check** (October 19, 23:02 UTC): the run session refused to send a second round of numbers to another
+session, because you had told it to answer you only. That is the right behavior and nothing is outstanding from it.
+
+**Offline proof that the report will copy the trace lines:** `tests/test_trace_prompts.py` runs the same commands as the live run
+(`ai_queue pull`, `social_posts validate`) on a post with no company and checks that `trace:` and `trace_rejected:` lines are printed with
+`empty:company`, that both prompts name those two line prefixes and say "unchanged", and that every reason code is explained in
+`docs/TRACEABILITY.md`. **Still unproven until a real run:** that the run session actually copies the lines into its final report.
+
+**Blank cells (your observation).** California rows from Greenhouse and Ashby had a blank Salary: those systems publish pay in a separate
+field the program never requested. A live cross-check of the 170 blank job-board rows: 134 had pay published (our loss), 33 had none, 3 were
+gone. 0 of 115 Greenhouse and 0 of 50 Ashby rows had pay; The Muse (179) and Lever (5) also 0. Fixed for new rows (E13). `scripts.field_audit`
+(E14) is the standing check.
+
+**Also found:** the X and LinkedIn collector tests only passed on October 19 (E15). `Rank (prelim)` is 3 on 600 of 710 rows and Fit, Next step
+are blank on all rows; that is by design today (the ranking and fit scoring of the plan are not built), not a fault.

@@ -51,6 +51,15 @@ findings in new commits, merge in the order below. (2) A3: create the routine wi
 otherwise) and name Haiku for the reading step in `docs/ROUTINE_PROMPT.md`. (3) One small PR per decided rule fix (A13, A16, A17, A19)
 and per tracing item (A20). Commits omit the `Claude-Session:` line (PENDING section 6).
 
+**October 21 additions (session branch `claude/jobhunter-continuation-d35nmm`, mirrored into `claude/combined-live-run`; no PR yet, because the
+user said "no PR yet"):** (1) MBA 2027 rule in `collection_reason` (`mba_class_evidence`, three new drop reasons, `dropped=` counts in the probe
+note); every test sample moved onto MBA-2027 wording (`tests/mba_fixtures.py`). (2) Pay: `greenhouse_pay`, `ashby_pay`, `salary_from_text`;
+the probe URLs now ask for `pay_transparency=true` and `includeCompensation=true`. (3) `scripts/field_audit.py` (+ `--cross-check`).
+(4) Fix for the date-dependent X/LinkedIn tests (commit `144859f`; PRs #40, #41, #43, #47, #48 lack it). (5) `tests/test_trace_prompts.py`.
+These sit on top of the combined branch, so before Codex each needs re-cutting onto `main` as its own small PR (they touch `postings.py`,
+`source_probe.py`, tests and docs only). Open decisions A22 to A25 and task B11 are in PENDING section 0. PR #51 (Codex's ten fixes) waits for
+Claude's review. Full run suite: 1,161+ tests pass.
+
 ### Merge plan, checked by a trial replay (October 19, about 22:00 UTC)
 
 Claude replayed every planned merge, in order, on a throwaway local branch that was never pushed, starting from `main` at `f71464f`.

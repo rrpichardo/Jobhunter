@@ -36,6 +36,7 @@ follows or messages. Raising a number below raises that risk. Nothing here is a 
 | 6 | The search wording itself | see section 4 | what is searched on X and LinkedIn | 4 |
 | 7 | Salary floors | US $140,000, Latin America $70,000 | which jobs are dropped for low pay | 5 |
 | 8 | Role families | six families plus forward-deployed strategist | which job titles count | 5 |
+| 8b | MBA 2027 rule | on (October 21) | only roles meant for MBA graduates of 2027 are collected | 5 |
 | 9 | Company boards | 24 companies | which companies are read directly | 6 |
 | 10 | Pause between sheet batches | 45 seconds | how gently the Sheet is written | 8 |
 
@@ -112,6 +113,20 @@ All of this is applied by code after the AI has copied the facts out of a post. 
 | Project management | project manager; project management lead; project director (plural titles are not matched, see below) |
 | Forward-deployed strategy (PR #42) | Forward-Deployed AI Strategist and name variants; AI Deployment Strategist; AI Implementation Strategist; Deployment Strategist. Any title naming an engineer or developer (Engineer, Engineering, Eng., Engr, Developer, Dev, SDE, SWE, "Software Development", plus plurals) is **not** accepted in this family. A title like "Forward Deployed Strategy Lead" is still collected, through the general Strategy family. |
 
+**MBA 2027 rule (your decision, October 21; applied after role and place, before pay).** A job is collected only when its own
+text (title plus description; for posts, the title plus the quoted sentence) says it is meant for MBA graduates of 2027. Seniority
+does not matter: a Senior Product Manager role open to MBAs graduating in 2027 passes; a plain one does not. Code: `mba_class_evidence`
+in `jobhunter/postings.py`. What counts: "MBA" within one sentence of "2027"; "MBA graduates / candidates / students / associates /
+leadership / rotational / recruiting / program"; "recent, new, upcoming, graduating or incoming MBAs"; "post-MBA"; a leadership-development
+or rotational program next to "MBA"; "pursuing / enrolled in an MBA". What does **not** count: "MBA preferred", "MBA or equivalent
+experience", "MBA or advanced degree" (these are qualifications, and nearly every MBA mention on the boards is one of them).
+Three drop codes: `not_mba_2027` (no such wording), `class_2027_without_mba` (a 2027 graduating-class role, for example "New Grad
+(2027 Start)", that asks for a bachelor's or master's and does not mention an MBA; decision A23), `mba_other_class_year` (MBA wording but
+another graduating year). The kept row's "More details" quotes the words that qualified it ("MBA 2027 evidence: ..."). Measured on
+6,812 real postings from the 24 company boards on October 21: 2 meet the rule (one is an internship, which role rules drop anyway) and
+55 more are class-of-2027 roles without an MBA. Sources that show only a short snippet (job-site search results, LinkedIn job cards, plain
+newsletter lines) rarely contain the wording, so they will mostly be dropped until their reader quotes the sentence that says who the role is for.
+
 **Roles that are always dropped:** intern, internship, summer associate, product marketing, product design(er), product
 communications. "BizOps" is out of scope (your decision, October 19). Plain "program manager" is not a family.
 
@@ -131,6 +146,7 @@ Remote roles are read from the text ("remote" alone does not prove a country).
 | Floor for United States jobs | $140,000 | A job whose top pay is below this is dropped. |
 | Floor for Latin America jobs | $70,000 | Same, for Latin America. |
 | Absolute minimum when the place is unclear | $70,000 | Anything clearly under this is dropped whatever the place. |
+| Where pay comes from (October 21 fix) | Greenhouse `pay_input_ranges`, Ashby `compensation`, then a yearly USD range written in the posting text | Greenhouse and Ashby publish pay in a separate field that was never requested or read, so every Anthropic, OpenAI, Stripe, Databricks (and so on) row had a blank Salary. The tiers of one posting (zones, states) merge into one range. Text reading is narrow: two amounts of at least $30,000, a pay word before them, and no bonus, equity, commission, hourly, monthly or other-currency word around them. |
 | Pay missing, or not an explicit annual USD figure (hourly, monthly, another currency, OTE, total compensation, equity) | kept | The row is kept. "More details" says "Salary preference: unresolved" and "Check first: verify annual USD base salary reaches ..." so you check the pay yourself. |
 
 Where: `salary_preference`, `collection_stub_match` and `collection_match` in `jobhunter/postings.py` (the numbers 140,000
