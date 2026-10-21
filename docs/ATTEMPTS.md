@@ -1,5 +1,26 @@
 # Implementation attempt log
 
+## October 21 PR #45 (a16z) integration with main — repair/review cycle 1 of 3
+
+- Starting head `aa9ee551c0bdb833dba4a53ede1dd85b17f6ac84` (reviewed clear by Codex at this exact SHA); the fetched
+  remote `claude/a16z` still equalled it. Merged main `66fbb868e8271474ccfc001d4969cc81b76e951e` in a new merge commit
+  (no rebase, no force push).
+- Earlier, one GitHub Action integration attempt (run 39606228524) stopped because fetch/merge was denied; it made no
+  edits. That is a permission failure, not a review cycle; counters were not reset. This is cycle 1 of the newly
+  authorized maximum of three.
+- Conflicts were the two the merge plan predicted, both "each side added entries": `DETAIL_SOURCES` in
+  `jobhunter/postings.py` and `detail_sources` in `sources/v0_sources.yaml`. Both kept: `waas` and `a16z` parsers,
+  both `waas-*` and all four `a16z-*` lines. Main's #42 title rules, earliest-discovery-time repair (the same fix as
+  this branch's `aa9ee55`, merged without duplication), eval guard, trace allowlist, X/LinkedIn cleanup, run-window
+  guard and collector limits came through unchanged: apart from the a16z files, the merged tree equals main.
+- Registry check: no duplicate ids; no id lost from either side except `a16z-ai-pm`, which this PR replaced on purpose
+  with the four a16z searches; every detail kind has a parser.
+- Local offline evidence (macOS, uv 0.13.1): `uv sync --locked --extra social`; `uv run --locked --extra social python
+  -m pytest -q`: 1066 passed, 1 skipped, 10 subtests passed. The skip is `tests/test_linkedin_collect.py:395`
+  ("browser unavailable"): no Playwright Chromium on this computer, so the real-browser session test did not run.
+  `git diff --check` clean. No live source, cookie, Sheet or cloud run. Fresh Codex review of the merge head and CI
+  are still required before merge.
+
 ## October 19 Codex review rounds on the Claude-written stack (#19 to #30)
 
 - Round 1: Codex reviewed every Claude-written PR at its exact head and found seven problems (R1 to R7) in #19,

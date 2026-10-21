@@ -21,7 +21,8 @@ RUN_HEADERS = ('Run ID', 'Started', 'Completed', 'Jobs input', 'Jobs unique', 'S
 SOURCE_STATUSES = {'OK', 'OK-zero-jobs', 'failed', 'blocked', 'needs setup'}
 SOURCE_ERRORS = {'', 'timeout', 'transport_error', 'protocol_or_decode_error', 'invalid_json',
                  'retry_delay_exceeds_budget', 'invalid_items_quarantined', 'inconsistent_empty_response',
-                 'duplicate_source_id', 'invalid_board_response'}
+                 'duplicate_source_id', 'invalid_board_response', 'social_login_failed', 'social_rate_limited',
+                 'social_collector_error'}
 
 
 def _sources(records):

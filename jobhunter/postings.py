@@ -216,8 +216,19 @@ ROLE_FAMILIES = (
                                      r'(?:MBA|management) (?:development|rotation(?:al)?) program)\b', re.I)),
     ('Strategy', re.compile(r'\b(?:strategy (?:manager|lead|director)|'
                            r'(?:manager|director|head|vp) (?:of )?(?:corporate |business )?strategy)\b', re.I)),
-    ('Entrepreneurship', re.compile(r'\b(?:entrepreneur|founder) in residence\b', re.I)),
+    ('Entrepreneurship', re.compile(r'\b(?:entrepreneur|founder)[- ]in[- ]residence\b', re.I)),
     ('Project management', re.compile(r'\bproject (?:manager|management lead|director)\b', re.I)),
+    # "Forward-Deployed AI Strategist" and its variants: forward deployed / FDE next to strategist or strategy within
+    # one title, in either order ("AI Strategist, Forward Deployed"), plus "AI Deployment Strategist" and "AI
+    # Implementation Strategist" (the user's other names for it) and the bare "Deployment Strategist". Forward-deployed
+    # ENGINEER titles do not match.
+    # "FDE" is itself short for forward deployed ENGINEER, so next to it only the noun "strategist" counts ("FDE Strategist"),
+    # never the bare word "strategy" ("FDE - AI Strategy" is an engineering title).
+    ('Forward-deployed strategy', re.compile(r'\bforward[- ]?deployed\b[^,;|\n]{0,40}?\bstrateg(?:ist|y)\b|'
+                                             r'\bFDE\b[^,;|\n]{0,40}?\bstrategist\b|'
+                                             r'\bstrateg(?:ist|y)\b[^;|\n]{0,40}?\bforward[- ]?deployed\b|'
+                                             r'\bstrategist\b[^;|\n]{0,40}?\bFDE\b|'
+                                             r'\b(?:(?:AI|GenAI|applied AI)\s+(?:deployment|implementation)|deployment)\s+strategist\b', re.I)),
 )
 
 # Free-text scan (Hacker News comments, social posts): the same families as above, built from ROLE_FAMILIES so
@@ -228,10 +239,18 @@ ROLE_TEXT = re.compile("|".join(
     for family, pattern in ROLE_FAMILIES), re.I)
 
 
+# A title that names an engineer or developer is an engineering role, even when "strategy" sits within 40 characters of
+# "forward deployed" ("Forward-Deployed Engineer - AI Strategy"), so it never counts as the strategist family.
+FORWARD_DEPLOYED_ENGINEER = re.compile(r'\b(?:engineers?|engineering|engr?|developers?|dev|SWEs?|SDEs?)\b|\bsoftware development\b', re.I)
+
+
 def role_family(title: str) -> str | None:
     if ROLE_EXCLUSIONS.search(title):
         return None
-    return next((family for family, pattern in ROLE_FAMILIES if pattern.search(title)), None)
+    for family, pattern in ROLE_FAMILIES:
+        if pattern.search(title) and not (family == 'Forward-deployed strategy' and FORWARD_DEPLOYED_ENGINEER.search(title)):
+            return family
+    return None
 
 
 def collection_region(location: str, *, remote: bool = False) -> str | None:
@@ -313,11 +332,20 @@ def collection_stub_match(title: str, location: str, salary: str) -> bool:
                 and (amount is None or amount >= (70_000 if region == 'unresolved' else floor)))
 
 
+def collection_reason(posting: Posting) -> str:
+    """Why the collection filter drops a posting (a fixed code), or "" when it is collected."""
+    if not role_family(posting.title):
+        return 'role_not_in_scope'
+    if collection_region(posting.location, remote=posting.remote) is None:
+        return 'place_excluded'
+    if salary_preference(posting)[0] == 'below floor':
+        return 'pay_below_floor'
+    return ''
+
+
 def collection_match(posting: Posting) -> bool:
     """Collect approved roles; retain unresolved requirements without asserting eligibility."""
-    return bool(role_family(posting.title)
-                and collection_region(posting.location, remote=posting.remote) is not None
-                and salary_preference(posting)[0] != 'below floor')
+    return not collection_reason(posting)
 
 
 def collection_title_priority(title: str, tag: str = 'other', text: str = '') -> int:
@@ -644,6 +672,30 @@ def stubs_yc(text, ctx):
     return stubs, rejected
 
 
+def stubs_waas(text, ctx):
+    """Work at a Startup public listing (no login): the page data holds the first jobs of one role page."""
+    stubs, rejected = [], 0
+    for job in _page_json(text)["props"]["jobs"]:
+        try:
+            stubs.append({"job_id": f"waas:{int(job['id'])}", "company": _stub_text(job.get("companyName")),
+                          "title": _stub_text(job.get("title")), "location": _stub_text(job.get("location")),
+                          "url": f"https://www.workatastartup.com/jobs/{int(job['id'])}",
+                          "salary": _stub_text(job.get("salary")), "posted_at": ""})  # the site shows no posting date
+        except (KeyError, TypeError, ValueError, AttributeError):
+            rejected += 1
+    return stubs, rejected
+
+
+def detail_waas(text):
+    props = _page_json(text)["props"]
+    job, company = props["job"], props.get("company") or {}
+    description = clean_html(job.get("descriptionHtml"))
+    if not description:
+        raise ValueError("invalid_board_response")
+    return {"text": description, "company": _stub_text(company.get("name")), "location": _stub_text(job.get("location")),
+            "salary": _stub_text(job.get("salaryRange"))}
+
+
 LD_JSON = re.compile(r'<script type="application/ld(?:\+|&#x2B;)json">(.*?)</script>', re.S)
 
 
@@ -823,11 +875,12 @@ PARSERS = {"greenhouse": parse_greenhouse, "lever": parse_lever, "ashby": parse_
            "jsearch": parse_jsearch, "jooble": parse_jooble}
 LISTING_ONLY = {"hn": count_hn}
 DETAIL_SOURCES = {"yc": (stubs_yc, detail_yc), "getro": (stubs_getro, detail_getro),
-                  "builtin": (stubs_builtin, detail_builtin), "a16z": (stubs_a16z, detail_a16z)}
+                  "builtin": (stubs_builtin, detail_builtin), "waas": (stubs_waas, detail_waas),
+                  "a16z": (stubs_a16z, detail_a16z)}
 
 
 SOURCE_PRIORITY = {"greenhouse": 0, "lever": 0, "ashby": 0, "yc-product": 1, "getro-accel": 1, "getro-primary": 1,
-                   "builtin-product": 1}
+                   "builtin-product": 1, "waas-product": 1, "waas-operations": 1}
 
 
 def _similar(posting: Posting) -> str:

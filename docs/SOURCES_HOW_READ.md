@@ -42,7 +42,8 @@ choose it. The plan's idea of using Haiku for this step has not been built or te
 | LinkedIn job listings | none yet | not built | Needs your approval (A1) and a first run (A2) |
 | LinkedIn hiring posts | C | checker built (`post_facts.py`); the collector that fetches posts is not | Not run |
 | X hiring posts | C | checker built; the collector is not | Not run |
-| Work at a Startup (logged in) | B or A (to be decided) | not built | Needs your approval (A1) |
+| Work at a Startup, public pages (product and operations role pages) | B | `stubs_waas`, `detail_waas` | Read live without a login on October 19: 24 product listings (15 matched the rules) and 29 operations listings (1 matched). The site answers HTTP 406 unless the request says it accepts HTML. Shows no posting date, and only the first ~25 jobs of each role page |
+| Work at a Startup, logged in (full lists: ~240 product, ~1,400 operations) | B | not built | Optional: needs your session cookies |
 | Cosign, school and MBA sites | to be decided | not built | Need your URLs |
 
 ## What stops a wrong value reaching the Sheet

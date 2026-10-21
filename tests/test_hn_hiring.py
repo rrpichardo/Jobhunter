@@ -256,6 +256,16 @@ def test_a_comment_with_a_rejected_fact_is_not_marked_read(tmp_path, capsys):
     assert 'held_for_retry=1' in capsys.readouterr().out
 
 
+def test_validate_prints_why_the_fact_was_rejected_and_keeps_it_in_the_result(tmp_path, capsys):
+    code, out = validate_with(tmp_path, capsys, {'processed': ['2001'], 'facts': [fact(company='Not Acme')]})
+    printed = capsys.readouterr().out
+    assert code == 0 and 'rejected_facts=1[not_in_post:company=1]' in printed
+    assert 'trace_rejected: 2001:not_in_post:company' in printed
+    saved = json.loads(out.read_text())
+    assert saved['trace']['rejected_facts'] == {'not_in_post:company': 1}
+    assert saved['rejections'] == [{'item_id': '2001', 'reason': 'not_in_post:company'}]
+
+
 def test_one_rejected_fact_holds_a_comment_even_when_another_fact_in_it_was_accepted(tmp_path, capsys):
     good = fact()
     bad = fact(title='Product Manager, Robots')  # same comment, second role not in its text

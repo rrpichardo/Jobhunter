@@ -52,6 +52,8 @@ keyed_apis:  # exactly one request per run each; keys come from environment vari
 detail_sources:  # listing page, then each shortlisted PM job's own page for its description (polite, capped)
   - {id: yc-product, kind: yc, url: "https://www.ycombinator.com/jobs/role/product-manager"}
   - {id: builtin-product, kind: builtin, url: "https://builtin.com/jobs/product-management"}
+  - {id: waas-product, kind: waas, url: "https://www.workatastartup.com/jobs/l/product-manager"}  # public page, first ~24 jobs; needs an Accept: text/html header
+  - {id: waas-operations, kind: waas, url: "https://www.workatastartup.com/jobs/l/operations"}  # chief of staff, founder in residence, strategy
   # a16z portfolio board: one search page (about 25 jobs) per entry, then each shortlisted job's own page
   - {id: a16z-product, kind: a16z, url: "https://jobs.a16z.com/jobs?q=product%20manager"}
   - {id: a16z-chief-of-staff, kind: a16z, url: "https://jobs.a16z.com/jobs?q=chief%20of%20staff"}
@@ -68,5 +70,5 @@ needs_setup:
   - {id: nextplay-rss, env: [], action: "Record the verified Next Play feed URL, then enable RSS plus extraction."}
   - {id: alirohde-rss, env: [], action: "Record the verified Ali Rohde Jobs feed URL, then enable RSS plus extraction."}
   - {id: cosign, env: [], action: "cosign.com now redirects to a domain-parking page; the user supplies the correct Cosign URL and creates the account, then supplies session cookies in environment settings."}
-  - {id: work-at-a-startup-logged-in, env: [], action: "workatastartup.com answers HTTP 406 without a login. The same YC jobs are collected from ycombinator.com pages already; for the logged-in site the user creates the account and supplies session cookies in environment settings."}
+  - {id: work-at-a-startup-logged-in, env: [], action: "OPTIONAL. The public pages (waas-product, waas-operations) are collected without a login but show only the first ~25 jobs of each role page; the full lists (about 240 product, 1,400 operations) need a logged-in session. To add them the user supplies session cookies in environment settings; not built."}
   - {id: mba-and-school-job-sites, env: [], action: "The user names each school or MBA site and its URL, creates or uses the logins, and supplies session cookies in environment settings; Claude never creates accounts or types passwords."}
