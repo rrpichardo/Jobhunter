@@ -247,3 +247,72 @@ def test_noun_first_wording_about_customers_does_not_qualify(text):
 ])
 def test_only_the_class_or_program_year_counts_not_an_application_or_launch_year(text, expected):
     assert p.collection_reason(job(text=text)) == expected
+
+
+# Codex re-review of PR 52 (review 5601000995, cycle 4). Defect 1: a negation that belongs to another clause ("Experience is
+# not required") must not cancel the applicant statement after it; a denial of the applicants themselves still does.
+@pytest.mark.parametrize('text', [
+    'Experience is not required, open to MBA students graduating in May 2027.',
+    'No prior product experience is required, open to MBA students graduating in May 2027.',
+    'Relocation is not provided; this role is open to MBA students graduating in May 2027.',
+    "Experience isn't needed, we are recruiting MBA students graduating in May 2027.",
+])
+def test_a_negation_in_an_unrelated_clause_does_not_cancel_the_applicant_statement(text):
+    assert p.collection_reason(job(text=text)) == ''
+
+
+@pytest.mark.parametrize('text', [
+    'This role is not open to MBA students graduating in May 2027.',
+    'We are not recruiting MBA students graduating in May 2027.',
+    'We are not recruiting MBA students.',
+    'MBA students graduating in May 2027 are not eligible to apply.',
+    'MBA graduates 2027 should not apply.',
+    'MBA students graduating in May 2027 are ineligible.',
+    "This role isn't for MBA students graduating in 2027.",
+    'We are not currently recruiting MBA students graduating in 2027.',
+    'We never hire MBA graduates of the class of 2027.',
+    'Our 2027 MBA Associate Program is not open to MBA students graduating in 2027.',
+])
+def test_an_explicit_denial_of_the_applicants_is_never_evidence(text):
+    assert p.collection_reason(job(text=text)) == 'not_mba_2027'
+
+
+@pytest.mark.parametrize('title,text', [
+    ('Product Manager (MBA)', 'MBA students graduating in May 2027 are not eligible to apply.'),
+    ('Associate (MBA Grad 2027)', 'MBA graduates 2027 should not apply.'),
+    ('Product Manager', 'MBA Class of 2027 students are not eligible to apply.'),
+    ('Rotational Product Manager (MBA)', 'This program is not open to MBA students.'),
+])
+def test_a_title_or_standalone_match_cannot_resurrect_eligibility_the_posting_denies(title, text):
+    assert p.mba_class_evidence(title, text)[0] != 'mba'
+
+
+# Defect 2: every graduation alternative and range is read, so a statement that also names 2027 qualifies.
+@pytest.mark.parametrize('text', [
+    'Open to MBA students graduating in May 2026 or May 2027.',
+    'Open to MBA students graduating in December 2026 or May 2027.',
+    'Open to MBA students graduating between December 2026 and June 2027.',
+    'Open to MBA students graduating from December 2026 to June 2027.',
+    'Open to MBA students graduating in 2026-2028.',
+    'Open to MBA students graduating in 2026, 2027 or 2028.',
+    'Open to MBA candidates in the classes of 2026 and 2027.',
+    'MBA students graduating in May 2026 or May 2027 are eligible to apply.',
+    'Open to MBA students graduating Dec 2026 - May 2027.',
+    'Open to MBA students (class of 2026 or 2027).',
+    'Not open to MBA students graduating in 2026; open to MBA students graduating in 2027.',
+    'We are not only hiring MBA students graduating in 2027 but also undergraduates.',
+])
+def test_every_graduation_alternative_and_range_that_includes_2027_qualifies(text):
+    assert p.collection_reason(job(text=text)) == ''
+
+
+@pytest.mark.parametrize('text', [
+    'Open to MBA students graduating in May 2026 or May 2028.',
+    'Open to MBA students graduating between 2028 and 2029.',
+    'Open to MBA students graduating in 2028 only, with applications opening in 2027.',
+    'Open to MBA students graduating in 2028; our fiscal year 2027 starts in July.',
+    'Open to MBA students graduating in 2028. Start date in 2027 is flexible for others.',
+    'Open to MBA students graduating in 2025 to 2026, starting in 2027.',
+])
+def test_alternatives_and_ranges_without_2027_and_unrelated_2027s_stay_wrong_class(text):
+    assert p.collection_reason(job(text=text)) == 'mba_other_class_year'
