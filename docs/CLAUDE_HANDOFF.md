@@ -35,6 +35,7 @@ the user's "go" for Codex, A12).** Heads at the time of writing (re-read them fr
 **Run branch** `claude/combined-live-run` = `main` + all eleven PRs with the conflict fixes in the Merge plan below; 1,075 tests pass.
 It exists only for real runs before Codex; never merge it. To run again: start a JobHunterEnv session (`env_01M9moVSWZBGvWAZYrqTm49s`,
 `source_revision` `claude/combined-live-run`) with the prompt in `docs/LIVE_RUN_PROMPT.md` (for a daily-style run use `--mode daily`).
+That prompt skips LinkedIn unless the user's A18 answer is added at its top; do not add that line on your own.
 Each social source spends one attempt per New York day; never retry a spent day; never print a cookie value.
 
 **Do next, in order, once the user answers:** (1) A12 "go": request Codex on one PR at a time (`docs/CODEX_REVIEW_QUEUE.md`), fix

@@ -1,5 +1,14 @@
 # Implementation attempt log
 
+## October 21 PR #46 Codex review repair, round 1 of 3
+
+- Codex reviewed `148eec68ba3c3a5ef0dd49b1c89cfe09c7a468d8`: the earlier pinned-uv repair was correct; one P2 remained.
+  The rerun prompt `docs/LIVE_RUN_PROMPT.md` collected LinkedIn unconditionally although LinkedIn is on hold pending A18.
+- Repair (docs only): the prompt now skips every LinkedIn step, records "held, A18 open" and makes no request unless the user adds
+  the A18 line; the handoff says so. A18 is not resolved by this change.
+- First repair cycle of the newly authorized round (maximum three). All older counters below are unchanged. No live collector,
+  credential or Sheet was touched. A fresh exact-head Codex review is required before merge.
+
 ## October 19 Codex review rounds on the Claude-written stack (#19 to #30)
 
 - Round 1: Codex reviewed every Claude-written PR at its exact head and found seven problems (R1 to R7) in #19,
