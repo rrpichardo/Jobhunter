@@ -12,6 +12,7 @@ from urllib.parse import urlsplit
 
 from jobhunter.postings import Posting, collection_match, collection_priority, parse_posted
 from jobhunter.records import https_url
+from jobhunter.job_identity import canonical_key, verified_requisition
 
 FACT_KEYS = ('title', 'company', 'location', 'salary', 'description_quote', 'apply_url')
 
@@ -38,10 +39,10 @@ def _posting(fact, by_id, captured_at, *, source_id, id_field, id_prefix, permal
     if link and (link not in candidate['links'] or not https_url(link)):
         raise ValueError('invalid_post_link')
     # Identity comes from code: one post can list several roles, each told apart by its title.
-    if link_ids and link:
-        # A listing that repeats from one edition to the next, or shares a title with another company's role, is told
-        # apart by its own application link: same link = same job in every edition, different link = different job.
-        job_id = f"{id_prefix}:{hashlib.sha256(link.encode()).hexdigest()[:16]}"
+    key = canonical_key(link) if link_ids and link else ''
+    if link_ids and verified_requisition(key):
+        # Only a verified requisition establishes identity across editions. Tracking does not change that job.
+        job_id = f"{id_prefix}:v2:{hashlib.sha256(key.encode()).hexdigest()[:16]}"
     else:  # existing scheme, kept as it was so already-delivered Hacker News, X and LinkedIn jobs keep their ids
         digest = hashlib.sha256((f"{fact['company']}\n{fact['title']}" if link_ids else fact['title']).casefold().encode()).hexdigest()[:10]
         job_id = f"{id_prefix}:{candidate[id_field]}:{digest}"
