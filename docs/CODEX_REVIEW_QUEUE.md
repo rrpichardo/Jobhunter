@@ -28,11 +28,24 @@ stretch from about 16:10. Check or raise the limit at https://chatgpt.com/codex/
 5. Merge only when the review covers the exact current head and CI is green. Then follow the merge order and conflict
    recipes in `docs/CLAUDE_HANDOFF.md` ("Merge plan").
 
+## Grouping for the next review round (your decision, October 21: "split grouping")
+
+- **Group 1, the X collector stack, reviewed together as one request:** #40 (X collector) with the PRs built on it, #41 (run modes), #43
+  (LinkedIn posts), #47 (Ali Rohde newsletter) and #48 (LinkedIn jobs, built on #43). One `@codex review` comment on #40 names the exact head of each
+  of the five PRs and asks for a review of the stack as one change (shared collector, allowance, validator and Run Log code); the same comment
+  is linked from #41, #43, #47 and #48 so each PR shows the review that covers its head. A change to any head in the group means a fresh request for
+  the whole group.
+- **Group 2, the independent PRs, each reviewed separately, one request per PR:** #42, #44, #45, #46, #49 and #50. None of them depends on the
+  X stack, so a finding or a moved head in one never holds up another.
+- #51 (Codex's repair PR) is not in either group: Codex wrote it, so it needs **Claude's** review (see `docs/PENDING.md` 0.3).
+- Unchanged: Codex reviews only the exact current head, CI must be green, findings are fixed in new commits, and the request comment is posted only after
+  your "go" for that round.
+
 ## Order and dependencies
 
-`#42` then `#44` then `#45` then `#46` then `#49` then `#40`; after `#40` merges, retarget `#41`, `#43`, `#47` to `main`
-(merge `main` into each first); `#48` last (it carries `#43`). Small PRs first so credits are not spent on a stack that
-is still moving. Do not spam: one request per PR, then wait.
+Within the grouping above the merge order is `#42` then `#44` then `#45` then `#46` then `#49` then `#50`, then the X collector stack (`#40`; after `#40` merges, retarget `#41`, `#43`, `#47` to `main`
+(merge `main` into each first); `#48` last (it carries `#43`)). Small independent PRs first so credits are not spent on a stack that
+is still moving. Do not spam: one request per group or PR, then wait.
 
 ## Snapshot (heads as of October 19, 2026, about 22:15 UTC)
 

@@ -50,6 +50,10 @@ Decisions already made are listed in section 2 so they are not asked again.
 
 ### 0.3 Review repairs: Codex implementing; Claude reviews the repair PR
 
+**How the next Codex round is grouped (your decision, October 21: split grouping).** Group 1, reviewed together in one request: the X collector
+stack #40, #41, #43, #47 and #48. Group 2, each reviewed separately: #42, #44, #45, #46, #49 and #50. #51 needs Claude's review, not Codex's. The
+request comments are posted only after your "go" for that round. Details and order: `docs/CODEX_REVIEW_QUEUE.md`.
+
 All eleven original PRs received exact-head Codex reviews; two were clean and nine have ten findings. The user then
 authorized Codex to implement the fixes and submit a PR for Claude review while Claude is unavailable. Codex is the sole
 implementation owner on `codex/repair-review-findings`, based on the combined run branch. All ten fixes are implemented with regressions; Claude review
