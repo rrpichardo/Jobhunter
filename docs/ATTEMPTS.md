@@ -1,6 +1,27 @@
 # Implementation attempt log
 
-## October 21 PR #52 — STOP: review cycles exhausted (3 of 3)
+## October 21 PR #46 Codex review repair — integration cycle 2 of 3
+
+- Codex reviewed `eb9021c5d626908133ced3ce94bbe41dde575e9d` and found one P2 at `docs/PENDING.md:97`: the integration had
+  shortened A1 in section 2 and lost main's (`15976f0`) approved concrete methods and its ban on retrying private-request
+  inspection. Before editing, the fetched remote `claude/handoff-oct19` still equalled `eb9021c` (no ownership race).
+- Repair (docs only): section 2 A1 again states Work at a Startup by headless browser with saved cookies, visible job cards only;
+  LinkedIn by headless browser with `li_at`; X by `twscrape` with `auth_token`/`ct0`; all read-only with random pauses; reading
+  private requests from the logged-in tab was blocked earlier and must not be retried. The A18 LinkedIn hold is unchanged. No
+  other policy changed.
+- Counters (not reset): this is integration cycle 2 of 3. The earlier A18 prompt repair (round 1 above) is kept, so #46 has had
+  three reviewed repair rounds in total under the current authorization. A fresh exact-head Codex review and CI are required
+  before merge.
+
+## October 21 PR #52 — reopened by the user (cap lifted)
+
+- The user wrote, in a new message: "dont worrya bout the three cylce limit we need to have 52 well". This explicitly lifts the
+  three-cycle cap for #52 and authorizes further Claude fixes and Codex reviews on it.
+- The earlier 3-of-3 stop below stays as history; its counters are not reset (the next #52 repair is cycle 4). The two Codex
+  findings from review 5601000995 remain open. Nothing on #52 was fixed in this change, and its branch is not adopted into #46.
+- Ownership: the cloud session that owned #52 was told to hold; the local Claude session is the sole implementation owner.
+
+## October 21 PR #52 — STOP: review cycles exhausted (3 of 3) (historical; superseded by the reopening above)
 
 - The third and final Codex review, on `70f332c8155cf4eb6a070d92998cbc2fc13cfbd7` (review 5601000995), still found false
   exclusions: (1) an unrelated negation earlier in the text excludes the posting, for example "Experience is not required, open

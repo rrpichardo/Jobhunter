@@ -1,7 +1,7 @@
 # Pending items: your decisions, your tasks, Codex, and what Claude does next
 
 Created October 18, 2026; rewritten and re-checked against GitHub and the Sheet on October 19, 2026, about 23:30 UTC;
-PR states in 0.3 updated October 21, 2026 from `main`'s merge history (merged: #40 to #45, #49, #50).
+PR states in 0.3 updated October 21, 2026 from `main`'s merge history (merged: #40 to #45, #49, #50); #52 reopened the same day.
 When the user asks "what is pending", "what do you need from me" or "where are we", Claude reads section 0 first,
 checks it against GitHub, answers in plain language, and fixes this file if it is out of date. Nothing here is a claim
 that work exists unless its status says so.
@@ -57,7 +57,7 @@ ready-to-paste request for each are in `docs/CODEX_REVIEW_QUEUE.md`.
 | #46 | This status and handoff documentation | `main` merged in on October 21; needs a fresh Codex review of the new head |
 | #47 | Ali Rohde newsletter | ran live on October 19 (worked) |
 | #48 | LinkedIn job listings | live login failed (A18); on hold until A18 |
-| #52 | Claude-written PR; its open findings are postings wrongly excluded | **STOPPED, left open and unmerged:** its three review cycles are used up (third review on `70f332c`, Codex review 5601000995, still two wrong exclusions; see `docs/ATTEMPTS.md`). No further fix without your new explicit go-ahead. |
+| #52 | Claude-written PR; its open findings are postings wrongly excluded | **Reopened October 21** by your message "dont worrya bout the three cylce limit we need to have 52 well": the three-cycle cap is lifted for #52 and further Claude fixes and Codex reviews are allowed. Its earlier stop after three cycles (third review on `70f332c`, Codex review 5601000995, two wrong exclusions still open) stays in `docs/ATTEMPTS.md` as history; counters are not reset. Not fixed yet; open and unmerged. |
 
 #51 is Codex-authored and outside this list (it gets a Claude review, not Codex).
 
@@ -94,8 +94,11 @@ every command exited 0. The Sheet was backed up first (A15).
 
 ## 2. Decisions already made (do not ask again)
 
-- A1: build LinkedIn, X and Work at a Startup collectors, read-only. A8: BizOps stays out; Forward-Deployed / AI Deployment /
-  AI Implementation Strategist titles are in (#42).
+- A1 (approved October 19): the cloud collection method is Work at a Startup by headless browser with saved cookies, visible job
+  cards only; LinkedIn by headless browser with `li_at`; X by `twscrape` with `auth_token`/`ct0`. All read-only, with random
+  pauses. Reading private requests from the logged-in tab was blocked earlier and must not be retried. Built offline; a live
+  LinkedIn step still waits on A18. A8: BizOps stays out; Forward-Deployed / AI Deployment / AI Implementation Strategist titles
+  are in (#42).
 - A2 and A15: the first live test and manual run happened on October 19 from the combined run branch, before Codex, at your
   request, after you backed up the Sheet. **Nothing merges to `main` without a Codex review of its exact head and green CI** (A4).
 - A3 (October 19): create the routine only after one manual run in JobHunterEnv has been checked. The manual run happened; your
@@ -135,7 +138,7 @@ every command exited 0. The Sheet was backed up first (A15).
 | LinkedIn collectors (#43, #48) | A18 |
 | The daily routine | A3 |
 | Merging #46, #47, #48 | A12 (Codex) |
-| Any further fix on #52 | your new explicit go-ahead (its 3 review cycles are used up) |
+| Fixing the two open #52 findings | nothing from you: reopened October 21 (cap lifted); Claude fixes, then a fresh Codex review |
 | The small rule fixes | A13, A16, A17, A19 |
 
 ## 5. How runs work (your direction, October 18)
