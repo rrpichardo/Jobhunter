@@ -98,8 +98,11 @@ every command exited 0. The Sheet was backed up first (A15).
   AI Implementation Strategist titles are in (#42).
 - A2 and A15: the first live test and manual run happened on October 19 from the combined run branch, before Codex, at your
   request, after you backed up the Sheet. **Nothing merges to `main` without a Codex review of its exact head and green CI** (A4).
-- A5: company boards keep the 28-day window. A6: no extra JSearch pages (free plan). A7 (first run): keep today's limits; revisit
-  now (0.1).
+- A3 (October 19): create the routine only after one manual run in JobHunterEnv has been checked. The manual run happened; your
+  look at the Sheet is what remains (0.1).
+- A5: company boards keep the 28-day window. The window rolls forward every day; a job already in the Sheet stays there and is
+  never re-added, so daily runs lose nothing; only roles first published more than 28 days ago stay out. A6: no extra JSearch
+  pages (free plan). A7 (first run): keep today's limits; revisit now (0.1).
 - A10: old PRs #19 to #30 closed (their content is in `main`; each was covered by Codex reviews, finally the combined #39).
 - A11: Haiku does the reading step ("haiku is good to go"; a bigger test was declined: "with 100 we are good").
 - A14: old commits stay as they are (no history rewrite); see the note in section 6.
@@ -139,6 +142,19 @@ every command exited 0. The Sheet was backed up first (A15).
 1. The first pull is a one-off manual run that looks back four weeks (done October 19).
 2. Then you check the Sheet (A3).
 3. Then the scheduled routine runs daily at 06:07 New York with a 3-day window; only new posts are read by the AI.
+
+Run modes (your decision, October 19):
+
+| Run | Window | When |
+| --- | --- | --- |
+| First manual run | `--lookback-days 28` | once, by hand, before the routine exists (A3) |
+| Daily routine | `--lookback-days 3` | 06:07 America/New_York, every day |
+| Catch-up | `--lookback-days 28` | by hand, whenever the last complete Run Log row is more than about 2 days old |
+
+`scripts/run_window.py` enforces this with one simple rule: the daily routine looks back 3 days and refuses to run
+(exit 3, `catch_up_needed`) when the last complete run started more than about 2 days ago (2 days plus 6 hours of scheduler
+drift) or there has never been one; `--mode manual` prints 28. Three days against a two-day limit leaves a full extra
+day of room for run time, so one missed day is covered and nothing falls between two runs. Read-only, offline-tested. Overlap never duplicates jobs.
 
 ## 6. Note: the "Claude-Session" lines in old commits
 

@@ -57,9 +57,13 @@ def record(source_id, status, stamp, *, error="", http=None, listed=None, valid=
             "retry_after_seconds": None, "coverage": coverage, "error": error}
 
 
-def fetch_once(client, url):
+HTML_KINDS = {"waas"}  # answer HTTP 406 unless the request says it accepts HTML
+
+
+def fetch_once(client, url, kind=None):
     """(status, text, error_code). One attempt; never follows redirects or retries."""
-    return _send(client, 'GET', url, headers={"User-Agent": USER_AGENT, "Accept": "application/json, */*"})
+    accept = "text/html, */*;q=0.8" if kind in HTML_KINDS else "application/json, */*"
+    return _send(client, 'GET', url, headers={"User-Agent": USER_AGENT, "Accept": accept})
 
 
 def _send(client, method, url, **request):
@@ -182,7 +186,7 @@ def fetch_details(client, entry, stubs, stamp, *, delay, sleep):
     for stub in stubs:
         sleep(delay)
         attempts += 1
-        status, body, error = fetch_once(client, stub["url"])
+        status, body, error = fetch_once(client, stub["url"], entry["kind"])
         if error or status != 200:
             rejected += 1
             if status in BLOCKED:
@@ -219,7 +223,7 @@ def probe_source(client, entry, stamp, *, delay=0, sleep=time.sleep, environ=Non
         status, body, error = fetch_keyed(client, request)
         del request  # the key never outlives the call
     else:
-        status, body, error = fetch_once(client, url)
+        status, body, error = fetch_once(client, url, kind)
     if error:
         return record(source_id, "failed", stamp, error=error), [], error
     if status == 404 and entry.get("candidate"):

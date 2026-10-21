@@ -1,0 +1,23 @@
+# Every search must name a role the delivery filter collects (a test checks this), because each one spends part of
+# the daily query limit. Starting search lists for the logged-in social lane (docs/PLAN.md). Read-only searches; the collector adds the
+# date window and drops replies. Tune after the first live run. Allowed characters are checked by the code.
+x-twscrape:
+  - 'hiring "AI product manager"'
+  - 'hiring "product manager" AI'
+  - 'hiring "senior product manager"'
+  - 'hiring "head of product"'
+  - 'hiring "chief of staff"'
+  - 'hiring "head of strategy"'
+  - 'hiring "founder in residence" OR "entrepreneur in residence"'
+  - 'hiring "leadership development program"'
+  - 'hiring "group product manager"'
+  - 'hiring "strategy manager"'
+
+# LinkedIn hiring-post searches (5 a run, user-confirmed October 18). Same rule: each phrase must be a role the
+# delivery filter collects. The collector adds LinkedIn's date filter and applies the exact window from the post date.
+linkedin-login:
+  - 'hiring "AI product manager"'
+  - 'hiring "senior product manager" AI'
+  - 'hiring "chief of staff"'
+  - 'hiring "head of strategy"'
+  - 'hiring "leadership development program"'
