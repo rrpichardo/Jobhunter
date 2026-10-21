@@ -12,11 +12,11 @@ STAMP = '2026-10-19T16:00:00+00:00'
 
 
 def newsletter_jobs(slug, roles):
-    text = '\n'.join(f'{title} at Acme, Remote. Apply {link}' for title, link in roles)
+    text = '\n'.join(f'{title} at Acme, Remote, open to MBA students graduating in spring 2027. Apply {link}' for title, link in roles)
     candidate = {'item_id': slug, 'url': f'https://alirohdejobs.substack.com/p/{slug}',
                  'created_at': STAMP, 'text': text, 'links': [link for _, link in roles]}
     facts = [{'item_id': slug, 'title': title, 'company': 'Acme', 'location': 'Remote', 'salary': '',
-              'description_quote': f'{title} at Acme, Remote.', 'apply_url': link} for title, link in roles]
+              'description_quote': f'{title} at Acme, Remote, open to MBA students graduating in spring 2027.', 'apply_url': link} for title, link in roles]
     result = pf.social_result('alirohde-rss', [candidate], facts, STAMP, listed=1, stats={})
     return [p.Posting(**row) for row in result['postings']]
 

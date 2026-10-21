@@ -6,14 +6,14 @@ import pytest
 
 from scripts import eval_reading as ev
 
-TEXT = 'Acme is hiring a Senior Product Manager, AI (Remote US). Salary $200,000 - $250,000.'
+TEXT = 'Acme is hiring a Senior Product Manager, AI (Remote US), open to MBA students graduating in spring 2027. Salary $200,000 - $250,000.'
 ITEMS = [{'item_id': str(n), 'url': f'https://x.com/a/status/{n}', 'created_at': '2026-10-15T12:00:00+00:00',
           'text': TEXT if n % 2 else 'Nothing relevant here.', 'links': []} for n in range(1, 21)]
 
 
 def fact(item_id, title='Senior Product Manager, AI', company='Acme'):
     return {'item_id': item_id, 'title': title, 'company': company, 'location': 'Remote US', 'salary': '$200,000 - $250,000',
-            'description_quote': TEXT[:60], 'apply_url': ''}
+            'description_quote': TEXT.split(' Salary')[0], 'apply_url': ''}
 
 
 def write(tmp_path, name, data):

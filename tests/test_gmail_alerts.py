@@ -7,10 +7,10 @@ from jobhunter import gmail_alerts as g
 
 
 BODY = ('<article><p>Acme</p><p>Product Manager</p><p>Remote - Colombia</p>'
-        '<p>USD 80,000 annually</p><p>Build billing products.</p>'
+        '<p>USD 80,000 annually</p><p>Build billing products. This role is open to MBA students graduating in spring 2027.</p>'
         '<a href="https://jobs.lever.co/acme/1">Apply</a></article>')
 FACTS = [{'title': 'Product Manager', 'company': 'Acme', 'location': 'Remote - Colombia',
-          'salary': 'USD 80,000 annually', 'description_quote': 'Build billing products.',
+          'salary': 'USD 80,000 annually', 'description_quote': 'Build billing products. This role is open to MBA students graduating in spring 2027.',
           'apply_url': 'https://jobs.lever.co/acme/1'}]
 RULE = {'sender': 'jobs@alerts.example', 'subject_pattern': r'^Your daily job alert$'}
 META = {'message_id': 'synthetic1', 'label_ids': ['label1'], 'from': 'Jobs <jobs@alerts.example>',
@@ -76,7 +76,7 @@ def test_only_exact_message_ids_are_read_and_raw_email_is_not_returned():
     posting = result['postings'][0]
     assert posting.source_id == 'gmail-job-alerts' and posting.title == 'Product Manager'
     assert posting.salary == 'USD 80,000 annually'
-    assert posting.text == 'Build billing products.' and posting.remote is False
+    assert posting.text == 'Build billing products. This role is open to MBA students graduating in spring 2027.' and posting.remote is False
     assert BODY not in repr(result) and 'synthetic1' not in posting.job_id
 
 
@@ -196,7 +196,7 @@ def test_partial_connector_failure_keeps_every_match_and_reports_selected_count(
 
 
 def test_facts_cannot_mix_between_separate_job_cards_or_footer():
-    first = '<article><p>Acme Product Manager Remote - Colombia Build billing products.</p><a href="https://jobs.lever.co/acme/1">Apply</a></article>'
+    first = '<article><p>Acme Product Manager Remote - Colombia Build billing products. This role is open to MBA students graduating in spring 2027.</p><a href="https://jobs.lever.co/acme/1">Apply</a></article>'
     second = '<article><p>Beta Director USD 150,000 annually</p><a href="https://jobs.lever.co/beta/2">Apply</a></article>'
     body = first + second + '<footer>United States</footer>'
     result = collect(Mailbox(body=body), lambda block: [FACTS[0] | {'salary':'USD 150,000 annually'}])

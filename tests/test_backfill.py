@@ -92,7 +92,7 @@ def lever_registry_entry():
 
 def lever_job(number, created):
     job = {'id': f'j{number}', 'text': 'Product Manager', 'categories': {'location': 'United States'},
-           'descriptionPlain': 'Build products.', 'hostedUrl': f'https://jobs.lever.co/acme/j{number}'}
+           'descriptionPlain': 'Build products. This role is open to MBA students graduating in spring 2027.', 'hostedUrl': f'https://jobs.lever.co/acme/j{number}'}
     if created is not None:
         job['createdAt'] = created
     return job
@@ -130,7 +130,7 @@ def test_an_unverified_listing_date_never_hides_a_job_the_detail_page_dates_as_r
             {'id': 2, 'title': 'Product Manager', 'url': '/companies/acme/jobs/2', 'location': 'United States',
              'companyName': 'Acme', 'createdAt': '2026-07-01T00:00:00Z'}]
     listing = '<div data-page="' + escape(json.dumps({'props': {'jobPostings': jobs}}), quote=True) + '"></div>'
-    page = '<script type="application/ld+json">{"@type":"JobPosting","description":"Build.","datePosted":"2026-10-10"}</script>'
+    page = '<script type="application/ld+json">{"@type":"JobPosting","description":"Build. This role is open to MBA students graduating in spring 2027.","datePosted":"2026-10-10"}</script>'
     seen = []
 
     def serve(request):
@@ -177,7 +177,7 @@ def no_real_pauses(monkeypatch):
 
 def artifact(tmp_path, count, *, status='OK', selected=None):
     rows = [p.to_row(p.Posting(f'bulk:{i:04d}', 'bulk', 'Co', f'Product Manager {i}', 'United States',
-                               'Build products.', f'https://example.com/jobs/{i}', STAMP, posted_at=STAMP))
+                               'Build products. This role is open to MBA students graduating in spring 2027.', f'https://example.com/jobs/{i}', STAMP, posted_at=STAMP))
             for i in range(count)]
     payload = {'schema_version': 2, 'jobs': rows, 'probe': {'notes': {}},
                'sources': [probe.record('bulk', status, STAMP, error='' if status == 'OK' else 'http_500',

@@ -12,18 +12,18 @@ from jobhunter import post_facts as pf
 from jobhunter.postings import Posting, collection_match, collection_reason, collection_region, role_family, salary_preference
 from jobhunter.records import https_url
 
-TEXT = 'Acme is hiring a Senior Product Manager, AI (Remote US). $170k-$210k. Apply: https://acme.example/jobs/pm'
+TEXT = 'Acme is hiring a Senior Product Manager, AI (Remote US), open to MBA students graduating in spring 2027. $170k-$210k. Apply: https://acme.example/jobs/pm'
 CANDIDATE = {'item_id': '1', 'url': 'https://x.com/a/status/1', 'created_at': '2026-10-15T12:00:00+00:00', 'text': TEXT,
              'links': ['https://acme.example/jobs/pm']}
 GOOD = {'item_id': '1', 'title': 'Senior Product Manager, AI', 'company': 'Acme', 'location': 'Remote US',
-        'salary': '$170k-$210k', 'description_quote': 'Acme is hiring a Senior Product Manager, AI (Remote US).',
+        'salary': '$170k-$210k', 'description_quote': 'Acme is hiring a Senior Product Manager, AI (Remote US), open to MBA students graduating in spring 2027.',
         'apply_url': 'https://acme.example/jobs/pm'}
 VALUES = {
     'title': ['Senior Product Manager, AI', '', '   ', 'Not in the post', 3, None, 'P' * 1001],
     'company': ['Acme', '', ' ', 'Beta', 7],
     'location': ['Remote US', '', 'Mars', 5],
     'salary': ['$170k-$210k', '', '$1', None],
-    'description_quote': ['Acme is hiring a Senior Product Manager, AI (Remote US).', '', 'x', 'A' * 301, 9],
+    'description_quote': ['Acme is hiring a Senior Product Manager, AI (Remote US), open to MBA students graduating in spring 2027.', '', 'x', 'A' * 301, 9],
     'apply_url': ['https://acme.example/jobs/pm', '', 'https://evil.example/x', 'http://acme.example/jobs/pm', 4],
 }
 
@@ -79,7 +79,7 @@ SALARIES = ['', 'USD 50,000 per year', 'USD 90,000 per year', 'USD 120,000 per y
 
 
 def posting(title, place, salary, remote):
-    return Posting('x:1:abc', 'x-twscrape', 'Acme', title, place, 'text', 'https://acme.example/jobs/1',
+    return Posting('x:1:abc', 'x-twscrape', 'Acme', title, place, 'Open to MBA students graduating in spring 2027.', 'https://acme.example/jobs/1',
                    '2026-10-19T00:00:00+00:00', salary=salary, remote=remote)
 
 

@@ -18,7 +18,7 @@ NOW = '2026-10-19T16:00:00+00:00'
 COOKIES = {'X_AUTH_TOKEN': 'secret-auth-token-value', 'X_CT0': 'secret-ct0-value'}
 
 
-def post(number, text='Acme is hiring a Senior Product Manager, AI (Remote US). Apply: https://acme.example/jobs/pm'):
+def post(number, text='Acme is hiring a Senior Product Manager, AI (Remote US), open to MBA students graduating in spring 2027. Apply: https://acme.example/jobs/pm'):
     return {'url': f'https://x.com/acme/status/{1850000000000000000 + number}',
             'created_at': '2026-10-15T12:00:00+00:00', 'text': text, 'links': ['https://acme.example/jobs/pm']}
 
@@ -184,7 +184,7 @@ def test_the_candidate_file_flows_through_the_queue_and_the_validator(tmp_path, 
     facts = tmp_path.parent / (tmp_path.name + '_facts.json')
     facts.write_text(json.dumps({'processed': ['1850000000000000001'], 'facts': [{
         'item_id': '1850000000000000001', 'title': 'Senior Product Manager, AI', 'company': 'Acme',
-        'location': 'Remote US', 'salary': '', 'description_quote': 'Acme is hiring a Senior Product Manager, AI (Remote US).',
+        'location': 'Remote US', 'salary': '', 'description_quote': 'Acme is hiring a Senior Product Manager, AI (Remote US), open to MBA students graduating in spring 2027.',
         'apply_url': 'https://acme.example/jobs/pm'}]}))
     result = tmp_path.parent / (tmp_path.name + '_result.json')
     assert social_posts.main(['validate', '--source', 'x-twscrape', '--candidates', str(work), '--candidates-sha256',

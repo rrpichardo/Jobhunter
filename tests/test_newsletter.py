@@ -16,8 +16,8 @@ NOW = datetime(2026, 10, 19, 16, tzinfo=timezone.utc)
 SOURCE = 'alirohde-rss'
 BODY = ('<p>Welcome to Edition 275! <a href="https://alirohdejobs.substack.com/subscribe?">Subscribe now</a></p>'
         '<h3>Chief of Staff roles</h3><p><a href="https://jobs.ashbyhq.com/acme/1234-abcd">Chief of Staff to the CEO</a>, '
-        'Acme (AI, Series B), Remote</p><p><a href="https://boards.greenhouse.io/beta/jobs/55">Associate Chief of Staff</a>, '
-        'Beta (Health, Series A), NYC</p>')
+        'Acme (AI, Series B), Remote, open to MBA students graduating in spring 2027</p><p><a href="https://boards.greenhouse.io/beta/jobs/55">Associate Chief of Staff</a>, '
+        'Beta (Health, Series A), NYC, open to MBA students graduating in spring 2027</p>')
 
 
 def item(title, published, link, content=BODY):
@@ -86,10 +86,10 @@ def test_the_edition_flows_through_the_queue_and_the_validator_and_pairs_a_role_
     edition = 'edition-275-ali-rohde-jobs'
     facts.write_text(json.dumps({'processed': [edition], 'facts': [
         {'item_id': edition, 'title': 'Chief of Staff to the CEO', 'company': 'Acme', 'location': 'Remote', 'salary': '',
-         'description_quote': 'Chief of Staff to the CEO [https://jobs.ashbyhq.com/acme/1234-abcd] , Acme (AI, Series B), Remote',
+         'description_quote': 'Chief of Staff to the CEO [https://jobs.ashbyhq.com/acme/1234-abcd] , Acme (AI, Series B), Remote, open to MBA students graduating in spring 2027',
          'apply_url': 'https://jobs.ashbyhq.com/acme/1234-abcd'},
         {'item_id': edition, 'title': 'Associate Chief of Staff', 'company': 'Beta', 'location': 'NYC', 'salary': '',
-         'description_quote': 'Associate Chief of Staff [https://boards.greenhouse.io/beta/jobs/55] , Beta (Health, Series A), NYC',
+         'description_quote': 'Associate Chief of Staff [https://boards.greenhouse.io/beta/jobs/55] , Beta (Health, Series A), NYC, open to MBA students graduating in spring 2027',
          'apply_url': 'https://boards.greenhouse.io/beta/jobs/55'}]}))
     result = tmp_path.parent / (tmp_path.name + '_result.json')
     assert social_posts.main(['validate', '--source', SOURCE, '--candidates', str(work), '--candidates-sha256', work_digest,
@@ -109,7 +109,7 @@ def test_an_invented_value_or_a_link_the_edition_does_not_contain_is_rejected(tm
     facts = tmp_path.parent / (tmp_path.name + '_facts.json')
     edition = 'edition-275-ali-rohde-jobs'
     good = {'item_id': edition, 'title': 'Associate Chief of Staff', 'company': 'Beta', 'location': 'NYC', 'salary': '',
-            'description_quote': 'Beta (Health, Series A), NYC', 'apply_url': ''}
+            'description_quote': 'Beta (Health, Series A), NYC, open to MBA students graduating in spring 2027', 'apply_url': ''}
     facts.write_text(json.dumps({'processed': [edition], 'facts': [
         {**good, 'company': 'Gamma'}, {**good, 'apply_url': 'https://evil.example/apply'}]}))
     result = tmp_path.parent / (tmp_path.name + '_result.json')
@@ -127,8 +127,8 @@ def _facts_for(link_title_company):
 
 def test_same_title_at_different_companies_are_different_jobs_and_a_role_relisted_next_week_is_the_same_job():
     from jobhunter import post_facts as pf
-    body = ('<p><a href="https://boards.greenhouse.io/acme/jobs/1001">Chief of Staff</a>, Acme (AI, Series B), Remote</p>'
-            '<p><a href="https://boards.greenhouse.io/beta/jobs/1002">Chief of Staff</a>, Beta (AI, Series B), Remote</p>')
+    body = ('<p><a href="https://boards.greenhouse.io/acme/jobs/1001">Chief of Staff</a>, Acme (AI, Series B), Remote, open to MBA students graduating in spring 2027</p>'
+            '<p><a href="https://boards.greenhouse.io/beta/jobs/1002">Chief of Staff</a>, Beta (AI, Series B), Remote, open to MBA students graduating in spring 2027</p>')
     def candidates(slug):
         cands, _ = nl.edition_candidates(SOURCE, feed(item('E', 'Fri, 16 Oct 2026 15:17:32 GMT',
                                                            f'https://alirohdejobs.substack.com/p/{slug}', content=body)), NOW, 28)
@@ -137,8 +137,8 @@ def test_same_title_at_different_companies_are_different_jobs_and_a_role_reliste
     ids = []
     for slug in ('edition-275-ali-rohde-jobs', 'edition-276-ali-rohde-jobs'):
         cands = candidates(slug)
-        quote_a = 'Chief of Staff [https://boards.greenhouse.io/acme/jobs/1001] , Acme (AI, Series B), Remote'
-        quote_b = 'Chief of Staff [https://boards.greenhouse.io/beta/jobs/1002] , Beta (AI, Series B), Remote'
+        quote_a = 'Chief of Staff [https://boards.greenhouse.io/acme/jobs/1001] , Acme (AI, Series B), Remote, open to MBA students graduating in spring 2027'
+        quote_b = 'Chief of Staff [https://boards.greenhouse.io/beta/jobs/1002] , Beta (AI, Series B), Remote, open to MBA students graduating in spring 2027'
         facts = [{'item_id': slug, 'title': 'Chief of Staff', 'company': 'Acme', 'location': 'Remote', 'salary': '',
                   'description_quote': quote_a, 'apply_url': 'https://boards.greenhouse.io/acme/jobs/1001'},
                  {'item_id': slug, 'title': 'Chief of Staff', 'company': 'Beta', 'location': 'Remote', 'salary': '',

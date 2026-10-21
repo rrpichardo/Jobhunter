@@ -6,7 +6,7 @@ import pytest
 from scripts import source_probe as probe
 
 GH = {"jobs": [{"id": 1, "title": "Product Manager, AI Agents", "location": {"name": "Remote"},
-                "content": "<p>Build agents.</p>", "absolute_url": "https://example.com/1"},
+                "content": "<p>Build agents. This role is open to MBA students graduating in spring 2027.</p>", "absolute_url": "https://example.com/1"},
                {"id": 2, "title": "Software Engineer", "location": {"name": "Remote"},
                 "content": "<p>Code.</p>", "absolute_url": "https://example.com/2"}]}
 REGISTRY = {
@@ -26,7 +26,7 @@ YC_LIST = ('<div data-page="{&quot;props&quot;:{&quot;jobPostings&quot;:[{&quot;
            '&quot;San Francisco, CA&quot;,&quot;companyName&quot;:&quot;Acme&quot;,&quot;salaryRange&quot;:&quot;&quot;},'
            '{&quot;id&quot;:8,&quot;title&quot;:&quot;Designer&quot;,&quot;url&quot;:&quot;/companies/acme/jobs/d&quot;,'
            '&quot;location&quot;:&quot;Remote&quot;,&quot;companyName&quot;:&quot;Acme&quot;}]}}"></div>')
-YC_PAGE = ('<script type="application/ld+json">{"@type":"JobPosting","description":"Build AI agents."}</script>')
+YC_PAGE = ('<script type="application/ld+json">{"@type":"JobPosting","description":"Build AI agents. This role is open to MBA students graduating in spring 2027."}</script>')
 
 
 def handler(request):
@@ -85,7 +85,7 @@ def test_a_blocked_source_is_requested_exactly_once():
 
 def test_every_match_is_delivered_with_no_total_cap_and_counts_stay_honest():
     many = {"jobs": [{"id": i, "title": "Product Manager", "location": {"name": "Remote"},
-                      "content": "<p>Build.</p>", "absolute_url": f"https://example.com/jobs/{i}"}
+                      "content": "<p>Build. This role is open to MBA students graduating in spring 2027.</p>", "absolute_url": f"https://example.com/jobs/{i}"}
                      for i in range(1, 201)]}
     registry = {"boards": {"greenhouse": [{"board": "big", "company": "Big", "tag": "other"}]},
                 "needs_setup": []}
@@ -135,7 +135,7 @@ def test_detail_source_fetches_only_shortlisted_pm_pages_and_delivers_them():
     client = httpx.Client(transport=httpx.MockTransport(lambda r: seen.append(str(r.url)) or handler(r)))
     payload = probe.run(registry, client, delay=0, sleep=lambda s: None, environ={}, now=lambda: "2026-10-18T00:00:00+00:00")
     assert [row["Job ID"] for row in payload["jobs"]] == ["yc-product:7"]
-    assert payload["jobs"][0]["Brief description"] == "Build AI agents."
+    assert payload["jobs"][0]["Brief description"] == "Build AI agents. This role is open to MBA students graduating in spring 2027."
     assert sum("ycombinator.com/companies" in url for url in seen) == 1  # the Designer page was never fetched
     source = payload["sources"][0]
     assert (source["status"], source["jobs_fetched"], source["pm_candidates"], source["selected_for_m0"]) == ("OK", 2, 1, 1)
@@ -295,7 +295,7 @@ def test_detail_safety_stop_prioritizes_known_ai_titles_and_reports_skipped_cand
     def serve(request):
         seen.append(str(request.url))
         return httpx.Response(200, text=listing if 'jobs/role' in str(request.url) else
-            YC_PAGE if request.url.path.endswith('/3') else YC_PAGE.replace('Build AI agents.', 'Build products.'))
+            YC_PAGE if request.url.path.endswith('/3') else YC_PAGE.replace('Build AI agents. This role is open to MBA students graduating in spring 2027.', 'Build products. This role is open to MBA students graduating in spring 2027.'))
     with httpx.Client(transport=httpx.MockTransport(serve)) as client:
         source, jobs, note = probe.probe_source(client, {'id': 'yc-product', 'kind': 'yc',
             'url': 'https://www.ycombinator.com/jobs/role/product-manager'}, '2026-10-18T00:00:00+00:00')
@@ -307,9 +307,9 @@ def test_detail_safety_stop_prioritizes_known_ai_titles_and_reports_skipped_cand
 
 def test_duplicates_across_sources_are_merged_and_counted():
     gh = {"jobs": [{"id": 1, "title": "Product Manager, AI Agents", "location": {"name": "Remote"},
-                    "content": "<p>Agents.</p>", "absolute_url": "https://job-boards.greenhouse.io/good/jobs/1"}]}
+                    "content": "<p>Agents, open to MBA students graduating in spring 2027.</p>", "absolute_url": "https://job-boards.greenhouse.io/good/jobs/1"}]}
     remotive = {"jobs": [{"id": 9, "title": "Product Manager, AI Agents", "company_name": "Good",
-                          "candidate_required_location": "USA", "description": "<p>Agents.</p>",
+                          "candidate_required_location": "USA", "description": "<p>Agents, open to MBA students graduating in spring 2027.</p>",
                           "url": "https://job-boards.greenhouse.io/good/jobs/1?ref=remotive"}]}
     registry = {"boards": {"greenhouse": [{"board": "good", "company": "Good", "tag": "ai"}]},
                 "aggregators": [{"id": "remotive", "kind": "remotive", "url": "https://agg.test/r"}],
@@ -352,7 +352,7 @@ KEYED_ENV = {"JSEARCH_API_KEY": KEY, "JOOBLE_API_KEY": KEY}
 STAMP = "2026-10-18T00:00:00+00:00"
 JSEARCH_BODY = {"status": "OK", "data": [
     {"job_id": "js-1", "employer_name": "Acme", "job_title": "AI Product Manager",
-     "job_description": "<p>Build LLM agents.</p>", "job_apply_link": "https://acme.test/apply/1",
+     "job_description": "<p>Build LLM agents. This role is open to MBA students graduating in spring 2027.</p>", "job_apply_link": "https://acme.test/apply/1",
      "job_google_link": "https://www.google.com/search?q=1", "job_city": "Austin", "job_state": "TX",
      "job_country": "US", "job_is_remote": False, "job_min_salary": 150000, "job_max_salary": 190000,
      "job_salary_currency": "USD", "job_salary_period": "YEAR"},
@@ -362,7 +362,7 @@ JSEARCH_BODY = {"status": "OK", "data": [
      "job_description": "AI.", "job_apply_link": "http://insecure.test/3"}]}
 JOOBLE_BODY = {"totalCount": 2, "jobs": [
     {"id": 555, "title": "Senior <b>Product</b> <b>Manager</b>, AI", "location": "New York, NY",
-     "snippet": "build <b>LLM</b> features", "salary": "$160k", "source": "acme.test", "type": "Full-time",
+     "snippet": "build <b>LLM</b> features, open to MBA students graduating in spring 2027", "salary": "$160k", "source": "acme.test", "type": "Full-time",
      "link": "https://jooble.org/desc/555", "company": "Delta", "updated": "2026-10-16"},
     {"id": 556, "title": "Chef", "location": "Boston", "snippet": "cook", "link": "https://jooble.org/desc/556",
      "company": "Eats"}]}
@@ -578,7 +578,7 @@ def test_total_cap_is_shared_round_robin_across_sources():
     from jobhunter.postings import Posting
 
     def job(source, n):
-        return (Posting(f"{source}:{n}", source, "Co", "Product Manager, AI", "Remote", "Build AI.",
+        return (Posting(f"{source}:{n}", source, "Co", "Product Manager, AI", "Remote", "Build AI. This role is open to MBA students graduating in spring 2027.",
                         f"https://example.com/{source}/{n}", "2026-10-18T00:00:00+00:00"), "")
     items = [job("early", n) for n in range(3)] + [job("late", n) for n in range(2)]
     order = [posting.job_id for posting, _ in probe.fair_order(items)]
