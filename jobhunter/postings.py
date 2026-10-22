@@ -472,15 +472,19 @@ _CONTRAST = re.compile(r",?\s*\b(?:but|however|although|though|whereas|while|yet
 
 
 def _denial_years(text: str, denial) -> set:
-    """The years a denial names, read only from the denial itself to the next contrast word: "Not open to MBA students graduating
-    in 2026, but open to MBA students graduating in 2027" denies 2026 only."""
+    """The years a denial names, read only from its own contrast-delimited clause: from the denial (plus, for a noun-first denial,
+    any class qualifier before its subject: "For the class of 2026, MBA students are not eligible to apply") to the next contrast
+    word. "Not open to MBA students graduating in 2026, but open to MBA students graduating in 2027" denies 2026 only."""
     sentence = _sentence(text, denial)
     before = re.split(r'[.;\n]', text[max(0, denial.start() - 240):denial.start()])[-1]
+    noun_first = not re.match(r"(?:not|never|no\s+longer|cannot|unable|except|excluding|exclud\w+|other\s+than|\w+n't)\b", denial.group(0), re.I)
+    lead = _CONTRAST.split(before)[-1] if noun_first else ''
     clause, *rest = _CONTRAST.split(sentence[len(before):], 1)
+    clause = lead + clause
     found = [year for pattern in _COHORT_YEAR for year in pattern.finditer(clause)] or list(_START_YEAR.finditer(clause))
     years = {year for cue in found for year in _year_group(clause, cue.start(1))}
-    if not years and rest and re.search(_MBA, rest[0], re.I):
-        return {'-'}  # a yearless denial followed by a contrasting MBA clause does not veto that clause's own statement
+    if not years and rest and (MBA_APPLICANT.search(rest[0]) or MBA_SUBJECT_FIRST.search(rest[0])):
+        return {'-'}  # a yearless denial followed by a contrasting clause that admits MBA applicants does not veto that clause
     return years
 
 

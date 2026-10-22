@@ -18,6 +18,18 @@
 - Checks: `uv run --locked --extra social python -m pytest -q`: 1,338 passed, 10 subtests passed. Offline real-data re-check unchanged: 2 of 6,812
   board postings meet the rule, 38 are class-of-2027 without an MBA. Waits for an exact-head Codex review and green CI before merge.
 
+## October 22 PR #53 — repair/review cycle 6
+
+- Same authorization as cycle 5 (cap lifted by the user, cloud session in charge of #53 at the user's chat instruction; counters not reset). Reviewed head
+  `d5d1d91eb15442763f417761d93e6c0df5d163a9` (Codex review 5608956351, two P2 findings, both reproduced first as failing tests).
+- Fixes: (1) a noun-first denial keeps its own leading class qualifier ("For the class of 2026, MBA students are not eligible to apply", "Class of 2026
+  MBA students are not eligible to apply" deny 2026 only and no longer veto an explicit 2027 statement); the clause is bounded on both sides by contrast
+  words, so no year is imported from a neighbouring clause, and a qualifier naming 2027 still denies 2027. (2) A yearless denial is relaxed by a contrasting
+  clause only when that clause affirmatively admits MBA applicants ("... are welcome to apply", "open to MBA students ...", "... may / can / should apply");
+  a bare mention ("can subscribe to our newsletter", "can join our networking events") leaves the global denial in force, so a "(MBA)" title cannot restore the role.
+- Checks: `uv run --locked --extra social python -m pytest -q`: 1,350 passed, 10 subtests passed. Offline real-data re-check unchanged (2 of 6,812 meet the
+  rule, 38 class-of-2027 without an MBA). Waits for an exact-head Codex review and green CI.
+
 ## October 21 PR #52 re-cut onto main — repair/review cycle 4 (cap lifted by the user)
 
 - Renewal: the user lifted the three-cycle cap for #52 ("dont worrya bout the three cylce limit we need to have 52 well"; entry
