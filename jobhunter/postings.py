@@ -138,6 +138,8 @@ def annual_usd_salary_ceiling(salary: str) -> float | None:
     """Explicit annual USD base-pay ceiling; unsupported compensation is unresolved."""
     usd = re.compile(r'\bUSD\b|US\$', re.I)
     salary = salary.replace('_', ' ')
+    if re.match(r'\s*(?:from|min(?:imum)?|at\s+least|starting)\b', salary, re.I):
+        return None  # a lower bound only: the upper pay is unknown, so it is not a ceiling
     if (not usd.search(salary)
             or not re.search(r'\b(year|yearly|annual|annually|annum|yr)\b', salary, re.I)
             or re.search(r'\b(COP|DOP|CAD|AUD|MXN|EUR|GBP|hour|hourly|month|monthly|week|weekly|day|daily|'
@@ -366,7 +368,7 @@ MBA_STANDALONE = tuple(re.compile(pattern, re.I) for pattern in (
 MBA_TITLE_MARKER = re.compile(rf"\(\s*(?:full[- ]time\s+|part[- ]time\s+)?{_MBA}\s*\)", re.I)
 # Noun-first wording: "MBA students graduating in May 2027 are eligible / encouraged / welcome to apply", "... should apply".
 MBA_SUBJECT_FIRST = re.compile(
-    rf"\b(?:{_MBA_PEOPLE})[^.;\n]{{0,60}}?\b(?:(?:are|is)\s+(?:also\s+|strongly\s+|especially\s+|warmly\s+)?"
+    rf"\b(?:{_MBA_PEOPLE})(?:(?!\b(?:but|however|although|though|whereas|while|yet)\b)[^.;\n]){{0,60}}?\b(?:(?:are|is)\s+(?:also\s+|strongly\s+|especially\s+|warmly\s+)?"
     rf"(?:eligible|encouraged|welcome|invited)\s+to\s+apply|(?:should|can|may)\s+apply|will\s+be\s+considered)\b", re.I)
 MBA_PEOPLE_IN_TITLE = re.compile(rf"\b(?:{_MBA_PEOPLE})", re.I)
 CLASS_2027_ONLY = re.compile(r"\bclass(?:es)? of 2027\b|\bnew[- ]grad(?:uate)?s?\b[^.;\n]{0,30}\b2027\b|"
@@ -403,17 +405,27 @@ def _sentence(source: str, match) -> str:
 # ("Experience is not required, open to MBA students ..." is still an applicant statement). Lead-first: "not open to",
 # "not recruiting", "isn't for", "except" directly before the MBA applicants. Noun-first: "MBA students ... are not eligible
 # to apply", "... should not apply", "... are ineligible".
+_MBAS = r"(?:MBAs|M\.B\.A\.s)(?![\w'])"
+# "not eligible for relocation assistance" denies a benefit, not the application; only "to apply", "to be considered", "for this role",
+# "for consideration" and a bare "not eligible" deny the applicant.
+_NOT_A_BENEFIT = (r"(?!\s+(?:for|to)\s+(?!(?:apply|be\s+(?:considered|hired|selected)|join|participate)\b|"
+                  r"(?:this|the|our|that|any)\s+(?:role|position|program(?:me)?|job|internship|opening|opportunit\w+|fellowship|cohort|track)\b|"
+                  r"(?:consideration|employment|hire|hiring)\b))")
 _DENYING = r"(?:\b(?:not|never|no\s+longer|cannot|unable\s+to)|\b\w+n't)\s+(?!only\b)"
 MBA_DENIED = tuple(re.compile(pattern, re.I) for pattern in (
     rf"{_DENYING}(?:(?:be|been|currently|actively|presently|now|yet|being)\s+)*"
     rf"(?:open\s+to|for|recruit\w*|hir\w*|seek\w*|target\w*|invit\w*|accept\w*|consider\w*|available\s+to|eligible\s+to|"
     rf"aimed\s+at|designed\s+for|intended\s+for|reserved\s+for|restricted\s+to|limited\s+to)\s*{_APPLICANT_WORDS}\b(?:{_MBA_PEOPLE})",
     rf"\b(?:except|excluding|exclud\w+|other\s+than)\s+(?:for\s+)?{_APPLICANT_WORDS}\b(?:{_MBA_PEOPLE})",
-    rf"\b(?:{_MBA_PEOPLE}|{_MBA}\s+class(?:\s+of)?|{_MBA}\s+grad(?:uate)?s?)[^.;\n]{{0,60}}?"
-    rf"(?:\b(?:are|is)\s+(?:not|never)\s+(?:eligible|encouraged|welcome|invited|considered|accepted)|"
-    rf"\b(?:aren't|isn't)\s+(?:eligible|encouraged|welcome|invited|considered|accepted)|"
+    rf"\b(?:{_MBA_PEOPLE}|{_MBA}\s+class(?:\s+of)?|{_MBA}\s+grad(?:uate)?s?|{_MBAS})[^.;\n]{{0,60}}?"
+    rf"(?:\b(?:are|is)\s+(?:not|never)\s+(?:eligible|encouraged|welcome|invited|considered|accepted){_NOT_A_BENEFIT}|"
+    rf"\b(?:aren't|isn't)\s+(?:eligible|encouraged|welcome|invited|considered|accepted){_NOT_A_BENEFIT}|"
     rf"\b(?:should|can|may|must|will|need)\s+(?:not|never)\s+(?:apply|be\s+considered)|"
-    rf"\b(?:shouldn't|can't|cannot|mustn't|won't)\s+(?:apply|be\s+considered)|\b(?:are|is)\s+(?:ineligible|excluded))\b",
+    rf"\b(?:shouldn't|can't|cannot|mustn't|won't)\s+(?:apply|be\s+considered)|"
+    rf"\b(?:are|is)\s+(?:ineligible|excluded){_NOT_A_BENEFIT})\b",
+    # Bare "MBAs" (no "students"): "We cannot hire MBAs." A plain "MBA" is a degree word ("not required to have an MBA"), so only the plural counts.
+    rf"{_DENYING}(?:(?:be|currently|actively|presently|now)\s+)*(?:able\s+to\s+)?(?:hir\w*|recruit\w*|accept\w*|consider\w*|invit\w*)"
+    rf"\s+(?:any\s+|all\s+)?{_MBAS}",
 ))
 
 
@@ -456,6 +468,22 @@ def _year_group(sentence: str, position: int) -> set:
     return set()
 
 
+_CONTRAST = re.compile(r",?\s*\b(?:but|however|although|though|whereas|while|yet)\b", re.I)
+
+
+def _denial_years(text: str, denial) -> set:
+    """The years a denial names, read only from the denial itself to the next contrast word: "Not open to MBA students graduating
+    in 2026, but open to MBA students graduating in 2027" denies 2026 only."""
+    sentence = _sentence(text, denial)
+    before = re.split(r'[.;\n]', text[max(0, denial.start() - 240):denial.start()])[-1]
+    clause, *rest = _CONTRAST.split(sentence[len(before):], 1)
+    found = [year for pattern in _COHORT_YEAR for year in pattern.finditer(clause)] or list(_START_YEAR.finditer(clause))
+    years = {year for cue in found for year in _year_group(clause, cue.start(1))}
+    if not years and rest and re.search(_MBA, rest[0], re.I):
+        return {'-'}  # a yearless denial followed by a contrasting MBA clause does not veto that clause's own statement
+    return years
+
+
 def _class_years(source: str, match, title: str) -> set:
     """The graduating-class or program years a statement names, with every alternative and range of each one.
     In a title every year is the program year."""
@@ -480,7 +508,7 @@ def mba_class_evidence(title: str, text: str) -> tuple[str, str]:
     as "Product Manager (MBA)" cannot bring back eligibility the description takes away.
     """
     denials = list(_denials(text))
-    denied_2027 = any('2027' in years or not years for years in (_class_years(text, denial, title) for denial in denials))
+    denied_2027 = any('2027' in years or not years for years in (_denial_years(text, denial) for denial in denials))
     explicit, other, unqualified = None, False, None
     for source, match in _statements(title, text):
         if source is text and any(denial.start() <= match.start() < denial.end() or match.start() <= denial.start() < match.end()
@@ -610,6 +638,16 @@ def _union(ranges):
     return (min(lows) if lows else 0, max(highs) if highs else 0)
 
 
+def _structured_pay_cell(tiers, currency, unit):
+    """One Salary cell for the tiers of a structured pay field. An omitted currency stays unresolved ("currency not stated")
+    instead of becoming USD, and a tier that publishes only a minimum makes the whole range open-ended ("from 90,000 ..."),
+    which the ceiling parser reads as unresolved rather than as an exact ceiling."""
+    low, high = _union(tiers)
+    if any(tier_low and not tier_high for tier_low, tier_high in tiers) and low:
+        return 'from ' + _salary(low, 0, currency or '(currency not stated)', unit)
+    return _salary(low, high, currency or '(currency not stated)', unit)
+
+
 def _pay_unit(label):
     """What a pay label from a source says the amount is: bonus, total compensation, OTE, hour, month, week, day, else year.
 
@@ -669,10 +707,9 @@ def greenhouse_pay(ranges):
         unit = _pay_unit(title)
         if unit == 'year':  # the blurb is mostly generic text ("for sales roles ... OTE"), so only explicit period wording counts
             unit = _blurb_period(clean_html(item.get('blurb'))) or 'year'
-        found.setdefault((plain(item.get('currency_type')).upper() or 'USD', unit), []).append((low, high))
+        found.setdefault((plain(item.get('currency_type')).upper(), unit), []).append((low, high))
     for currency, unit in sorted(found, key=lambda key: (key != ('USD', 'year'), key[1] != 'year', key)):
-        low, high = _union(found[(currency, unit)])
-        return _salary(low, high, currency, unit)
+        return _structured_pay_cell(found[(currency, unit)], currency, unit)
     return ''
 
 
@@ -690,12 +727,11 @@ def ashby_pay(compensation):
         low = int(low) if type(low) in (int, float) and low > 0 else 0
         high = int(high) if type(high) in (int, float) and high > 0 else 0
         if low or high:
-            found.setdefault((plain(item.get('currencyCode')).upper() or 'USD',
+            found.setdefault((plain(item.get('currencyCode')).upper(),
                               ASHBY_INTERVALS.get(plain(item.get('interval')).upper(), plain(item.get('interval')).lower())),
                              []).append((low, high))
     for currency, unit in sorted(found, key=lambda key: (key != ('USD', 'year'), key[1] != 'year', key)):
-        low, high = _union(found[(currency, unit)])
-        return _salary(low, high, currency, unit)
+        return _structured_pay_cell(found[(currency, unit)], currency, unit)
     return ''
 
 

@@ -1,4 +1,6 @@
 """Pay that a source publishes must reach the Salary column (the Anthropic California rows were blank)."""
+from dataclasses import replace
+
 import pytest
 
 from jobhunter import postings as p
@@ -7,6 +9,11 @@ from scripts import source_probe
 
 CTX = {"board": "acme", "company": "Acme", "tag": "ai", "source_id": "greenhouse:acme",
        "captured_at": "2026-10-21T00:00:00+00:00"}
+
+
+def job():
+    return p.Posting('greenhouse:acme:1', 'greenhouse:acme', 'Acme', 'Product Manager', 'United States', mba('Own the roadmap.'),
+                     'https://boards.greenhouse.io/acme/jobs/1', '2026-10-21T00:00:00+00:00')
 
 
 def gh_job(ranges, **changes):
@@ -236,3 +243,60 @@ def test_a_currency_named_anywhere_before_the_range_keeps_the_pay_unresolved(tex
 ])
 def test_an_explicit_usd_currency_keeps_the_pay(text):
     assert p.salary_from_text(text) == "90,000 - 120,000 USD year"
+
+
+# Codex review 5606618473 of PR 53 (cycle 5): do not invent USD, do not turn a minimum into a ceiling.
+@pytest.mark.parametrize('currency', [None, '', '   ', 5])
+def test_greenhouse_pay_without_a_stated_currency_is_not_usd(currency):
+    cell = p.greenhouse_pay([{'min_cents': 9_000_000, 'max_cents': 11_000_000, 'currency_type': currency, 'title': 'Annual base'}])
+    assert 'USD' not in cell and 'currency not stated' in cell
+    assert p.annual_usd_salary_ceiling(cell) is None
+
+
+@pytest.mark.parametrize('currency', [None, '', ' ', 7])
+def test_ashby_pay_without_a_stated_currency_is_not_usd(currency):
+    cell = p.ashby_pay({'summaryComponents': [{'compensationType': 'Salary', 'interval': '1 YEAR', 'currencyCode': currency,
+                                                'minValue': 90000, 'maxValue': 110000}]})
+    assert 'USD' not in cell and 'currency not stated' in cell
+    assert p.annual_usd_salary_ceiling(cell) is None
+
+
+def test_missing_currency_leaves_an_otherwise_eligible_posting_unresolved_not_below_the_floor():
+    cell = p.greenhouse_pay([{'min_cents': 9_000_000, 'max_cents': 11_000_000, 'currency_type': None}])
+    posting = replace(job(), salary=cell)
+    assert p.collection_reason(posting) == ''
+
+
+def test_an_explicit_usd_tier_wins_over_an_unstated_currency_tier_and_explicit_cad_stays_cad():
+    cell = p.greenhouse_pay([{'min_cents': 9_000_000, 'max_cents': 11_000_000, 'currency_type': None},
+                             {'min_cents': 15_000_000, 'max_cents': 19_000_000, 'currency_type': 'USD'}])
+    assert cell == '150,000 - 190,000 USD year'
+    assert p.greenhouse_pay([{'min_cents': 15_000_000, 'max_cents': 19_000_000, 'currency_type': 'CAD'}]) == '150,000 - 190,000 CAD year'
+
+
+@pytest.mark.parametrize('ranges', [
+    [{'min_cents': 9_000_000, 'max_cents': None, 'currency_type': 'USD'}],
+    [{'min_cents': 9_000_000, 'max_cents': 0, 'currency_type': 'USD'}],
+    [{'min_cents': 9_000_000, 'currency_type': 'USD'}],
+])
+def test_a_greenhouse_minimum_without_a_maximum_is_not_an_exact_ceiling(ranges):
+    cell = p.greenhouse_pay(ranges)
+    assert cell.startswith('from ') and p.annual_usd_salary_ceiling(cell) is None
+    assert p.collection_reason(replace(job(), salary=cell)) == ''  # unresolved, not below the 140,000 floor
+
+
+def test_an_ashby_minimum_without_a_maximum_is_not_an_exact_ceiling():
+    cell = p.ashby_pay({'summaryComponents': [{'compensationType': 'Salary', 'interval': '1 YEAR', 'currencyCode': 'USD',
+                                                'minValue': 90000, 'maxValue': None}]})
+    assert cell.startswith('from ') and p.annual_usd_salary_ceiling(cell) is None
+    assert p.collection_reason(replace(job(), salary=cell)) == ''
+
+
+def test_a_minimum_only_tier_makes_a_merged_range_open_ended_but_max_only_and_complete_ranges_keep_working():
+    assert p.greenhouse_pay([{'min_cents': 9_000_000, 'max_cents': 11_000_000, 'currency_type': 'USD'},
+                             {'min_cents': 10_000_000, 'max_cents': None, 'currency_type': 'USD'}]).startswith('from 90,000')
+    assert p.greenhouse_pay([{'max_cents': 19_000_000, 'currency_type': 'USD'}]) == '190,000 USD year'
+    cell = p.greenhouse_pay([{'min_cents': 15_000_000, 'max_cents': 19_000_000, 'currency_type': 'USD'}])
+    assert p.annual_usd_salary_ceiling(cell) == 190_000
+    assert p.collection_reason(replace(job(), salary='from 150,000 USD year')) == ''
+    assert p.collection_reason(replace(job(), salary='90,000 - 110,000 USD year')) == 'pay_below_floor'

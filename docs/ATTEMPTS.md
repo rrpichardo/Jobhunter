@@ -1,5 +1,23 @@
 # Implementation attempt log
 
+## October 22 PR #53 (re-cut of #52) — repair/review cycle 5
+
+- Authorization: the user lifted the cap (cycle 4 entry below; counters not reset, this is **cycle 5**) and, because the local session that
+  owned #53 could not be found, told the cloud session in chat to take over the #53 fixes ("do 2"). Reviewed head: `94fe272068d7655b1a7f0ee4393e889bc8bcae0f`
+  (Codex review 5606618473, five P2 findings). No other branch, no live source, Sheet, cookie or model call was touched.
+- Fixes, tests first: (1) a denial reads its graduation years only from itself to the next contrast word ("Not open to MBA students graduating in
+  2026, but open to MBA students graduating in 2027" qualifies; the reverse still denies 2027), and a yearless denial followed by a contrasting
+  MBA clause does not veto that clause; noun-first eligibility no longer runs across "but". (2) "not eligible / ineligible / not welcome ..."
+  denies the application only when it ends the phrase or is followed by "to apply", "to be considered", "for this role / position / program"
+  or "for consideration"; "not eligible for relocation assistance" or "for the signing bonus" is a benefit and does not cancel the statement.
+  (3) Bare "MBAs" are covered by explicit denials ("We cannot hire MBAs", "MBAs should not apply") so a "(MBA)" title cannot bring a role back;
+  the singular "MBA" stays a degree word ("not required to have an MBA", "not only hiring MBAs" are not denials). (4) An omitted, blank or
+  non-text currency in Greenhouse or Ashby pay is "(currency not stated)", never USD, so the pay filter reads it as unresolved. An explicit USD tier
+  still wins over an unstated tier. (5) A tier with a minimum and no maximum makes the cell "from 90,000 USD year"; the ceiling parser returns
+  unresolved for a leading "from / minimum / at least / starting", so it is never an exact ceiling. Max-only and complete ranges are unchanged.
+- Checks: `uv run --locked --extra social python -m pytest -q`: 1,338 passed, 10 subtests passed. Offline real-data re-check unchanged: 2 of 6,812
+  board postings meet the rule, 38 are class-of-2027 without an MBA. Waits for an exact-head Codex review and green CI before merge.
+
 ## October 21 PR #52 re-cut onto main — repair/review cycle 4 (cap lifted by the user)
 
 - Renewal: the user lifted the three-cycle cap for #52 ("dont worrya bout the three cylce limit we need to have 52 well"; entry

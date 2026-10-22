@@ -316,3 +316,59 @@ def test_every_graduation_alternative_and_range_that_includes_2027_qualifies(tex
 ])
 def test_alternatives_and_ranges_without_2027_and_unrelated_2027s_stay_wrong_class(text):
     assert p.collection_reason(job(text=text)) == 'mba_other_class_year'
+
+
+# Codex review 5606618473 of PR 53 (cycle 5): denial binding and bare MBAs.
+@pytest.mark.parametrize('text', [
+    'Not open to MBA students graduating in 2026, but open to MBA students graduating in 2027.',
+    'Not open to MBA students graduating in 2026, however open to MBA students graduating in 2027.',
+    'Not open to MBA students graduating in May 2026, while open to MBA students graduating in May 2027.',
+    'Open to MBA students graduating in May 2027. MBA students graduating in May 2027 are not eligible for relocation assistance but may apply.',
+    'Open to MBA students graduating in May 2027. MBA students graduating in May 2027 are not eligible for the signing bonus.',
+    'Open to MBA students graduating in May 2027. MBA students are ineligible for relocation support.',
+])
+def test_a_denial_binds_to_its_own_clause_and_a_benefit_is_not_the_application(text):
+    assert p.collection_reason(job(text=text)) == ''
+
+
+@pytest.mark.parametrize('text', [
+    'Not open to MBA students graduating in 2027, but open to MBA students graduating in 2026.',
+    'MBA students graduating in May 2027 are not eligible to apply.',
+    'MBA students graduating in May 2027 are not eligible for this role.',
+    'MBA students graduating in May 2027 are not eligible for the position.',
+    'MBA students graduating in May 2027 are not eligible for consideration.',
+    'MBA students graduating in May 2027 are not eligible.',
+    'MBA students graduating in May 2027 are ineligible to apply.',
+])
+def test_a_denial_of_the_application_itself_still_cancels_the_statement(text):
+    assert p.collection_reason(job(text=f'Open to MBA students graduating in May 2027. {text}')) == 'not_mba_2027'
+
+
+@pytest.mark.parametrize('text', [
+    'We cannot hire MBAs.',
+    'We do not hire MBAs.',
+    'We are not able to recruit any MBAs.',
+    "We won't accept MBAs.",
+    'MBAs are not eligible to apply.',
+    'MBAs should not apply.',
+])
+def test_an_explicit_denial_of_bare_mbas_beats_a_title_marker(text):
+    assert p.collection_reason(job(title='Product Manager (MBA)', text=text)) == 'not_mba_2027'
+
+
+@pytest.mark.parametrize('text', [
+    'We are not only hiring MBAs but also undergraduates. Open to MBA students graduating in 2027.',
+    'A degree is not required; an MBA is preferred. Open to MBA students graduating in 2027.',
+    'We do not require an MBA degree. Open to MBA students graduating in 2027.',
+])
+def test_not_only_and_degree_wording_are_not_denials_of_mbas(text):
+    assert p.collection_reason(job(text=text)) == ''
+
+
+@pytest.mark.parametrize('text,expected', [
+    ('Not open to MBA students, but MBA students graduating in 2027 are welcome to apply.', ''),
+    ('Not open to MBA students graduating in 2026, but open to MBA students graduating in 2026.', 'mba_other_class_year'),
+    ('Not open to MBA students.', 'not_mba_2027'),
+])
+def test_contrast_neighbors_of_the_denial_binding(text, expected):
+    assert p.collection_reason(job(text=text)) == expected

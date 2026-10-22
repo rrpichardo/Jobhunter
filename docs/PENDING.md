@@ -3,7 +3,7 @@
 Created October 18, 2026; rewritten and re-checked against GitHub and the Sheet on October 19, 2026, about 23:30 UTC;
 PR states in 0.3 updated October 21, 2026 from `main`'s merge history (merged: #40 to #47, #49, #50); #52 reopened the same day;
 `main` (`8c81341`) merged into #48 the same day (integration), then a docs fix for Codex's Haiku-note finding; #48 merged (`fc77f2f`).
-Later on October 21: #52's own work re-cut onto `main` as `claude/mba-2027-main` (cycle 4), waiting for a Codex review.
+Later on October 21: #52's own work re-cut onto `main` as `claude/mba-2027-main` (cycle 4; PR #53). October 22: Codex found five more problems in #53 (review 5606618473); the cloud session fixed them (cycle 5) at the user's request and waits for a Codex review of the new head.
 When the user asks "what is pending", "what do you need from me" or "where are we", Claude reads section 0 first,
 checks it against GitHub, answers in plain language, and fixes this file if it is out of date. Nothing here is a claim
 that work exists unless its status says so.
@@ -65,7 +65,7 @@ ready-to-paste request for each are in `docs/CODEX_REVIEW_QUEUE.md`.
 | PR | What | Note |
 | --- | --- | --- |
 | #52 | Claude-written: MBA 2027 rule, pay fix, blank-cell checker, START_HERE | **Frozen review vehicle**, never merged as is (it sits on the old unreviewed stack). Three Codex review cycles, then you lifted the cap on October 21 ("dont worrya bout the three cylce limit we need to have 52 well"); history and counters in `docs/ATTEMPTS.md`, not reset. |
-| successor of #52 | Branch `claude/mba-2027-main`, started from `main` `fc77f2f`: only #52's own changes, plus **cycle 4** fixes for the two findings of Codex review 5601000995 (an unrelated "not" no longer excludes a posting; "May 2026 or May 2027" and graduation ranges count). | Pushed for review; the successor PR is opened and linked from #52 by the coordinating session. **Not yet reviewed by Codex; needs an exact-head Codex review and green CI before it merges.** |
+| successor of #52 | Branch `claude/mba-2027-main`, started from `main` `fc77f2f`: only #52's own changes, plus **cycle 4** fixes for the two findings of Codex review 5601000995 (an unrelated "not" no longer excludes a posting; "May 2026 or May 2027" and graduation ranges count). | PR #53. **Cycle 5** fixes for Codex review 5606618473 are pushed (denial wording bound to its own clause, benefit versus application eligibility, bare "MBAs", unknown currency no longer assumed USD, minimum-only pay no longer an exact ceiling). **Needs an exact-head Codex review and green CI before it merges.** |
 
 #51 is Codex-authored and excluded from this list (it gets a Claude review, not Codex). Its fixes reached `main` through #40 to
 #50; closing it waits for your go.
