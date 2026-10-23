@@ -509,12 +509,18 @@ def _denial_years(text: str, denial, title: str = '') -> set:
     sentence = _sentence(text, denial)
     before = re.split(r'[.;\n]', text[max(0, denial.start() - 240):denial.start()])[-1]
     clause, *rest = _CONTRAST.split(sentence[len(before):], 1)
-    found = _year_cues(clause)
-    years = {year for cue in found for year in _year_group(clause, cue.start(1))}
+    lead = _CONTRAST.split(before)[-1]
+
+    def graduation_years(part):
+        return {year for pattern in _GRAD_YEAR for cue in pattern.finditer(part) for year in _year_group(part, cue.start(1))}
+
+    # The denied class: a graduation year in the denial itself, else a class qualifier just before it (unless that prefix is another
+    # MBA statement); only then a program, cohort or start date, which never outranks a graduation class.
+    years = graduation_years(clause)
+    if not years and not (MBA_APPLICANT.search(lead) or MBA_SUBJECT_FIRST.search(lead)):
+        years = graduation_years(lead)
     if not years:
-        lead = _CONTRAST.split(before)[-1]
-        if not (MBA_APPLICANT.search(lead) or MBA_SUBJECT_FIRST.search(lead)):  # a prefix that is another MBA statement is not a qualifier
-            years = {year for pattern in _GRAD_YEAR for cue in pattern.finditer(lead) for year in _year_group(lead, cue.start(1))}
+        years = {year for cue in _year_cues(clause) for year in _year_group(clause, cue.start(1))}
     if not years and rest and _admits_2027(rest[0], title):
         return {'-'}  # a yearless denial followed by a contrasting clause that admits MBA applicants does not veto that clause
     return years

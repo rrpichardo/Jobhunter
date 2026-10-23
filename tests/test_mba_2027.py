@@ -482,3 +482,18 @@ def test_the_same_shapes_naming_2027_as_the_class_still_deny_2027(text):
 ])
 def test_an_explicit_graduating_class_keeps_the_program_date_out_of_the_applicant_years(text, expected):
     assert p.collection_reason(job(title='Product Manager (MBA)', text=text)) == expected
+
+
+# Codex follow-up review 5623655972 of PR 53 (cycle 9): a leading graduation class outranks a trailing program date.
+@pytest.mark.parametrize('text,expected', [
+    ('Open to MBA students graduating in 2027. For 2027 MBA graduates, this role is not open to MBA students for the 2026 program.', 'not_mba_2027'),
+    ('Open to MBA students graduating in 2027. For 2026 MBA graduates, this role is not open to MBA students for the 2027 program.', ''),
+    ('Open to MBA students graduating in 2027. For the MBA class of 2027, MBA students are not eligible to apply for the 2026 program.', 'not_mba_2027'),
+    ('Open to MBA students graduating in 2027. For the MBA class of 2026, MBA students are not eligible to apply for the 2027 program.', ''),
+    ('Open to MBA students graduating in 2027. For 2026 MBA graduates, MBA students are not eligible to apply for the 2027 cohort.', ''),
+    ('Open to MBA students graduating in 2027. This role is not open to MBA students for the 2026 program.', ''),
+    ('Open to MBA students graduating in 2027. For 2027 MBA graduates, this role is not open to MBA students for the 2027 program.', 'not_mba_2027'),
+    ('Open to MBA students graduating in 2027. For 2026 MBA graduates, this role is not open to MBA students for the 2026 program.', ''),
+])
+def test_a_leading_graduation_class_outranks_a_trailing_program_date_in_both_word_orders(text, expected):
+    assert p.collection_reason(job(text=text)) == expected

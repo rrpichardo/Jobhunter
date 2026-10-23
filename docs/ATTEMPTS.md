@@ -18,6 +18,17 @@
 - Checks: `uv run --locked --extra social python -m pytest -q`: 1,338 passed, 10 subtests passed. Offline real-data re-check unchanged: 2 of 6,812
   board postings meet the rule, 38 are class-of-2027 without an MBA. Waits for an exact-head Codex review and green CI before merge.
 
+## October 23 PR #53 — repair/review cycle 9
+
+- Same authorization (cap lifted by the user; cloud session in charge of #53 at the user's chat instruction; counters not reset). Reviewed head
+  `b6f17876eaff01bd981d3e504d0d4fcf130097eb` (Codex review 5623655972, one P2 finding with four cases, reproduced first as failing tests).
+- Fix: a denial's class is resolved in a fixed order: a graduation year inside the denial itself, else a graduation class qualifier just before it (unless that
+  prefix is another MBA statement), and only then a program, cohort or start date. A trailing program date therefore never overrides a leading graduation class
+  ("For 2027 MBA graduates, this role is not open to MBA students for the 2026 program" denies 2027; "For 2026 MBA graduates, ... for the 2027 program" denies 2026),
+  in both word orders. A denial with no graduation class at all still reads its program date as before.
+- Checks: `uv run --locked --extra social python -m pytest -q`: 1,385 passed, 10 subtests passed. Offline real-data re-check unchanged (2 of 6,812 meet the rule, 38
+  class-of-2027 without an MBA). Waits for an exact-head Codex review and green CI.
+
 ## October 23 PR #53 — repair/review cycle 8
 
 - Same authorization (cap lifted by the user; cloud session in charge of #53 at the user's chat instruction; counters not reset). Reviewed head
