@@ -18,6 +18,19 @@
 - Checks: `uv run --locked --extra social python -m pytest -q`: 1,338 passed, 10 subtests passed. Offline real-data re-check unchanged: 2 of 6,812
   board postings meet the rule, 38 are class-of-2027 without an MBA. Waits for an exact-head Codex review and green CI before merge.
 
+## October 23 PR #53 — repair/review cycle 8
+
+- Same authorization (cap lifted by the user; cloud session in charge of #53 at the user's chat instruction; counters not reset). Reviewed head
+  `e2d9157a244d0d5e8714972b65d6261a3ccc840b` (Codex review 5622912780, two P2 findings, each reproduced first as a failing test).
+- Fixes: (1) A leading class qualifier that itself names MBAs ("For 2026 MBA graduates, this role is not open to MBA students", "For the MBA class of 2026, ...")
+  keeps its year: only a prefix that is another applicant statement ("Open to MBA students ... and") is refused, and the noun-first denial now starts at the MBA
+  subject nearest its verb, so the qualifier stays in the prefix. (2) Graduation cues ("graduating in", "class of", "2026 graduates") and program cues ("2027 program",
+  "cohort", "intake") are separate: program or start dates count only when the statement has no graduation cue, in the admission check, the denial and the
+  affirmative statements alike ("MBA students graduating in 2026 are welcome to apply for the 2027 program" is the class of 2026; "... are not eligible to apply for
+  the 2027 program" denies 2026 only). Real graduation alternatives and ranges are unchanged.
+- Checks: `uv run --locked --extra social python -m pytest -q`: 1,377 passed, 10 subtests passed. Offline real-data re-check unchanged (2 of 6,812 meet the rule, 38
+  class-of-2027 without an MBA). Waits for an exact-head Codex review and green CI.
+
 ## October 23 PR #53 — repair/review cycle 7
 
 - Same authorization (cap lifted by the user; cloud session in charge of #53 at the user's chat instruction; counters not reset). Reviewed head

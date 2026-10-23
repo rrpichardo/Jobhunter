@@ -450,3 +450,35 @@ def test_the_valid_welcome_to_apply_contrast_still_lifts_a_yearless_denial():
 def test_a_contrast_that_admits_only_another_class_is_dropped_as_the_wrong_class():
     text = 'We cannot hire MBAs, but MBA students graduating in 2026 are welcome to apply.'
     assert p.collection_reason(job(title='Product Manager (MBA)', text=text)) == 'mba_other_class_year'
+
+
+# Codex follow-up review 5622912780 of PR 53 (cycle 8).
+@pytest.mark.parametrize('text', [
+    'Open to MBA students graduating in 2027. For 2026 MBA graduates, this role is not open to MBA students.',
+    'Open to MBA students graduating in 2027. For the MBA class of 2026, this role is not open to MBA students.',
+    'Open to MBA students graduating in 2027. For 2026 MBA graduates, MBA students are not eligible to apply.',
+    'MBA students graduating in 2026 are not eligible to apply for the 2027 program. Open to MBA students graduating in 2027.',
+    'MBA students graduating in 2026 are not eligible to apply for the 2027 cohort. Open to MBA students graduating in 2027.',
+])
+def test_a_class_qualifier_that_names_mbas_or_follows_the_subject_is_still_the_denied_class(text):
+    assert p.collection_reason(job(text=text)) == ''
+
+
+@pytest.mark.parametrize('text', [
+    'Open to MBA students graduating in 2027. For 2027 MBA graduates, this role is not open to MBA students.',
+    'Open to MBA students graduating in 2027. For the MBA class of 2027, this role is not open to MBA students.',
+    'MBA students graduating in 2027 are not eligible to apply for the 2026 program. Open to MBA students graduating in 2027.',
+])
+def test_the_same_shapes_naming_2027_as_the_class_still_deny_2027(text):
+    assert p.collection_reason(job(text=text)) == 'not_mba_2027'
+
+
+@pytest.mark.parametrize('text,expected', [
+    ('We cannot hire MBAs, but MBA students graduating in 2026 are welcome to apply for the 2027 program.', 'mba_other_class_year'),
+    ('We cannot hire MBAs, but MBA students graduating in 2027 are welcome to apply for the 2026 program.', ''),
+    ('Open to MBA students graduating in 2026 for the 2027 program.', 'mba_other_class_year'),
+    ('Open to MBA students graduating in 2026 or 2027 for the 2028 program.', ''),
+    ('Join our 2027 program, open to MBA students.', ''),
+])
+def test_an_explicit_graduating_class_keeps_the_program_date_out_of_the_applicant_years(text, expected):
+    assert p.collection_reason(job(title='Product Manager (MBA)', text=text)) == expected

@@ -417,7 +417,7 @@ MBA_DENIED = tuple(re.compile(pattern, re.I) for pattern in (
     rf"(?:open\s+to|for|recruit\w*|hir\w*|seek\w*|target\w*|invit\w*|accept\w*|consider\w*|available\s+to|eligible\s+to|"
     rf"aimed\s+at|designed\s+for|intended\s+for|reserved\s+for|restricted\s+to|limited\s+to)\s*{_APPLICANT_WORDS}\b(?:{_MBA_PEOPLE})",
     rf"\b(?:except|excluding|exclud\w+|other\s+than)\s+(?:for\s+)?{_APPLICANT_WORDS}\b(?:{_MBA_PEOPLE})",
-    rf"\b(?:{_MBA_PEOPLE}|{_MBA}\s+class(?:\s+of)?|{_MBA}\s+grad(?:uate)?s?|{_MBAS})[^.;\n]{{0,60}}?"
+    rf"\b(?:{_MBA_PEOPLE}|{_MBA}\s+class(?:\s+of)?|{_MBA}\s+grad(?:uate)?s?|{_MBAS})(?:(?!{_MBA_PEOPLE})[^.;\n]){{0,60}}?"
     rf"(?:\b(?:are|is)\s+(?:not|never)\s+(?:eligible|encouraged|welcome|invited|considered|accepted){_NOT_A_BENEFIT}|"
     rf"\b(?:aren't|isn't)\s+(?:eligible|encouraged|welcome|invited|considered|accepted){_NOT_A_BENEFIT}|"
     rf"\b(?:should|can|may|must|will|need)\s+(?:not|never)\s+(?:apply|be\s+considered)|"
@@ -437,12 +437,27 @@ def _denials(text: str):
 
 # A year counts as the class or program year only when it is tied to graduating, a class, a cohort, a program or a start; an
 # application window, a launch or a fiscal year in the same sentence says nothing about who may apply.
-_COHORT_YEAR = tuple(re.compile(pattern, re.I) for pattern in (
-    r"\b(?:graduat\w*|graduation|class(?:es)?\s+of|cohort|completing|completes?|finishing|finishes)\b[^.;\n]{0,30}?\b(20[2-3]\d)\b",
-    r"\b(20[2-3]\d)\s+(?:north\s+america\s+)?(?:mba\s+)?(?:graduates?|grads?|graduating|class|cohort|program(?:me)?|intake)\b",
+# Graduation cues name the applicants' own class; program cues ("cohort", "2027 program") only date the program, so they count only when no
+# graduation cue is present ("MBA students graduating in 2026 are welcome to apply for the 2027 program" is the class of 2026).
+_GRAD_YEAR = tuple(re.compile(pattern, re.I) for pattern in (
+    r"\b(?:graduat\w*|graduation|class(?:es)?\s+of|completing|completes?|finishing|finishes)\b[^.;\n]{0,30}?\b(20[2-3]\d)\b",
+    r"\b(20[2-3]\d)\s+(?:north\s+america\s+)?(?:mba\s+)?(?:graduates?|grads?|graduating|class)\b",
     rf"\b{_MBA}\s+(?:grad(?:uate)?s?\s*)?(?:class\s+of\s+)?\(?(20[2-3]\d)\b",
 ))
+_PROGRAM_YEAR = tuple(re.compile(pattern, re.I) for pattern in (
+    r"\bcohort\b[^.;\n]{0,30}?\b(20[2-3]\d)\b",
+    r"\b(20[2-3]\d)\s+(?:north\s+america\s+)?(?:mba\s+)?(?:cohort|program(?:me)?|intake)\b",
+))
 _START_YEAR = re.compile(r"\b(?:start(?:s|ing)?|begin(?:s|ning)?)\b[^.;\n]{0,20}?\b(20[2-3]\d)\b", re.I)
+def _year_cues(sentence: str) -> list:
+    """The year cues of a statement: its graduation cues, else its program cues, else a start date."""
+    for patterns in (_GRAD_YEAR, _PROGRAM_YEAR):
+        found = [year for pattern in patterns for year in pattern.finditer(sentence)]
+        if found:
+            return found
+    return list(_START_YEAR.finditer(sentence))
+
+
 # Alternatives and ranges of one graduating class: "May 2026 or May 2027", "between December 2026 and June 2027",
 # "2026-2028", "2026, 2027 or 2028", "classes of 2026 and 2027". A cue on any year of the group stands for the whole group.
 _WHEN = (r"(?:(?:early|late|mid)[- ]?)?(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|"
@@ -471,11 +486,6 @@ def _year_group(sentence: str, position: int) -> set:
 _CONTRAST = re.compile(r",?\s*\b(?:but|however|although|though|whereas|while|yet)\b", re.I)
 
 
-_CLASS_CUE = tuple(re.compile(pattern, re.I) for pattern in (
-    r"\bclass(?:es)?\s+of\s+(20[2-3]\d)\b", r"\b(20[2-3]\d)\s+(?:mba\s+)?(?:graduates?|grads?|graduating|class)\b",
-    r"\bgraduat\w*\b[^.;\n]{0,30}?\b(20[2-3]\d)\b"))
-
-
 def _admits_2027(clause: str, title: str) -> bool:
     """True when the clause affirmatively admits MBA applicants of 2027 (or of no stated year): an applicant statement that is not
     itself denied ("... are welcome to apply", "open to MBA students graduating in 2027"), never a bare mention."""
@@ -499,12 +509,12 @@ def _denial_years(text: str, denial, title: str = '') -> set:
     sentence = _sentence(text, denial)
     before = re.split(r'[.;\n]', text[max(0, denial.start() - 240):denial.start()])[-1]
     clause, *rest = _CONTRAST.split(sentence[len(before):], 1)
-    found = [year for pattern in _COHORT_YEAR for year in pattern.finditer(clause)] or list(_START_YEAR.finditer(clause))
+    found = _year_cues(clause)
     years = {year for cue in found for year in _year_group(clause, cue.start(1))}
     if not years:
         lead = _CONTRAST.split(before)[-1]
-        if not re.search(_MBA, lead, re.I):
-            years = {year for pattern in _CLASS_CUE for cue in pattern.finditer(lead) for year in _year_group(lead, cue.start(1))}
+        if not (MBA_APPLICANT.search(lead) or MBA_SUBJECT_FIRST.search(lead)):  # a prefix that is another MBA statement is not a qualifier
+            years = {year for pattern in _GRAD_YEAR for cue in pattern.finditer(lead) for year in _year_group(lead, cue.start(1))}
     if not years and rest and _admits_2027(rest[0], title):
         return {'-'}  # a yearless denial followed by a contrasting clause that admits MBA applicants does not veto that clause
     return years
@@ -516,7 +526,7 @@ def _class_years(source: str, match, title: str) -> set:
     sentence = _sentence(source, match)
     if source is title:
         return {year for group in _YEAR_GROUP.finditer(sentence) for year in _year_group(sentence, group.start())}
-    found = [year for pattern in _COHORT_YEAR for year in pattern.finditer(sentence)] or list(_START_YEAR.finditer(sentence))
+    found = _year_cues(sentence)
     return {year for cue in found for year in _year_group(sentence, cue.start(1))}
 
 
