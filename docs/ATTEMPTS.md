@@ -18,6 +18,18 @@
 - Checks: `uv run --locked --extra social python -m pytest -q`: 1,338 passed, 10 subtests passed. Offline real-data re-check unchanged: 2 of 6,812
   board postings meet the rule, 38 are class-of-2027 without an MBA. Waits for an exact-head Codex review and green CI before merge.
 
+## October 23 PR #53 — repair/review cycle 7
+
+- Same authorization (cap lifted by the user; cloud session in charge of #53 at the user's chat instruction; counters not reset). Reviewed head
+  `e5eef131b4285ac77da846bcbee0fba1605f3534` (Codex review 5622469373, three P2 findings, each reproduced first as a failing test).
+- Fixes: (1) A yearless denial is lifted only by a contrast that really admits MBA applicants: an applicant statement that is not itself denied and names
+  2027 or no year ("we are not recruiting MBA students ..." and "... graduating in 2026 are welcome to apply" no longer lift it). (2) A leading qualifier
+  is used only when the denial names no year of its own, and only class wording ("class of 2026", "2026 graduates", "graduating ... 2026"), so a program
+  year ("For our 2027 program, MBA students graduating in 2026 are not eligible ...") is not a denied class. (3) The leading class qualifier now applies to
+  lead-first denials too ("For the class of 2026, this role is not open to MBA students"); a prefix that is itself another MBA statement is never imported.
+- Checks: `uv run --locked --extra social python -m pytest -q`: 1,364 passed, 10 subtests passed. Offline real-data re-check unchanged (2 of 6,812 meet the
+  rule, 38 class-of-2027 without an MBA). Waits for an exact-head Codex review and green CI.
+
 ## October 22 PR #53 — repair/review cycle 6
 
 - Same authorization as cycle 5 (cap lifted by the user, cloud session in charge of #53 at the user's chat instruction; counters not reset). Reviewed head

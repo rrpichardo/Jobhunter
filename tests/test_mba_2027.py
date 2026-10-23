@@ -409,3 +409,44 @@ def test_a_contrast_that_does_not_admit_applicants_keeps_a_global_mba_denial_act
 ])
 def test_a_contrast_that_admits_the_2027_class_still_relaxes_a_yearless_denial(text):
     assert p.collection_reason(job(title='Product Manager (MBA)', text=text)) == ''
+
+
+# Codex follow-up review 5622469373 of PR 53 (cycle 7).
+@pytest.mark.parametrize('text', [
+    'Open to MBA students graduating in 2027. For the class of 2026, this role is not open to MBA students.',
+    'Open to MBA students graduating in 2027. For the class of 2026, we are not recruiting MBA students.',
+    'Open to MBA students graduating in 2027. For the class of 2026, MBA students are not eligible to apply.',
+    'For our 2027 program, MBA students graduating in 2026 are not eligible to apply. Open to MBA students graduating in 2027.',
+    'For our 2027 program, this role is not open to MBA students graduating in 2026. Open to MBA students graduating in 2027.',
+    'Open to MBA students graduating in 2027 and not open to MBA students graduating in 2026.',
+])
+def test_a_denial_is_bound_to_its_own_class_in_either_word_order(text):
+    assert p.collection_reason(job(text=text)) == ''
+
+
+@pytest.mark.parametrize('text', [
+    'Open to MBA students graduating in 2027. For the class of 2027, this role is not open to MBA students.',
+    'Open to MBA students graduating in 2027. For the class of 2027, we are not recruiting MBA students.',
+    'For our 2027 program, MBA students graduating in 2027 are not eligible to apply. Open to MBA students graduating in 2027.',
+])
+def test_a_leading_qualifier_naming_2027_still_denies_2027_in_either_word_order(text):
+    assert p.collection_reason(job(text=text)) == 'not_mba_2027'
+
+
+@pytest.mark.parametrize('text', [
+    'We cannot hire MBAs, but we are not recruiting MBA students graduating in 2026.',
+    'We cannot hire MBAs, but we are not recruiting MBA students.',
+    'We do not hire MBAs, but MBA students are not welcome to apply.',
+])
+def test_a_negative_or_other_class_contrast_does_not_lift_a_global_denial(text):
+    assert p.collection_reason(job(title='Product Manager (MBA)', text=text)) == 'not_mba_2027'
+
+
+def test_the_valid_welcome_to_apply_contrast_still_lifts_a_yearless_denial():
+    text = 'We cannot hire MBAs, but MBA students graduating in 2027 are welcome to apply.'
+    assert p.collection_reason(job(title='Product Manager (MBA)', text=text)) == ''
+
+
+def test_a_contrast_that_admits_only_another_class_is_dropped_as_the_wrong_class():
+    text = 'We cannot hire MBAs, but MBA students graduating in 2026 are welcome to apply.'
+    assert p.collection_reason(job(title='Product Manager (MBA)', text=text)) == 'mba_other_class_year'

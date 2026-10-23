@@ -471,19 +471,41 @@ def _year_group(sentence: str, position: int) -> set:
 _CONTRAST = re.compile(r",?\s*\b(?:but|however|although|though|whereas|while|yet)\b", re.I)
 
 
-def _denial_years(text: str, denial) -> set:
-    """The years a denial names, read only from its own contrast-delimited clause: from the denial (plus, for a noun-first denial,
-    any class qualifier before its subject: "For the class of 2026, MBA students are not eligible to apply") to the next contrast
-    word. "Not open to MBA students graduating in 2026, but open to MBA students graduating in 2027" denies 2026 only."""
+_CLASS_CUE = tuple(re.compile(pattern, re.I) for pattern in (
+    r"\bclass(?:es)?\s+of\s+(20[2-3]\d)\b", r"\b(20[2-3]\d)\s+(?:mba\s+)?(?:graduates?|grads?|graduating|class)\b",
+    r"\bgraduat\w*\b[^.;\n]{0,30}?\b(20[2-3]\d)\b"))
+
+
+def _admits_2027(clause: str, title: str) -> bool:
+    """True when the clause affirmatively admits MBA applicants of 2027 (or of no stated year): an applicant statement that is not
+    itself denied ("... are welcome to apply", "open to MBA students graduating in 2027"), never a bare mention."""
+    denials = list(_denials(clause))
+    for pattern in (MBA_APPLICANT, MBA_SUBJECT_FIRST):
+        for match in pattern.finditer(clause):
+            if any(d.start() <= match.start() < d.end() or match.start() <= d.start() < match.end() for d in denials):
+                continue
+            years = _class_years(clause, match, title)
+            if not years or '2027' in years:
+                return True
+    return False
+
+
+def _denial_years(text: str, denial, title: str = '') -> set:
+    """The graduating years a denial names, read only from its own contrast-delimited clause: from the denial to the next contrast
+    word. When the denial names no year itself, a class qualifier just before it ("For the class of 2026, MBA students are not
+    eligible to apply", "For the class of 2026, this role is not open to MBA students") is its class, in either word order; a prefix
+    that is another MBA statement, or only dates a program ("For our 2027 program, ..."), is not. "Not open to MBA students
+    graduating in 2026, but open to MBA students graduating in 2027" denies 2026 only."""
     sentence = _sentence(text, denial)
     before = re.split(r'[.;\n]', text[max(0, denial.start() - 240):denial.start()])[-1]
-    noun_first = not re.match(r"(?:not|never|no\s+longer|cannot|unable|except|excluding|exclud\w+|other\s+than|\w+n't)\b", denial.group(0), re.I)
-    lead = _CONTRAST.split(before)[-1] if noun_first else ''
     clause, *rest = _CONTRAST.split(sentence[len(before):], 1)
-    clause = lead + clause
     found = [year for pattern in _COHORT_YEAR for year in pattern.finditer(clause)] or list(_START_YEAR.finditer(clause))
     years = {year for cue in found for year in _year_group(clause, cue.start(1))}
-    if not years and rest and (MBA_APPLICANT.search(rest[0]) or MBA_SUBJECT_FIRST.search(rest[0])):
+    if not years:
+        lead = _CONTRAST.split(before)[-1]
+        if not re.search(_MBA, lead, re.I):
+            years = {year for pattern in _CLASS_CUE for cue in pattern.finditer(lead) for year in _year_group(lead, cue.start(1))}
+    if not years and rest and _admits_2027(rest[0], title):
         return {'-'}  # a yearless denial followed by a contrasting clause that admits MBA applicants does not veto that clause
     return years
 
@@ -512,7 +534,7 @@ def mba_class_evidence(title: str, text: str) -> tuple[str, str]:
     as "Product Manager (MBA)" cannot bring back eligibility the description takes away.
     """
     denials = list(_denials(text))
-    denied_2027 = any('2027' in years or not years for years in (_denial_years(text, denial) for denial in denials))
+    denied_2027 = any('2027' in years or not years for years in (_denial_years(text, denial, title) for denial in denials))
     explicit, other, unqualified = None, False, None
     for source, match in _statements(title, text):
         if source is text and any(denial.start() <= match.start() < denial.end() or match.start() <= denial.start() < match.end()
