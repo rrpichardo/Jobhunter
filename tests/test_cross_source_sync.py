@@ -13,7 +13,7 @@ URL = 'https://job-boards.greenhouse.io/acme/jobs/123'
 
 def row(identity, source, url=URL):
     return to_row(Posting(identity, source, 'Acme', 'Product Manager, AI', 'United States',
-                          'Build AI products.', url, STAMP))
+                          'Build AI products. This role is open to MBA students graduating in spring 2027.', url, STAMP))
 
 
 def deliver(store, rows, identity):
@@ -119,7 +119,7 @@ def test_custom_greenhouse_requisition_reconciles_across_runs():
 def test_same_batch_discovery_attribution_survives_later_direct_only_syncs():
     from jobhunter.postings import dedupe
     direct = Posting('greenhouse:acme:123', 'greenhouse:acme', 'Acme', 'Product Manager, AI',
-                     'United States', 'Build AI products.', URL, STAMP)
+                     'United States', 'Build AI products. This role is open to MBA students graduating in spring 2027.', URL, STAMP)
     other = Posting('remotive:9', 'remotive', 'Acme', direct.title, direct.location,
                     direct.text, URL, STAMP)
     store = MemoryStore()
@@ -164,7 +164,7 @@ def test_legacy_same_batch_attribution_is_retained_without_inventing_its_time():
 def test_discovery_times_are_ordered_by_instant_and_not_timezone_text():
     from dataclasses import replace
     direct = Posting('greenhouse:acme:123', 'greenhouse:acme', 'Acme', 'Product Manager, AI',
-                     'United States', 'Build AI products.', URL, '2026-10-18T09:00:00+00:00')
+                     'United States', 'Build AI products. This role is open to MBA students graduating in spring 2027.', URL, '2026-10-18T09:00:00+00:00')
     store = MemoryStore()
     deliver(store, [to_row(direct)], 'first-instant')
     earlier = replace(direct, captured_at='2026-10-18T10:30:00+02:00')

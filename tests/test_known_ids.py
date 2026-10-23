@@ -15,7 +15,7 @@ from sheet_fakes import MemoryStore
 JOBS = [{'id': i, 'title': 'Product Manager', 'url': f'/companies/acme/jobs/{i}', 'location': 'United States',
          'companyName': 'Acme'} for i in range(1, 5)]
 LISTING = '<div data-page="' + escape(json.dumps({'props': {'jobPostings': JOBS}}), quote=True) + '"></div>'
-PAGE = '<script type="application/ld+json">{"@type":"JobPosting","description":"Build things."}</script>'
+PAGE = '<script type="application/ld+json">{"@type":"JobPosting","description":"Build things. This role is open to MBA students graduating in spring 2027."}</script>'
 YC = {'id': 'yc-product', 'kind': 'yc', 'url': 'https://www.ycombinator.com/jobs/role/product-manager'}
 
 
@@ -141,7 +141,7 @@ def test_a_stop_smaller_than_the_shortlist_moves_through_old_pages_on_successive
             return httpx.Response(200, text=listing)
         date = '2026-01-01' if url.endswith('/1') else '2026-10-17'
         return httpx.Response(200, text='<script type="application/ld+json">{"@type":"JobPosting",'
-                                        f'"description":"Build things.","datePosted":"{date}"}}</script>')
+                                        f'"description":"Build things. This role is open to MBA students graduating in spring 2027.","datePosted":"{date}"}}</script>')
 
     delivered = set()
     for day in (18, 19):

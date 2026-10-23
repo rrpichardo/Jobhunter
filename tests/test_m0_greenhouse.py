@@ -32,13 +32,13 @@ def test_valid_empty_board_is_distinct_from_failure_and_malformed_response():
 
 def test_duplicate_source_ids_and_partial_response_are_not_silently_accepted():
     item = {"id": 101, "title": "AI Product Manager",
-            "absolute_url": "https://example.com/jobs/101", "content": "Build AI."}
+            "absolute_url": "https://example.com/jobs/101", "content": "Build AI. This role is open to MBA students graduating in spring 2027."}
     assert collect({"jobs": [item, item]}).status == "failed"
     assert collect({"jobs": [item], "meta": {"total": 10}}).coverage == "partial-response"
 
 
 def test_bad_individual_post_is_quarantined_without_discarding_valid_jobs():
-    item = {"id": 101, "title": "AI Product Manager", "content": "Build AI products.",
+    item = {"id": 101, "title": "AI Product Manager", "content": "Build AI products. This role is open to MBA students graduating in spring 2027.",
             "absolute_url": "https://example.com/jobs/101"}
     result = collect({"jobs": [item, item | {"id": 102, "content": None}], "meta": {"total": 2}})
     assert result.status == "OK"
@@ -56,8 +56,8 @@ def test_absent_total_does_not_claim_complete_coverage():
 def test_obviously_hidden_markup_is_excluded_from_source_excerpt_text():
     item = {"id": 101, "title": "AI Product Manager",
             "absolute_url": "https://example.com/jobs/101",
-            "content": '<p>Build AI.</p><span hidden>Hidden claim</span><div style="display: none">Other claim</div>'}
-    assert collect({"jobs": [item]}).jobs[0].text == "Build AI."
+            "content": '<p>Build AI. This role is open to MBA students graduating in spring 2027.</p><span hidden>Hidden claim</span><div style="display: none">Other claim</div>'}
+    assert collect({"jobs": [item]}).jobs[0].text == "Build AI. This role is open to MBA students graduating in spring 2027."
 
 
 def test_inconsistent_empty_response_is_failed_and_schema_failure_retains_attempts():
@@ -65,7 +65,7 @@ def test_inconsistent_empty_response_is_failed_and_schema_failure_retains_attemp
     from jobhunter.greenhouse import collect_board
     assert collect({"jobs": [], "meta": {"total": 50}}).status == "failed"
     calls = []
-    item = {"id": 101, "title": "PM", "content": "Build AI.",
+    item = {"id": 101, "title": "PM", "content": "Build AI. This role is open to MBA students graduating in spring 2027.",
             "absolute_url": "https://example.com/jobs/101"}
     def handler(request):
         calls.append(1)

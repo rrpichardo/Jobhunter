@@ -22,7 +22,7 @@ LISTING = page({'jobs': [
     {'id': 12, 'title': 'Software Engineer', 'location': 'Remote (US)', 'salary': '$150K - $200K', 'companyName': 'Acme AI'},
     {'title': 'No id here'}], 'totalJobsCount': 241})
 DETAIL = page({'job': {'id': 11, 'title': 'Senior Product Manager, AI', 'location': 'San Francisco, CA, US',
-                       'salaryRange': '$180K - $240K', 'descriptionHtml': '<p>Own the <b>agent</b> roadmap.</p>'},
+                       'salaryRange': '$180K - $240K', 'descriptionHtml': '<p>Own the <b>agent</b> roadmap. This role is open to MBA students graduating in spring 2027.</p>'},
                'company': {'name': 'Acme AI'}})
 
 
@@ -34,7 +34,7 @@ def test_listing_rows_come_from_the_page_data_and_a_row_without_an_id_is_rejecte
 
 def test_a_job_page_gives_clean_text_company_location_and_salary_and_an_empty_one_is_rejected():
     found = p.detail_waas(DETAIL)
-    assert found['text'] == 'Own the agent roadmap.' and found['company'] == 'Acme AI' and found['location'] == 'San Francisco, CA, US'
+    assert found['text'] == 'Own the agent roadmap. This role is open to MBA students graduating in spring 2027.' and found['company'] == 'Acme AI' and found['location'] == 'San Francisco, CA, US'
     try:
         p.detail_waas(page({'job': {'descriptionHtml': ''}, 'company': {}}))
     except ValueError as exc:

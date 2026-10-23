@@ -20,6 +20,10 @@ them in chat. Claude's recommendation is only a suggestion. Never write a passwo
 | A7 | X search wording after the first run | (a) keep it for a week, then revise with numbers; (b) change now (write which searches to add or drop) | (a), and first record which search found each post (E10) | |
 | A20 | More tracing | E5 keep the reasons in the Sheet; E6 reasons for job boards; E10 which search found each post (write the ones you want) | E10 and E5 now, E6 later | |
 | A21 | Order of the bigger pieces | E3 one editable settings file; E1 README; E2 control page (write your order) | E3, then E1, then E2 | |
+| A22 | Erase the existing rows not meant for MBA 2027 (see `docs/MBA_CLEANUP_DRYRUN.md`: keep 1, maybe 3, no 164, cannot tell 542) | (a) back up, archive tab, then remove all but the keepers; (b) remove only the 164 read in full; (c) leave the Sheet | (a) | |
+| A23 | 2027 new-grad roles that do not mention an MBA | keep out / let them in | keep out | |
+| A24 | Roles outside the title list that are explicitly for MBA 2027 (for example Sierra "Strategist, Agent Development (MBA Grad 2027)") | accept any full-time business role / keep the title list | accept | |
+| A25 | Where MBA 2027 roles should come from (company MBA programs, school sites, alerts) | write the names | | |
 
 ## 2. Your tasks
 
@@ -30,6 +34,7 @@ them in chat. Claude's recommendation is only a suggestion. Never write a passwo
 | B3 | School/MBA job sites you want, and the correct Cosign address | names and web addresses | |
 | B4 | Gmail connector: set Delete label, Mark spam, Trash, Remove labels to "Needs approval" | done / not yet | |
 | B9 | Web address of the Next Play newsletter you read | web address | |
+| B11 | Company MBA programs to watch (General Motors first) and their MBA recruiting page addresses | names and web addresses | |
 | B10 | Optional: the NAME of the Work at a Startup cookie (never the value) | cookie name / skip | |
 | B8 | Optional: rotate the Google service-account key | done / skip | |
 

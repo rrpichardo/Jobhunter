@@ -97,7 +97,10 @@ Rules, enforced by code that rejects anything else:
 - Every value must be copied exactly from that comment's text. Never invent, translate,
   summarize or normalize. `location` and `salary` are `""` when the comment gives none.
   Never guess a salary.
-- `description_quote` is an exact excerpt of at most 300 characters.
+- `description_quote` is an exact excerpt of at most 300 characters. If the comment says who the role is for (for example
+  "open to MBA students graduating in spring 2027", "MBA leadership program", "class of 2027"), make that sentence the quote:
+  code keeps a role only when the quote or title says it is meant for MBA graduates of 2027, and a quote that leaves the
+  sentence out gets the role dropped (`not_mba_2027`). Copy it exactly; never add the words yourself.
 - `apply_url` is `""` or exactly one of that comment's `links`. Leave it `""` when
   unsure; code then uses the comment permalink and the row is a lead.
 - Do not decide eligibility. Code applies the salary and location rules.
@@ -118,7 +121,7 @@ again on the next run. Report N in the final report.
 Validation also prints a `trace:` line (and a `trace_rejected:` line with up to ten examples) that says what happened to
 every fact: how many were valid, duplicates, or rejected with a fixed reason code (for example `not_in_post:title`,
 `link_not_in_post_links`, `too_long:description_quote`), how many posts were unreadable, how many valid facts the
-collection filter dropped and why (`role_not_in_scope`, `place_excluded`, `pay_below_floor`), how many were delivered and
+collection filter dropped and why (`role_not_in_scope`, `place_excluded`, `not_mba_2027`, `class_2027_without_mba`, `mba_other_class_year`, `pay_below_floor`), how many were delivered and
 how many posts are held. **Copy the `trace:` lines into the final report unchanged** for every validated source. They hold
 only numbers, reason codes and post ids; never paste post text, a name or an email into the report.
 
@@ -133,7 +136,7 @@ uv run --locked python -m scripts.ai_queue pull --source alirohde-rss --candidat
 Each candidate is one edition: `text` lists roles as `Title [application link] , Company (sector, stage), Place`. Write
 `$DIR/ali_facts.json` exactly as in section 1 but with `item_id` (the edition's id) instead of `comment_id`, one fact per
 role that matches the roles we collect; copy every value word for word, `description_quote` is an exact excerpt of at most
-300 characters, and `apply_url` is the role's own link from the `[...]` beside its title (it must be one of the edition's
+300 characters (the sentence saying the role is for MBA graduates of 2027, when the edition has one), and `apply_url` is the role's own link from the `[...]` beside its title (it must be one of the edition's
 `links`). Then `scripts.social_posts validate --source alirohde-rss --candidates $DIR/ali_work.json --candidates-sha256
 <work digest> --extractions $DIR/ali_facts.json --output $DIR/ali_result.json`, pass it to `source_probe` as
 `--social-result $DIR/ali_result.json --social-result-sha256 <digest>`, and run `ai_queue commit --source alirohde-rss

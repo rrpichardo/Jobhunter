@@ -1,5 +1,9 @@
 # Prompt for the first live test and first manual run (ready to paste into a JobHunterEnv session)
 
+> **Historical (used once, October 19). Do not paste it as is.** Every PR the combined branch carried is now in `main`, and
+> `claude/combined-live-run` also holds unreviewed #51/#52 work. A future run starts from reviewed `main` instead of that branch,
+> and only with the user's approval for that run; the rules below (A18 hold, one social attempt per day, no secrets) still apply.
+
 Written October 19, 2026. Use it only after the user has said the Google Sheet is backed up (item A15 in `docs/PENDING.md`).
 Start the session in the `JobHunterEnv` environment (`env_01M9moVSWZBGvWAZYrqTm49s`) from the branch `claude/combined-live-run`
 (for example `mcp__claude-code-remote__create_session` with `source_url` the repository and `source_revision` that branch),

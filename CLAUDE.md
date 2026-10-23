@@ -10,6 +10,8 @@ the distinction between local review, manual cloud proof and scheduled productio
 
 ## What is pending (keep this consistent)
 
+The user reads `docs/START_HERE.md` first (the same list at a smaller size). Update it together with section 0 of `docs/PENDING.md`.
+
 When the user asks what is pending, what Claude needs from them, or where things stand, read section 0 of
 `docs/PENDING.md` first, check it against GitHub (open PRs, Codex replies), answer in plain, non-technical language,
 and correct that section if it is out of date. Update section 0 in the same change whenever a decision, a task, a PR

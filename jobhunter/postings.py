@@ -5,7 +5,7 @@ untrusted: it is cleaned, never executed, and only an exact leading excerpt of i
 is stored. Models do not choose any cell value on this path.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from html import unescape
@@ -138,6 +138,8 @@ def annual_usd_salary_ceiling(salary: str) -> float | None:
     """Explicit annual USD base-pay ceiling; unsupported compensation is unresolved."""
     usd = re.compile(r'\bUSD\b|US\$', re.I)
     salary = salary.replace('_', ' ')
+    if re.match(r'\s*(?:from|min(?:imum)?|at\s+least|starting)\b', salary, re.I):
+        return None  # a lower bound only: the upper pay is unknown, so it is not a ceiling
     if (not usd.search(salary)
             or not re.search(r'\b(year|yearly|annual|annually|annum|yr)\b', salary, re.I)
             or re.search(r'\b(COP|DOP|CAD|AUD|MXN|EUR|GBP|hour|hourly|month|monthly|week|weekly|day|daily|'
@@ -332,12 +334,254 @@ def collection_stub_match(title: str, location: str, salary: str) -> bool:
                 and (amount is None or amount >= (70_000 if region == 'unresolved' else floor)))
 
 
+# The user graduates with an MBA in May 2027, so a role is collected only when the posting itself says WHO MAY APPLY: MBA
+# students or graduates of 2027. Wording that only mentions MBAs is not enough: "MBA preferred" or "MBA or equivalent
+# experience" is a qualification, "products for MBA students" describes customers, and a plain "New Grad 2027" role asks
+# for a bachelor's or master's in a technical field. Job seniority does not matter: a Senior Product Manager role open to
+# MBAs graduating in 2027 qualifies. The graduating year is read from the same statement, so an unrelated "2027" elsewhere
+# in the posting never overrides an explicit other class.
+_MBA = r"(?:MBA|M\.B\.A\.?|master(?:'?s)? of business administration)s?"
+_MBA_PEOPLE = (rf"(?:(?:recent|new|upcoming|graduating|soon[- ]to[- ]be|incoming|current|full[- ]time)\s+)?{_MBA}\s+"
+               rf"(?:students?|graduates?|grads?|candidates?|hires?|recruits?|associates?)\b"
+               rf"|(?:recent|new|upcoming|graduating|soon[- ]to[- ]be|incoming)\s+{_MBA}\b")
+# Words that say who may apply. "for" counts only after role, position, program and similar words, never after "products".
+_APPLICANT_LEAD = (r"(?:role|position|program(?:me)?|opening|opportunity|job|internship|fellowship|cohort|track)\s+"
+                   r"(?:is\s+|are\s+)?(?:only\s+)?(?:open\s+to|for|aimed\s+at|designed\s+for|intended\s+for|reserved\s+for|"
+                   r"available\s+to|restricted\s+to|limited\s+to)"
+                   r"|open\s+(?:only\s+)?to|(?:we\s+(?:are\s+|'re\s+)?)?(?:recruiting|hiring|seeking|targeting|inviting)"
+                   r"|(?:applicants?|candidates?)\s+(?:must|should|need\s+to)\s+be|eligibility:?|eligible:?")
+# Only words that DESCRIBE the applicants may sit between a lead and the MBA noun. A verb phrase such as "a PM to build products for"
+# describes the job or the customers, so it cannot make the MBA students applicants.
+_APPLICANT_WORDS = (r"(?:(?:the|a|an|our|these|top|talented|rising|motivated|exceptional|current|incoming|recent|new|graduating|"
+                    r"full[- ]time|part[- ]time|rotational|summer|fall|spring|winter|20\d\d|class\s+of|and|or|only|:|,)\s*)*")
+MBA_APPLICANT = re.compile(rf"\b(?:{_APPLICANT_LEAD})\b\s*{_APPLICANT_WORDS}\b(?:{_MBA_PEOPLE})", re.I)
+MBA_STANDALONE = tuple(re.compile(pattern, re.I) for pattern in (
+    rf"\b{_MBA}\s+class(?:\s+of)?\b",
+    rf"\b{_MBA}\s+grad(?:uate)?s?\b\s*(?:\(?20\d\d|class)",
+    rf"\b{_MBA}\s+(?:leadership|rotational|rotation|associate|early[- ]career|development)\s+(?:development\s+)?program(?:me)?\b",
+    rf"\bpost[- ]{_MBA}\s+(?:role|hires?|position|associate|product|opportunit\w+)\b",
+    rf"\b{_MBA}\s+(?:campus\s+)?recruit(?:ing|ment|s)\b",
+    rf"\b(?:applicants?|candidates?)\s+(?:must|should)\s+(?:be|have)\s+(?:currently\s+)?(?:pursuing|enrolled\s+in|completing)\s+an?\s+{_MBA}\b",
+))
+# In a TITLE, "(MBA)" or "(Full-Time MBA)" marks the program; in a description the same words are usually a degree requirement
+# ("Master of Business Administration (MBA) or Juris Doctor (JD) degree"), so this marker is read in titles only.
+MBA_TITLE_MARKER = re.compile(rf"\(\s*(?:full[- ]time\s+|part[- ]time\s+)?{_MBA}\s*\)", re.I)
+# Noun-first wording: "MBA students graduating in May 2027 are eligible / encouraged / welcome to apply", "... should apply".
+MBA_SUBJECT_FIRST = re.compile(
+    rf"\b(?:{_MBA_PEOPLE})(?:(?!\b(?:but|however|although|though|whereas|while|yet)\b)[^.;\n]){{0,60}}?\b(?:(?:are|is)\s+(?:also\s+|strongly\s+|especially\s+|warmly\s+)?"
+    rf"(?:eligible|encouraged|welcome|invited)\s+to\s+apply|(?:should|can|may)\s+apply|will\s+be\s+considered)\b", re.I)
+MBA_PEOPLE_IN_TITLE = re.compile(rf"\b(?:{_MBA_PEOPLE})", re.I)
+CLASS_2027_ONLY = re.compile(r"\bclass(?:es)? of 2027\b|\bnew[- ]grad(?:uate)?s?\b[^.;\n]{0,30}\b2027\b|"
+                             r"\byou\s+(?:will\s+)?graduat\w*[^.;\n]{0,80}\b2027\b|"
+                             r"\b(?:expected\s+)?graduation(?:\s+date)?\b[^.;\n]{0,60}\b2027\b|\b2027\b\s+(?:graduates?|grads?)\b|"
+                             rf"\b(?:open\s+to|seeking|recruiting|hiring)\s*{_APPLICANT_WORDS}\b(?:students|graduates)\b[^.;\n]{{0,40}}\b2027\b|"
+                             r"\bearly[- ]career\b[^.;\n]{0,30}\b2027\b", re.I)
+
+
+def _statements(title: str, text: str):
+    """Spans of the posting that state who may apply as an MBA student or graduate."""
+    for pattern in MBA_STANDALONE:
+        for source in (title, text):
+            for match in pattern.finditer(source):
+                yield source, match
+    for match in MBA_TITLE_MARKER.finditer(title):
+        yield title, match
+    for match in MBA_PEOPLE_IN_TITLE.finditer(title):  # a title such as "Strategist (MBA Graduates 2027)" names the applicants
+        yield title, match
+    for match in MBA_APPLICANT.finditer(text):
+        yield text, match
+    for match in MBA_SUBJECT_FIRST.finditer(text):
+        yield text, match
+
+
+def _sentence(source: str, match) -> str:
+    """The sentence (or the whole title) that holds a match: from the previous . ; or line break to the next one."""
+    before = re.split(r'[.;\n]', source[max(0, match.start() - 240):match.start()])[-1]
+    after = re.split(r'[.;\n]', source[match.end():match.end() + 240])[0]
+    return before + source[match.start():match.end()] + after
+
+
+# A denial is a negation that governs the applicant predicate itself, never a negative word elsewhere in the sentence
+# ("Experience is not required, open to MBA students ..." is still an applicant statement). Lead-first: "not open to",
+# "not recruiting", "isn't for", "except" directly before the MBA applicants. Noun-first: "MBA students ... are not eligible
+# to apply", "... should not apply", "... are ineligible".
+_MBAS = r"(?:MBAs|M\.B\.A\.s)(?![\w'])"
+# "not eligible for relocation assistance" denies a benefit, not the application; only "to apply", "to be considered", "for this role",
+# "for consideration" and a bare "not eligible" deny the applicant.
+_NOT_A_BENEFIT = (r"(?!\s+(?:for|to)\s+(?!(?:apply|be\s+(?:considered|hired|selected)|join|participate)\b|"
+                  r"(?:this|the|our|that|any)\s+(?:role|position|program(?:me)?|job|internship|opening|opportunit\w+|fellowship|cohort|track)\b|"
+                  r"(?:consideration|employment|hire|hiring)\b))")
+_DENYING = r"(?:\b(?:not|never|no\s+longer|cannot|unable\s+to)|\b\w+n't)\s+(?!only\b)"
+MBA_DENIED = tuple(re.compile(pattern, re.I) for pattern in (
+    rf"{_DENYING}(?:(?:be|been|currently|actively|presently|now|yet|being)\s+)*"
+    rf"(?:open\s+to|for|recruit\w*|hir\w*|seek\w*|target\w*|invit\w*|accept\w*|consider\w*|available\s+to|eligible\s+to|"
+    rf"aimed\s+at|designed\s+for|intended\s+for|reserved\s+for|restricted\s+to|limited\s+to)\s*{_APPLICANT_WORDS}\b(?:{_MBA_PEOPLE})",
+    rf"\b(?:except|excluding|exclud\w+|other\s+than)\s+(?:for\s+)?{_APPLICANT_WORDS}\b(?:{_MBA_PEOPLE})",
+    rf"\b(?:{_MBA_PEOPLE}|{_MBA}\s+class(?:\s+of)?|{_MBA}\s+grad(?:uate)?s?|{_MBAS})(?:(?!{_MBA_PEOPLE})[^.;\n]){{0,60}}?"
+    rf"(?:\b(?:are|is)\s+(?:not|never)\s+(?:eligible|encouraged|welcome|invited|considered|accepted){_NOT_A_BENEFIT}|"
+    rf"\b(?:aren't|isn't)\s+(?:eligible|encouraged|welcome|invited|considered|accepted){_NOT_A_BENEFIT}|"
+    rf"\b(?:should|can|may|must|will|need)\s+(?:not|never)\s+(?:apply|be\s+considered)|"
+    rf"\b(?:shouldn't|can't|cannot|mustn't|won't)\s+(?:apply|be\s+considered)|"
+    rf"\b(?:are|is)\s+(?:ineligible|excluded){_NOT_A_BENEFIT})\b",
+    # Bare "MBAs" (no "students"): "We cannot hire MBAs." A plain "MBA" is a degree word ("not required to have an MBA"), so only the plural counts.
+    rf"{_DENYING}(?:(?:be|currently|actively|presently|now)\s+)*(?:able\s+to\s+)?(?:hir\w*|recruit\w*|accept\w*|consider\w*|invit\w*)"
+    rf"\s+(?:any\s+|all\s+)?{_MBAS}",
+))
+
+
+def _denials(text: str):
+    """Spans of the description that deny MBA applicants."""
+    for pattern in MBA_DENIED:
+        yield from pattern.finditer(text)
+
+
+# A year counts as the class or program year only when it is tied to graduating, a class, a cohort, a program or a start; an
+# application window, a launch or a fiscal year in the same sentence says nothing about who may apply.
+# Graduation cues name the applicants' own class; program cues ("cohort", "2027 program") only date the program, so they count only when no
+# graduation cue is present ("MBA students graduating in 2026 are welcome to apply for the 2027 program" is the class of 2026).
+_GRAD_YEAR = tuple(re.compile(pattern, re.I) for pattern in (
+    r"\b(?:graduat\w*|graduation|class(?:es)?\s+of|completing|completes?|finishing|finishes)\b[^.;\n]{0,30}?\b(20[2-3]\d)\b",
+    r"\b(20[2-3]\d)\s+(?:north\s+america\s+)?(?:mba\s+)?(?:graduates?|grads?|graduating|class)\b",
+    rf"\b{_MBA}\s+(?:grad(?:uate)?s?\s*)?(?:class\s+of\s+)?\(?(20[2-3]\d)\b",
+))
+_PROGRAM_YEAR = tuple(re.compile(pattern, re.I) for pattern in (
+    r"\bcohort\b[^.;\n]{0,30}?\b(20[2-3]\d)\b",
+    r"\b(20[2-3]\d)\s+(?:north\s+america\s+)?(?:mba\s+)?(?:cohort|program(?:me)?|intake)\b",
+))
+_START_YEAR = re.compile(r"\b(?:start(?:s|ing)?|begin(?:s|ning)?)\b[^.;\n]{0,20}?\b(20[2-3]\d)\b", re.I)
+def _year_cues(sentence: str) -> list:
+    """The year cues of a statement: its graduation cues, else its program cues, else a start date."""
+    for patterns in (_GRAD_YEAR, _PROGRAM_YEAR):
+        found = [year for pattern in patterns for year in pattern.finditer(sentence)]
+        if found:
+            return found
+    return list(_START_YEAR.finditer(sentence))
+
+
+# Alternatives and ranges of one graduating class: "May 2026 or May 2027", "between December 2026 and June 2027",
+# "2026-2028", "2026, 2027 or 2028", "classes of 2026 and 2027". A cue on any year of the group stands for the whole group.
+_WHEN = (r"(?:(?:early|late|mid)[- ]?)?(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|"
+         r"sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|spring|summer|fall|autumn|winter)\.?\s+")
+_YEAR_LINK = r"\s*(?:,\s*(?:or|and)?|or|and|to|through|thru|until|-|–|—|/)\s*"
+_YEAR_GROUP = re.compile(rf"(?:\bbetween\s+)?(?:{_WHEN})?\b20[2-3]\d\b(?:{_YEAR_LINK}(?:{_WHEN})?\b20[2-3]\d\b)*", re.I)
+_RANGE_LINK = re.compile(r"^\s*(?:to|through|thru|until|-|–|—)\s*$", re.I)
+
+
+def _year_group(sentence: str, position: int) -> set:
+    """Every year of the alternative or range group that holds the year at `position`; a range covers the years between."""
+    for group in _YEAR_GROUP.finditer(sentence):
+        if group.start() <= position < group.end():
+            years = list(re.finditer(r'20[2-3]\d', group.group(0)))
+            found = {int(year.group(0)) for year in years}
+            between = group.group(0).lower().startswith('between')
+            for first, second in zip(years, years[1:]):
+                link = group.group(0)[first.end():second.start()]
+                if _RANGE_LINK.match(re.sub(rf"^\s*|(?:{_WHEN})$", '', link, flags=re.I)) or (between and re.fullmatch(
+                        rf"\s*and\s*(?:{_WHEN})?", link, re.I)):
+                    found.update(range(int(first.group(0)), int(second.group(0)) + 1))
+            return {str(year) for year in found}
+    return set()
+
+
+_CONTRAST = re.compile(r",?\s*\b(?:but|however|although|though|whereas|while|yet)\b", re.I)
+
+
+def _admits_2027(clause: str, title: str) -> bool:
+    """True when the clause affirmatively admits MBA applicants of 2027 (or of no stated year): an applicant statement that is not
+    itself denied ("... are welcome to apply", "open to MBA students graduating in 2027"), never a bare mention."""
+    denials = list(_denials(clause))
+    for pattern in (MBA_APPLICANT, MBA_SUBJECT_FIRST):
+        for match in pattern.finditer(clause):
+            if any(d.start() <= match.start() < d.end() or match.start() <= d.start() < match.end() for d in denials):
+                continue
+            years = _class_years(clause, match, title)
+            if not years or '2027' in years:
+                return True
+    return False
+
+
+def _denial_years(text: str, denial, title: str = '') -> set:
+    """The graduating years a denial names, read only from its own contrast-delimited clause: from the denial to the next contrast
+    word. When the denial names no year itself, a class qualifier just before it ("For the class of 2026, MBA students are not
+    eligible to apply", "For the class of 2026, this role is not open to MBA students") is its class, in either word order; a prefix
+    that is another MBA statement, or only dates a program ("For our 2027 program, ..."), is not. "Not open to MBA students
+    graduating in 2026, but open to MBA students graduating in 2027" denies 2026 only."""
+    sentence = _sentence(text, denial)
+    before = re.split(r'[.;\n]', text[max(0, denial.start() - 240):denial.start()])[-1]
+    clause, *rest = _CONTRAST.split(sentence[len(before):], 1)
+    lead = _CONTRAST.split(before)[-1]
+
+    def graduation_years(part):
+        return {year for pattern in _GRAD_YEAR for cue in pattern.finditer(part) for year in _year_group(part, cue.start(1))}
+
+    # The denied class: a graduation year in the denial itself, else a class qualifier just before it (unless that prefix is another
+    # MBA statement); only then a program, cohort or start date, which never outranks a graduation class.
+    years = graduation_years(clause)
+    if not years and not (MBA_APPLICANT.search(lead) or MBA_SUBJECT_FIRST.search(lead)):
+        years = graduation_years(lead)
+    if not years:
+        years = {year for cue in _year_cues(clause) for year in _year_group(clause, cue.start(1))}
+    if not years and rest and _admits_2027(rest[0], title):
+        return {'-'}  # a yearless denial followed by a contrasting clause that admits MBA applicants does not veto that clause
+    return years
+
+
+def _class_years(source: str, match, title: str) -> set:
+    """The graduating-class or program years a statement names, with every alternative and range of each one.
+    In a title every year is the program year."""
+    sentence = _sentence(source, match)
+    if source is title:
+        return {year for group in _YEAR_GROUP.finditer(sentence) for year in _year_group(sentence, group.start())}
+    found = _year_cues(sentence)
+    return {year for cue in found for year in _year_group(sentence, cue.start(1))}
+
+
+def mba_class_evidence(title: str, text: str) -> tuple[str, str]:
+    """(kind, quote): `mba` when the posting says it is for MBA students or graduates of 2027, with those words;
+    `other_year` when every statement that names a graduating year names another one; `class_only` when it is for the
+    2027 graduating class without an MBA; otherwise ''.
+
+    Every applicant statement is read before deciding: a statement that names 2027 qualifies the posting; otherwise any
+    statement that names another year (the program year in a title, an explicit class in the description) disqualifies it,
+    even when another statement names no year at all ("Product Manager (MBA)" plus "graduating in spring 2028 only").
+
+    A statement the posting denies ("not open to MBA students ...", "MBA graduates 2027 should not apply") is not evidence.
+    A denial that names 2027 or no year at all also outweighs every other match for 2027 or without a year, so a title such
+    as "Product Manager (MBA)" cannot bring back eligibility the description takes away.
+    """
+    denials = list(_denials(text))
+    denied_2027 = any('2027' in years or not years for years in (_denial_years(text, denial, title) for denial in denials))
+    explicit, other, unqualified = None, False, None
+    for source, match in _statements(title, text):
+        if source is text and any(denial.start() <= match.start() < denial.end() or match.start() <= denial.start() < match.end()
+                                  for denial in denials):
+            continue
+        years = _class_years(source, match, title)
+        quote = ' '.join(source[max(0, match.start() - 40):match.end() + 60].split())
+        if '2027' in years:
+            explicit = explicit or quote
+        elif years:
+            other = True
+        else:
+            unqualified = unqualified or quote
+    if explicit and not denied_2027:
+        return 'mba', explicit
+    if other:
+        return 'other_year', ''
+    if unqualified and not denied_2027:
+        return 'mba', unqualified
+    return ('class_only', '') if not denied_2027 and CLASS_2027_ONLY.search(f'{title}. {text}') else ('', '')
+
+
 def collection_reason(posting: Posting) -> str:
     """Why the collection filter drops a posting (a fixed code), or "" when it is collected."""
     if not role_family(posting.title):
         return 'role_not_in_scope'
     if collection_region(posting.location, remote=posting.remote) is None:
         return 'place_excluded'
+    kind = mba_class_evidence(posting.title, posting.text)[0]
+    if kind != 'mba':
+        return {'other_year': 'mba_other_class_year', 'class_only': 'class_2027_without_mba'}.get(kind, 'not_mba_2027')
     if salary_preference(posting)[0] == 'below floor':
         return 'pay_below_floor'
     return ''
@@ -412,6 +656,8 @@ def _collect(items, build):
         except (ValueError, TypeError, AttributeError, KeyError):
             rejected += 1
             continue
+        if not posting.salary:  # the source gave no pay field; a range written in the posting still counts
+            posting = replace(posting, salary=salary_from_text(posting.text))
         if posting.job_id in seen:
             raise ValueError("duplicate_source_id")
         seen.add(posting.job_id)
@@ -427,6 +673,162 @@ def _salary(low, high, currency="", period=""):
     return " ".join(part for part in (amount, str(currency or ""), str(period or "")) if part)
 
 
+def _union(ranges):
+    """(low, high) covering every (low, high) pair; zone and state tiers of one posting become one range."""
+    lows = [low for low, _ in ranges if low]
+    highs = [high for _, high in ranges if high]
+    return (min(lows) if lows else 0, max(highs) if highs else 0)
+
+
+def _structured_pay_cell(tiers, currency, unit):
+    """One Salary cell for the tiers of a structured pay field. An omitted currency stays unresolved ("currency not stated")
+    instead of becoming USD, and a tier that publishes only a minimum makes the whole range open-ended ("from 90,000 ..."),
+    which the ceiling parser reads as unresolved rather than as an exact ceiling."""
+    low, high = _union(tiers)
+    if any(tier_low and not tier_high for tier_low, tier_high in tiers) and low:
+        return 'from ' + _salary(low, 0, currency or '(currency not stated)', unit)
+    return _salary(low, high, currency or '(currency not stated)', unit)
+
+
+def _pay_unit(label):
+    """What a pay label from a source says the amount is: bonus, total compensation, OTE, hour, month, week, day, else year.
+
+    Words after "excluding" or "plus" describe what the range leaves out ("Annual base salary (excluding equity and bonus)").
+    """
+    label = re.sub(r'\b(?:excluding|exclusive of|not including|without|before|plus)\b[^:.;)]*', ' ', label, flags=re.I)
+    if re.search(r'\b(?:bonus|commission|equity|stock|rsu|sign(?:ing)?[- ]?on|signing)\b', label, re.I):
+        return 'bonus'
+    if re.search(r'\btotal\s+(?:cash\s+|target\s+)?(?:compensation|comp|rewards|cash|target)\b', label, re.I):
+        return 'total compensation'
+    if re.search(r'\b(?:OTE|on[- ]target)\b', label, re.I):
+        return 'OTE'
+    for pattern, unit in ((r'\b(?:hourly|hour|per hour)\b', 'hour'), (r'\b(?:bi-?weekly|weekly|per week)\b', 'week'),
+                          (r'\b(?:monthly|per month)\b', 'month'), (r'\b(?:daily|per day)\b', 'day')):
+        if re.search(pattern, label, re.I):
+            return unit
+    return 'year'
+
+
+_BLURB_PERIODS = (
+    r'\bper\s+(month|week|day|hour)\b', r'\b(?:a|each|every)\s+(month|week|day|hour)\b',
+    r'\b(?:paid|payable|quoted|given|stated|listed)\s+(monthly|weekly|bi-?weekly|daily|hourly)\b',
+    r'\b(?:range|amount|salary|pay|rate|figures?|compensation)\s+(?:is|are)\s+(monthly|weekly|bi-?weekly|daily|hourly)\b',
+    r'\b(monthly|weekly|bi-?weekly|hourly|daily)\s+(?:salary|pay|rate|range|compensation|amount|figures?)\b',
+)
+_PERIOD_UNIT = {'month': 'month', 'monthly': 'month', 'week': 'week', 'weekly': 'week', 'biweekly': 'week', 'bi-weekly': 'week',
+                'day': 'day', 'daily': 'day', 'hour': 'hour', 'hourly': 'hour'}
+
+
+def _blurb_period(blurb):
+    """month, week, day or hour when the blurb explicitly says the range is per month and so on; None otherwise."""
+    for pattern in _BLURB_PERIODS:
+        match = re.search(pattern, blurb, re.I)
+        if match:
+            return _PERIOD_UNIT[match.group(1).lower()]
+    return None
+
+
+def greenhouse_pay(ranges):
+    """Pay Greenhouse publishes beside a posting (`pay_input_ranges`, amounts in cents), as one Salary cell.
+
+    The label (`title`, and the `blurb` only for an explicit "monthly salary" style phrase) decides what each amount is.
+    Yearly USD ranges win (the tiers of one posting are merged into one range). Anything else is written with its own
+    unit word (CAD year, USD month, USD bonus, USD total compensation ...), which the pay filter reads as unresolved
+    instead of as yearly base pay. An unlabeled range is yearly, as Greenhouse pay ranges are.
+    """
+    found = {}
+    for item in ranges if isinstance(ranges, list) else []:
+        if not isinstance(item, dict):
+            continue
+        low, high = item.get('min_cents'), item.get('max_cents')
+        low = low // 100 if type(low) is int and low > 0 else 0
+        high = high // 100 if type(high) is int and high > 0 else 0
+        if not (low or high):
+            continue
+        title = plain(item.get('title'))
+        unit = _pay_unit(title)
+        if unit == 'year':  # the blurb is mostly generic text ("for sales roles ... OTE"), so only explicit period wording counts
+            unit = _blurb_period(clean_html(item.get('blurb'))) or 'year'
+        found.setdefault((plain(item.get('currency_type')).upper(), unit), []).append((low, high))
+    for currency, unit in sorted(found, key=lambda key: (key != ('USD', 'year'), key[1] != 'year', key)):
+        return _structured_pay_cell(found[(currency, unit)], currency, unit)
+    return ''
+
+
+ASHBY_INTERVALS = {'1 YEAR': 'year', '1 MONTH': 'month', '1 WEEK': 'week', '1 DAY': 'day', '1 HOUR': 'hour'}
+
+
+def ashby_pay(compensation):
+    """Salary components of an Ashby posting (requested with `includeCompensation=true`) as one Salary cell."""
+    components = compensation.get('summaryComponents') if isinstance(compensation, dict) else None
+    found = {}
+    for item in components if isinstance(components, list) else []:
+        if not isinstance(item, dict) or item.get('compensationType') != 'Salary':
+            continue
+        low, high = item.get('minValue'), item.get('maxValue')
+        low = int(low) if type(low) in (int, float) and low > 0 else 0
+        high = int(high) if type(high) in (int, float) and high > 0 else 0
+        if low or high:
+            found.setdefault((plain(item.get('currencyCode')).upper(),
+                              ASHBY_INTERVALS.get(plain(item.get('interval')).upper(), plain(item.get('interval')).lower())),
+                             []).append((low, high))
+    for currency, unit in sorted(found, key=lambda key: (key != ('USD', 'year'), key[1] != 'year', key)):
+        return _structured_pay_cell(found[(currency, unit)], currency, unit)
+    return ''
+
+
+_PAY_AMOUNT = r'\$\s?\d{2,3}(?:,\d{3})+(?:\.\d+)?|\$\s?\d{2,3}(?:\.\d+)?\s?[kK]\b'
+_PAY_RANGE = re.compile(rf'({_PAY_AMOUNT})\s*(?:-|\u2013|\u2014|to)\s*({_PAY_AMOUNT}|\d{{2,3}}(?:,\d{{3}})+|\d{{2,3}}\s?[kK]\b)')
+_PAY_CUE = re.compile(r'\b(?:salary|base pay|base compensation|pay range|pay scale|compensation range|base range)\b', re.I)
+_NOT_BASE_PAY = re.compile(r'\b(?:total\s+(?:cash\s+|target\s+)?(?:compensation|comp|rewards|cash)|on[- ]target|OTE|bonus|commission|'
+                           r'equity|stock|rsu|sign[- ]?on|signing|relocation|stipend|allowance|reimbursement|401|monthly|weekly|'
+                           r'bi-?weekly|daily|hourly|per\s+(?:month|week|day|hour)|a\s+month|each\s+month)\b', re.I)
+_CURRENCY_CODE = r'(?:CAD|AUD|NZD|MXN|EUR|GBP|CHF|SGD|INR|BRL|JPY|CNY|AED|SEK|NOK|DKK|PLN|COP|ARS|CLP|ZAR|CA\$|C\$|A\$|\u20ac|\u00a3)'
+_CURRENCY_WORD = re.compile(r'\b(?:CAD|AUD|NZD|MXN|EUR|GBP|CHF|SGD|INR|BRL|JPY|CNY|AED|SEK|NOK|DKK|PLN|COP|ARS|CLP|ZAR)\b|CA\$|C\$|A\$|[\u20ac\u00a3]', re.I)
+_OTHER_CURRENCY = re.compile(rf'(?:\b{_CURRENCY_CODE})\s*$|[\u20ac\u00a3]\s*$', re.I)
+
+
+def _pay_number(text):
+    digits = re.sub(r'[^\d.]', '', text.replace(',', '').rstrip('kK '))
+    return float(digits) * (1000 if re.search(r'[kK]\s*$', text.strip()) else 1)
+
+
+_TAIL_PERIOD = re.compile(r'\b(?:monthly|weekly|bi-?weekly|daily|hourly|per\s+(?:month|week|day|hour)|a\s+month|each\s+month|'
+                          r'paid\s+(?:monthly|weekly|bi-?weekly|daily|hourly))\b|/\s*(?:mo|month|wk|week|hr|hour|day)\b', re.I)
+_TAIL_INCLUDES = re.compile(r'\b(?:including|inclusive\s+of|incl\.?|includes|total|OTE|on[- ]target)\b[^.;\n]*?'
+                            r'\b(?:bonus(?:es)?|commissions?|equity|stock|rsus?|variable|incentives?|compensation)\b', re.I)
+_TAIL_CURRENCY = re.compile(rf'(?:^|[\s(\[,/-]){_CURRENCY_CODE}(?![A-Za-z])', re.I)
+
+
+def salary_from_text(text):
+    """A yearly USD base-pay range written in a posting ("The salary range is $160,000 - $200,000"), or "".
+
+    Deliberately narrow, and it reads the whole compensation sentence on both sides of the range: two amounts of at least
+    30,000; a base-pay word (salary, base pay, pay range ...) earlier in the sentence; nothing before the range that makes it
+    total compensation, OTE, bonus, equity, commission or a monthly, weekly, daily or hourly figure; nothing after it in the
+    same sentence that gives another currency, a period ("per month", "paid monthly") or says the range INCLUDES bonus, equity
+    or commission ("plus bonus" is extra on top of base and is fine). Anything else stays unresolved. Several ranges (one per
+    location tier) are merged into one.
+    """
+    text = text or ''
+    ranges = []
+    for match in _PAY_RANGE.finditer(text):
+        sentence = re.split(r'[.;\n]', text[max(0, match.start() - 200):match.start()])[-1]
+        tail = re.split(r'(?<!\d)[.;\n]|\.(?!\d)', text[match.end():match.end() + 160])[0]
+        if (not _PAY_CUE.search(sentence) or _NOT_BASE_PAY.search(sentence) or _CURRENCY_WORD.search(sentence)
+                or _OTHER_CURRENCY.search(text[max(0, match.start() - 8):match.start()])
+                or _TAIL_CURRENCY.search(tail[:60]) or _TAIL_PERIOD.search(tail) or _TAIL_INCLUDES.search(tail)
+                or re.match(r'\s*(?:in\s+)?(?:bonus|commission|equity|OTE|total)', tail, re.I)):
+            continue
+        low, high = _pay_number(match.group(1)), _pay_number(match.group(2))
+        if 30_000 <= low <= high:
+            ranges.append((int(low), int(high)))
+    if not ranges:
+        return ''
+    low, high = _union(ranges)
+    return _salary(low, high, 'USD', 'year')
+
+
 def parse_greenhouse(data, ctx):
     if not isinstance(data, dict) or not isinstance(data.get("jobs"), list):
         raise ValueError("invalid_board_response")
@@ -437,8 +839,8 @@ def parse_greenhouse(data, ctx):
             raise ValueError
         return Posting(f"greenhouse:{ctx['board']}:{item['id']}", ctx["source_id"], ctx["company"],
                        plain(item.get("title")), plain(location.get("name")), clean_html(item.get("content")),
-                       item.get("absolute_url"), ctx["captured_at"], tag=ctx["tag"],
-                       posted_at=parse_posted(item.get("first_published")))
+                       item.get("absolute_url"), ctx["captured_at"], salary=greenhouse_pay(item.get("pay_input_ranges")),
+                       tag=ctx["tag"], posted_at=parse_posted(item.get("first_published")))
     return (*_collect(data["jobs"], build), len(data["jobs"]))
 
 
@@ -471,8 +873,8 @@ def parse_ashby(data, ctx):
         text = plain(item.get("descriptionPlain")) or clean_html(item.get("descriptionHtml"))
         return Posting(f"ashby:{ctx['board']}:{item['id']}", ctx["source_id"], ctx["company"],
                        plain(item.get("title")), location, text, item.get("jobUrl"),
-                       ctx["captured_at"], tag=ctx["tag"], remote=item.get('isRemote') is True,
-                       posted_at=parse_posted(item.get("publishedAt")))
+                       ctx["captured_at"], salary=ashby_pay(item.get("compensation")), tag=ctx["tag"],
+                       remote=item.get('isRemote') is True, posted_at=parse_posted(item.get("publishedAt")))
     return (*_collect(listed, build), len(listed))
 
 
@@ -945,6 +1347,9 @@ def to_row(posting: Posting, note: str = "") -> dict:
         details += '\nWork mode: Remote (source metadata)'
     preference, floor = salary_preference(posting)
     details += f'\nRole family: {role_family(posting.title) or "Unclassified"}'
+    mba_quote = mba_class_evidence(posting.title, posting.text)[1]
+    if mba_quote:
+        details += f'\nMBA 2027 evidence: {mba_quote}'
     details += f'\nSalary preference: {preference} (annual USD floor {floor})'
     if preference == 'unresolved':
         details += f'\nCheck first: verify annual USD base salary reaches {floor:,}'
