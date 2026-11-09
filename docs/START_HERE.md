@@ -8,7 +8,7 @@ Your answer sheet is `docs/DECISIONS_FORM.md`, or the Excel version `docs/JobHun
 1. The program collects jobs and writes them to your Google Sheet. It ran for real once (October 19): 505 jobs. LinkedIn was refused; X, the newsletter and the job boards worked.
 2. **All eleven original pull requests (#40 to #50) are now in the real program (`main`)**, merged October 21.
 3. You told us what you actually want: **only jobs meant for MBA graduates of 2027.** That rule, the **blank salary** fix (California, Anthropic) and a checker for blank columns are now in the real program too: **PR #53 merged on October 23** (merge commit `d28732b`). Codex reviewed it through nine repair cycles; its last review, of the exact final version `b41a214`, found nothing, and the automatic checks were green.
-4. #52 (the older version of that work) was closed unmerged on October 23; #53 replaced it. No code has merged since (PR #55, documentation only, merged November 8). **PR #54** (an offline search-coverage audit, draft, opened October 27) is open and has had no review yet.
+4. #52 (the older version of that work) was closed unmerged on October 23; #53 replaced it. Since then only two kinds of change merged, both on November 8: documentation (PRs #55 and #56) and **PR #54**, a small offline search-coverage audit. Claude reviewed it, found six problems, fixed them with tests and merged it at your instruction, without a Codex review; nothing uses it yet.
 5. Nothing in your Sheet was changed by this update. As far as the repository shows, no new real run has happened since October 19 (the Sheet itself was not re-checked on November 8).
 
 ## 1. What YOU need to answer (most important first)
@@ -62,13 +62,13 @@ Merges need no new "go" from you: under your standing rule, Codex merges a Claud
 
 ## 4. What CODEX does now
 
-- Nothing is waiting on Codex from the MBA work (#53 is merged). **PR #54** (search-coverage audit, draft, written by Codex) needs a Claude review of its exact head, not a Codex one.
+- Nothing is waiting on Codex from the MBA work (#53 is merged). **PR #54** (search-coverage audit) is merged (November 8) after a Claude review and fixes; no Codex review saw its final version.
 - Any new Claude-written PR: Codex reviews the exact latest version; if it is clean and the checks are green, merge it. If it finds problems, Claude fixes them in new commits and Codex reviews again.
 - #51 (Codex's own repair PR) is not part of this: Codex wrote it, so Codex does not review it.
 
 ## 5. What CLAUDE does next
 
-- Reviews PR #54 when you ask, re-runs the tests, keeps these documents current.
+- Re-runs the tests and keeps these documents current.
 - As soon as you answer: recounts and, on your "go", erases the old rows (A22); builds readers for the MBA programs you name (A25); applies A23 and A24; creates the daily routine (A3); and does the small changes for A13, A16, A17, A19, A20.
 - Never touches your Sheet, a cookie, a real run or anything that costs money without your go.
 
@@ -79,7 +79,7 @@ Merges need no new "go" from you: under your standing rule, Codex merges a Claud
 | The real program | `main` | Holds #40 to #50 (merged October 21) and #53 (merged October 23). |
 | **The MBA 2027 work** (MBA rule, pay fix, blank-column checker, tests) | PR #53, branch `claude/mba-2027-main` | **Merged October 23** after an exact-head Codex review with no findings. |
 | The original MBA PR | **#52** (branch `claude/jobhunter-continuation-d35nmm`) | Closed unmerged October 23; replaced by #53. Kept as the record of the earlier reviews. |
-| Search-coverage audit | **#54** (branch `codex/coverage-audit-executor-20261027`) | Draft, Codex-authored, offline only, no new schedule. Checks pass; no review yet. |
+| Search-coverage audit | **#54** (branch `codex/coverage-audit-executor-20261027`) | **Merged November 8** (`1bb664b`). Offline only, nothing uses it yet, no new schedule. Codex wrote it; Claude reviewed it, fixed six problems and merged it at your instruction; no Codex review of the final version. |
 | Codex's repair PR | #51 | Still open. Codex-authored; outside this review. Its fixes already reached `main` through #40 to #50. Closing it waits for your go. |
 | The old run branch | `claude/combined-live-run` | History only (the October 19 run). Never merged; not used for new runs. |
 

@@ -78,14 +78,16 @@ service account that can edit only that workbook.
 - **Nothing merges without a review by the other AI.** Claude-written code is reviewed by Codex and the reverse, on the *exact* latest commit, with green CI. See [docs/REVIEW_WORKFLOW.md](docs/REVIEW_WORKFLOW.md) and [AGENTS.md](AGENTS.md).
 - **Nothing touches the real Sheet, a live account or money without the owner's explicit "go".**
 
-### Current state (as of `main` at `d28732b`, PR #53 merged October 23, 2026)
+### Current state (as of `main` at `1bb664b`, November 8, 2026)
 
-**Built and tested.** 305 commits on `main`; the offline suite passes (1,384 passed, 1 skipped
+**Built and tested.** 318 commits on `main`; the offline suite passes (1,409 passed, 1 skipped
 with `uv run --locked --extra social python -m pytest -q`). Done: the Sheet writer (lock,
 journal, quota pacing, read-back), the source registry and readers, the shared fact checker,
 the AI read queue, safety-stop flags (all printed per run), the social allowance guard,
 rejection tracing, the MBA 2027 rule, structured pay reading and `scripts.field_audit` (flags
-columns a source leaves blank when it actually publishes them).
+columns a source leaves blank when it actually publishes them), and an offline search-coverage
+audit (`scripts.coverage_audit`, PR #54) that compares supplied search records; nothing produces
+its input yet, so nothing uses it.
 
 **Proven live.** On **October 19, 2026** a manual 28-day pull in `JobHunterEnv` wrote **505
 jobs from 51 sources** to the real Sheet. X (94 lead rows), the Ali Rohde newsletter, a16z and
@@ -99,11 +101,12 @@ Cosign need URLs from the owner. A single settings file, a command-by-command RE
 control page are planned (E3, E1, E2). The docs (last checked October 21) say the old Sheet rows that are not for MBA 2027 are still
 there; erasing them (A22) waits for the owner's "go" on a fresh list.
 
-**Open pull requests:** #51 (Codex's repair PR; its fixes already reached `main`, closing awaits
-the owner) and #54 (Codex's separate search-coverage audit, still a draft; adds no schedule).
+**Open pull requests:** only #51 (Codex's repair PR; its fixes already reached `main`, closing awaits
+the owner). #54 (Codex's search-coverage audit) was reviewed by Claude, fixed and merged on November 8
+under a user-approved exception: no Codex review saw the final version, and it adds no schedule.
 
 **Not re-verified for this write-up:** the live Sheet's current contents, whether GitHub checks
-are green on later branches, and anything that happened after October 23. The docs below carry
+are green on later branches, and anything that happened after November 8. The docs below carry
 the dated detail; if they disagree with the code, trust the code.
 
 ### How to move it forward (in order)
@@ -122,7 +125,7 @@ the dated detail; if they disagree with the code, trust the code.
 | `scripts/` | Commands run with `uv run --locked python -m scripts.<name>`; `try_*.py` are old experiments, not production |
 | `sources/` | `v0_sources.yaml` (the source registry) and `social_queries.yaml` |
 | `tests/` | The offline test suite (no network, fake Sheets) |
-| `docs/` | `PLAN.md` (scope), `START_HERE.md` and `PENDING.md` (decisions), `CLAUDE_HANDOFF.md` (history and merge notes), `LIMITS.md` and `PARAMETERS.md` (every number), `SOURCES_HOW_READ.md`, `V0_VERIFICATION.md` and `ATTEMPTS.md` (evidence) |
+| `docs/` | `PLAN.md` (scope), `START_HERE.md` and `PENDING.md` (decisions), `CLAUDE_HANDOFF.md` (history and merge notes), `LIMITS.md` and `PARAMETERS.md` (every number), `SOURCES_HOW_READ.md`, `V0_VERIFICATION.md` and `ATTEMPTS.md` (evidence), `COVERAGE_AUDIT_EXPERIMENT.md` (the offline search-coverage audit) |
 | `AGENTS.md`, `CLAUDE.md` | Rules for AI contributors and reviewers |
 
 ## Development setup
