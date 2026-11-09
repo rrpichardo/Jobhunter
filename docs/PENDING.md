@@ -3,7 +3,7 @@
 Created October 18, 2026; rewritten and re-checked against GitHub and the Sheet on October 19, 2026, about 23:30 UTC;
 PR states in 0.3 updated October 21, 2026 from `main`'s merge history (merged: #40 to #47, #49, #50); #52 reopened the same day;
 `main` (`8c81341`) merged into #48 the same day (integration), then a docs fix for Codex's Haiku-note finding; #48 merged (`fc77f2f`).
-Later on October 21: #52's own work re-cut onto `main` as `claude/mba-2027-main` (cycle 4; PR #53). October 22: Codex found five more problems in #53 (review 5606618473); the cloud session fixed them (cycle 5) at the user's request and waits for a Codex review of the new head.
+Later on October 21: #52's own work re-cut onto `main` as `claude/mba-2027-main` (cycle 4; PR #53). October 22: Codex found five more problems in #53 (review 5606618473); the cloud session fixed them (cycle 5) at the user's request and waits for a Codex review of the new head. **Update November 8, 2026 (checked against GitHub): PR #53 was merged into `main` on October 23, 2026 (`d28732b`) after a Codex exact-head review of `b41a214` with no actionable findings and green Linux and Windows checks; PR #52 was closed the same day.**
 When the user asks "what is pending", "what do you need from me" or "where are we", Claude reads section 0 first,
 checks it against GitHub, answers in plain language, and fixes this file if it is out of date. Nothing here is a claim
 that work exists unless its status says so.
@@ -21,7 +21,7 @@ column. Fill it in (or answer in chat); Claude copies each answer back here. The
 | --- | --- | --- | --- |
 | A18 | **LinkedIn: what now?** The first live run was refused at login on its first search (`social_login_failed`, a redirect loop). A fresh cookie fixes only one possible cause, so nothing guarantees it works next time. Options: (a) read your LinkedIn job-alert emails through Gmail (needs B1); (b) rely on JSearch and Jooble, which already bring LinkedIn listings into the Sheet; (c) one diagnostic try: Claude first makes the collector say what page it was sent to, then you refresh the cookie; (d) run the LinkedIn collector on your own computer (your home internet and browser) instead of the cloud; (e) drop the LinkedIn collectors (close #43 and #48); (f) your own proposal. | (a) plus (b) now; keep #43 and #48 open but on hold; remove `LINKEDIN_LI_AT` from JobHunterEnv until you decide, so the daily routine does not knock with a bad cookie. | open |
 | A3 | **Create the daily routine?** First look at the new rows the first run added to the Sheet (505 jobs, 94 of them X leads) and say whether they are useful. Then Claude creates `JobHunter Daily` (06:07 New York, 3-day window, Haiku reads, LinkedIn off unless A18 says otherwise). | Yes, after you look at the Sheet; better after A22 and A25 too, so it runs with the MBA rule and the right sources. | open (needs your look at the Sheet) |
-| A12 | **Codex "go".** Done for #40 to #50 (all merged October 21). The re-cut of #52 (`claude/mba-2027-main`) still needs a Codex review of its exact head before it merges (`docs/CODEX_REVIEW_QUEUE.md`). | Go. | partly done |
+| A12 | **Codex "go".** Done for #40 to #50 (all merged October 21). The re-cut of #52 (PR #53) got a clean Codex review of its exact head `b41a214` and merged October 23 (`d28732b`). Open PRs #51 (Codex-authored) and #54 (Codex coverage audit) are not part of this. | Go. | done for #53 |
 | A16 | **X posts that name no company** (E8). 39 facts from 34 X posts were rejected only because the company was empty (a person posting "we are hiring a Chief of Staff, DM me"). | Fill the company with the poster's `@handle` in code (not by the AI) and show the row as a lead; needs a PR and Codex. | open |
 | A17 | **Pay written like `$190k-$220k`** (E7). The pay filter reads `USD 50,000 per year` but not plain `$Nk-$Mk`, so those jobs are kept as "pay unresolved" and the floors ($140k US, $70k Latin America) rarely act on X and Hacker News posts. | Count `$Nk-$Mk` as annual USD when no hourly or monthly word or other currency is next to it; anything else stays "unresolved". | open |
 | A13 | **Plural titles** ("Product Managers"). Today the plural is dropped and the singular collected; it also keeps such posts from being read at all on Hacker News. | Yes, accept plurals. | open |
@@ -65,7 +65,7 @@ ready-to-paste request for each are in `docs/CODEX_REVIEW_QUEUE.md`.
 | PR | What | Note |
 | --- | --- | --- |
 | #52 | Claude-written: MBA 2027 rule, pay fix, blank-cell checker, START_HERE | **Frozen review vehicle**, never merged as is (it sits on the old unreviewed stack). Three Codex review cycles, then you lifted the cap on October 21 ("dont worrya bout the three cylce limit we need to have 52 well"); history and counters in `docs/ATTEMPTS.md`, not reset. |
-| successor of #52 | Branch `claude/mba-2027-main`, started from `main` `fc77f2f`: only #52's own changes, plus **cycle 4** fixes for the two findings of Codex review 5601000995 (an unrelated "not" no longer excludes a posting; "May 2026 or May 2027" and graduation ranges count). | PR #53. **Cycle 9** (Codex review 5623655972: a leading graduation class outranks a trailing program date) follows cycle 8 (Codex review 5622912780: an MBA-bearing class qualifier; a program date is not the applicants' class) follows cycle 7 (Codex review 5622469373: a denial's class qualifier in either word order and not a program year; a negative contrast cannot lift a global denial) follows cycle 6 and **cycle 5**, whose fixes for Codex review 5606618473 are pushed (denial wording bound to its own clause, benefit versus application eligibility, bare "MBAs", unknown currency no longer assumed USD, minimum-only pay no longer an exact ceiling). **Needs an exact-head Codex review and green CI before it merges.** |
+| successor of #52 | Branch `claude/mba-2027-main`, started from `main` `fc77f2f`: only #52's own changes, plus **cycle 4** fixes for the two findings of Codex review 5601000995 (an unrelated "not" no longer excludes a posting; "May 2026 or May 2027" and graduation ranges count). | PR #53. **Cycle 9** (Codex review 5623655972: a leading graduation class outranks a trailing program date) follows cycle 8 (Codex review 5622912780: an MBA-bearing class qualifier; a program date is not the applicants' class) follows cycle 7 (Codex review 5622469373: a denial's class qualifier in either word order and not a program year; a negative contrast cannot lift a global denial) follows cycle 6 and **cycle 5**, whose fixes for Codex review 5606618473 are pushed (denial wording bound to its own clause, benefit versus application eligibility, bare "MBAs", unknown currency no longer assumed USD, minimum-only pay no longer an exact ceiling). **MERGED October 23, 2026 (`d28732b`):** Codex exact-head review of `b41a214` had no actionable findings and the Linux and Windows checks passed. |
 
 #51 is Codex-authored and excluded from this list (it gets a Claude review, not Codex). Its fixes reached `main` through #40 to
 #50; closing it waits for your go.
@@ -137,9 +137,9 @@ every command exited 0. The Sheet was backed up first (A15).
 | E9 | X replies: keep them and fix the wrong comment, or filter them | your call (A19) |
 | E10 | Record which search found each social post, so search wording can be tuned with numbers | proposed (A20) |
 | E11 | A Run Log column for the AI queue counts | proposed (part of E5) |
-| E12 | Only roles for MBA graduates of 2027 (`mba_class_evidence`), with drop reasons printed per source (`dropped=` in the probe table; this also covers E6) | built on `claude/mba-2027-main` (re-cut of #52); waits for Codex |
-| E13 | Pay read from Greenhouse, Ashby and posting text; found by your California/Anthropic observation (October 21: 134 of 170 blank pay cells on job-board rows were pay the employer had published) | built on `claude/mba-2027-main`; new rows only (your answer); waits for Codex |
-| E14 | `scripts.field_audit`: flags a source that leaves a column blank far more than it publishes it; `--cross-check` asks the live boards, so it is a live request and runs only with a run's approval | built on `claude/mba-2027-main`; waits for Codex |
+| E12 | Only roles for MBA graduates of 2027 (`mba_class_evidence`), with drop reasons printed per source (`dropped=` in the probe table; this also covers E6) | **done: merged in PR #53 (October 23)** |
+| E13 | Pay read from Greenhouse, Ashby and posting text; found by your California/Anthropic observation (October 21: 134 of 170 blank pay cells on job-board rows were pay the employer had published) | built on `claude/mba-2027-main`; new rows only (your answer); **done: merged in PR #53 (October 23)** |
+| E14 | `scripts.field_audit`: flags a source that leaves a column blank far more than it publishes it; `--cross-check` asks the live boards, so it is a live request and runs only with a run's approval | **done: merged in PR #53 (October 23)** |
 
 ## 4. Work that waits on a decision or task
 
@@ -151,7 +151,6 @@ every command exited 0. The Sheet was backed up first (A15).
 | Work at a Startup logged-in lists (the public page shows only 24 of 241 jobs) | B10 |
 | LinkedIn collectors (#43, #48) | A18 |
 | The daily routine | A3 |
-| Merging the re-cut of #52 (`claude/mba-2027-main`) | A12 (Codex review of its exact head, green CI) |
 | Erasing old rows | A22, after the MBA rule is merged and a fresh read-only dry run |
 | Readers for company MBA programs | A25, B11 |
 | The small rule fixes | A13, A16, A17, A19 |
