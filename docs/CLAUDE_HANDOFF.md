@@ -25,6 +25,11 @@ reopened by the user on October 21 with the cap lifted (history and counters kep
 not fixed yet; the local Claude session owns it, the cloud session was told to hold); #51 is Codex-authored. Merged code does not lift the LinkedIn hold: A18 still gates every live
 LinkedIn step, and every runbook installs the pinned uv 0.13.1 and puts it first on PATH. The table below is the October 19 snapshot.
 
+**Update November 8, 2026 (supersedes the paragraph below):** the re-cut `claude/mba-2027-main` is PR #53, merged October 23
+(`d28732b`) after a clean exact-head Codex review of `b41a214`; #52 is closed unmerged. Open: #54 (Codex-written offline
+search-coverage audit, draft, needs a Claude review) and #51. No code has reached `main` since October 23 (only documentation: PR #55 on November 8), and the repository
+shows no real run after October 19. Start with `docs/PENDING.md`.
+
 **Update October 21, later:** #48 is merged too (`fc77f2f`); every original PR #40 to #50 is in `main`. #52 stays open as a frozen
 review vehicle (never merged or rebased; its remote branch is left untouched). Its own changes were re-cut onto `main` in branch
 `claude/mba-2027-main` (started from `fc77f2f`) by selective patches, not by merging the bundle: the MBA 2027 rule
@@ -33,8 +38,6 @@ note), pay from Greenhouse/Ashby fields and written ranges, `scripts/field_audit
 fixtures, and these docs. Cycle 4 fixed the two findings of Codex review 5601000995 with failing-first tests (`docs/ATTEMPTS.md`).
 The successor PR is opened and linked from #52 by the coordinating session; it needs an exact-head Codex review and green CI before
 it merges. #51 is Codex-authored and excluded. Nothing here approves a live run, the Sheet clean-up (A22), the routine (A3) or spending.
-
-**Update November 8, 2026 (checked against GitHub):** PR #53 was merged into `main` on October 23, 2026 (`d28732b`) after a Codex exact-head review of `b41a214` with no actionable findings and green Linux and Windows checks; PR #52 was closed the same day. Open PRs: #51 (Codex-authored) and #54 (Codex search-coverage audit, no new schedule). Not re-checked in this update: the live Sheet, and whether any run happened after October 19.
 
 **Open PRs (all Claude-written; each needs a Codex review of its exact head and green CI before merging; nothing merges without
 the user's "go" for Codex, A12).** Heads at the time of writing (re-read them from GitHub before acting):
