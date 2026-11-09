@@ -7,8 +7,8 @@ Your answer sheet is `docs/DECISIONS_FORM.md`, or the Excel version `docs/JobHun
 
 1. The program collects jobs and writes them to your Google Sheet. It ran for real once (October 19): 505 jobs. LinkedIn was refused; X, the newsletter and the job boards worked.
 2. **All eleven original pull requests (#40 to #50) are now in the real program (`main`)**, merged October 21.
-3. You told us what you actually want: **only jobs meant for MBA graduates of 2027.** That rule, the **blank salary** fix (California, Anthropic) and a checker for blank columns are now in the real program too: **PR #53 merged on October 23** (merge commit `d28732b`). Codex reviewed it through nine repair rounds; its last review, of the exact final version `b41a214`, found nothing, and the automatic checks were green.
-4. #52 (the older version of that work) was closed unmerged on October 23; #53 replaced it. Nothing else has merged since. **PR #54** (an offline search-coverage audit, draft, opened October 27) is open and has had no review yet.
+3. You told us what you actually want: **only jobs meant for MBA graduates of 2027.** That rule, the **blank salary** fix (California, Anthropic) and a checker for blank columns are now in the real program too: **PR #53 merged on October 23** (merge commit `d28732b`). Codex reviewed it through nine repair cycles; its last review, of the exact final version `b41a214`, found nothing, and the automatic checks were green.
+4. #52 (the older version of that work) was closed unmerged on October 23; #53 replaced it. No code has merged since (PR #55, documentation only, merged November 8). **PR #54** (an offline search-coverage audit, draft, opened October 27) is open and has had no review yet.
 5. Nothing in your Sheet was changed by this update. As far as the repository shows, no new real run has happened since October 19 (the Sheet itself was not re-checked on November 8).
 
 ## 1. What YOU need to answer (most important first)
