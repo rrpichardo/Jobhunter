@@ -4,7 +4,7 @@ Created October 18, 2026; rewritten and re-checked against GitHub and the Sheet 
 PR states in 0.3 updated October 21, 2026 from `main`'s merge history (merged: #40 to #47, #49, #50); #52 reopened the same day;
 `main` (`8c81341`) merged into #48 the same day (integration), then a docs fix for Codex's Haiku-note finding; #48 merged (`fc77f2f`).
 Later on October 21: #52's own work re-cut onto `main` as `claude/mba-2027-main` (cycle 4; PR #53). October 22: Codex found five more problems in #53 (review 5606618473); the cloud session fixed them (cycle 5) at the user's request.
-**Checked against GitHub on November 8, 2026:** #53 merged October 23 (`d28732b`) after Codex's exact-head review of `b41a214` found nothing (cycles 5 to 9 are in `docs/ATTEMPTS.md` and on the PR); #52 closed unmerged the same day; PR #54 (Codex's offline search-coverage audit, draft, opened October 27) is open and unreviewed. No code has reached `main` since October 23 (only documentation: PR #55 on November 8). The Sheet was not re-read on November 8; the sections below that describe it are as of October 19.
+**Checked against GitHub on November 8, 2026:** #53 merged October 23 (`d28732b`) after Codex's exact-head review of `b41a214` found nothing (cycles 5 to 9 are in `docs/ATTEMPTS.md` and on the PR); #52 closed unmerged the same day; PR #54 (Codex's offline search-coverage audit) was reviewed by Claude, fixed and merged on November 8 (`1bb664b`) under the user's exception (no Codex review of the final head). The only changes to `main` since October 23 are documentation (#55, #56) and #54. The Sheet was not re-read on November 8; the sections below that describe it are as of October 19.
 When the user asks "what is pending", "what do you need from me" or "where are we", Claude reads section 0 first,
 checks it against GitHub, answers in plain language, and fixes this file if it is out of date. Nothing here is a claim
 that work exists unless its status says so.
@@ -62,14 +62,14 @@ Decisions already made are listed in section 2 so they are not asked again.
 #47 Ali Rohde newsletter (`8c81341`), #48 LinkedIn job listings (`fc77f2f`; code only, held by A18).
 Merging code does not lift a hold: no live LinkedIn request until A18 is answered.
 
-Open on November 8: #52 is closed (above), #53 is merged, and **#54** is Codex-written, so it needs a Claude review of its exact head, not a Codex one. The rows below keep the history. Each Claude-written PR needs a Codex review of its exact head plus green CI before it may merge. Heads, history and a
+Open on November 8: #52 is closed (above), #53 is merged, and **#54** was merged on November 8 after a Claude review and fixes. The rows below keep the history. Each Claude-written PR needs a Codex review of its exact head plus green CI before it may merge. Heads, history and a
 ready-to-paste request for each are in `docs/CODEX_REVIEW_QUEUE.md`.
 
 | PR | What | Note |
 | --- | --- | --- |
 | #52 | Claude-written: MBA 2027 rule, pay fix, blank-cell checker, START_HERE | **Closed unmerged October 23** (replaced by #53). Was a frozen review vehicle, never merged as is (it sat on the old unreviewed stack). Three Codex review cycles, then you lifted the cap on October 21 ("dont worrya bout the three cylce limit we need to have 52 well"); history and counters in `docs/ATTEMPTS.md`, not reset. |
 | successor of #52 | Branch `claude/mba-2027-main`, started from `main` `fc77f2f`: only #52's own changes, plus **cycle 4** fixes for the two findings of Codex review 5601000995 (an unrelated "not" no longer excludes a posting; "May 2026 or May 2027" and graduation ranges count). | PR #53. **Cycle 9** (Codex review 5623655972: a leading graduation class outranks a trailing program date) follows cycle 8 (Codex review 5622912780: an MBA-bearing class qualifier; a program date is not the applicants' class) follows cycle 7 (Codex review 5622469373: a denial's class qualifier in either word order and not a program year; a negative contrast cannot lift a global denial) follows cycle 6 and **cycle 5**, whose fixes for Codex review 5606618473 are pushed (denial wording bound to its own clause, benefit versus application eligibility, bare "MBAs", unknown currency no longer assumed USD, minimum-only pay no longer an exact ceiling). **MERGED October 23, 2026 (`d28732b`):** Codex exact-head review of `b41a214` had no actionable findings and the Linux and Windows checks passed. |
-| #54 | Codex-written: isolated offline Python search-coverage audit, no new schedule (branch `codex/coverage-audit-executor-20261027`, draft, opened October 27) | Needs a Claude review of its exact head. Linux/Windows checks and the `claude-review` job show success, but the job badge is not the review (no review or comment is posted on the PR); do not merge on the badge. |
+| #54 | Codex-written: isolated offline Python search-coverage audit, no new schedule (branch `codex/coverage-audit-executor-20261027`, opened October 27) | **Merged November 8** (`1bb664b`). Claude reviewed `87578ef` (six problems), fixed them with failing-first tests (`14b3881`) and merged at the user's instruction; no Codex review of the final head. Offline only, unused until a real source of search records exists. |
 
 #51 is Codex-authored and excluded from this list (it gets a Claude review, not Codex). Its fixes reached `main` through #40 to
 #50; closing it waits for your go.
@@ -155,7 +155,6 @@ every command exited 0. The Sheet was backed up first (A15).
 | Work at a Startup logged-in lists (the public page shows only 24 of 241 jobs) | B10 |
 | LinkedIn collectors (#43, #48) | A18 |
 | The daily routine | A3 |
-| Merging PR #54 (search-coverage audit) | A Claude review of its exact head, green CI |
 | Erasing old rows | A22: the MBA rule is merged (October 23); needs a fresh read-only dry run and your "go" |
 | Readers for company MBA programs | A25, B11 |
 | The small rule fixes | A13, A16, A17, A19 |

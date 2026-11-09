@@ -38,8 +38,8 @@ reviews it). The table below is the October 19 snapshot, kept as history.
 
 **Update November 8, 2026 (supersedes the October 21 paragraph below):** the successor of #52 is PR #53. Codex reviewed its exact
 head `b41a214` on October 23 with no actionable findings, the checks were green, and it merged as `d28732b`. #52 was closed
-unmerged. Nothing Claude-written is waiting on Codex. Open: #54 (Codex-written, draft, needs a Claude review) and #51
-(Codex-written, repairs already in `main`). The paragraph below and the October 19 table are history.
+unmerged. Nothing Claude-written is waiting on Codex. #54 (Codex-written) was reviewed by Claude, fixed and merged on November 8; #51
+(Codex-written, repairs already in `main`) is still open. The paragraph below and the October 19 table are history.
 
 **Update October 21, later (from `main`'s merge history):** #48 is merged too (`fc77f2f`), so every original PR #40 to #50 is in
 `main`. #52 stays open as a frozen review vehicle (its branch sits on top of the unreviewed combined stack and is never merged

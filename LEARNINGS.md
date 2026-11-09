@@ -3,6 +3,9 @@
 Short, specific, evidence-backed. Newest first. The shared system reads this file at the start of each session
 here and at the monthly review. Never put links, secrets or personal data in it.
 
+## 2026-11-08 · claude/readme-latest
+- **When code groups or merges records, test every ordering of the same input and compare the answers, and test the same item under different link spellings.** _Evidence: a tool whose nine tests all passed counted one job as two (or one) depending on input order, and counted one Greenhouse job twice when one link had a tracking tag; both were found only by running real-shaped inputs, then locked in with shuffle tests._
+
 ## 2026-11-08 · claude/docs-status-followup
 - **Before editing files in a shared checkout, run a status check for uncommitted changes and the current branch, and do the work in a separate worktree if another session has edits there.** _Evidence: the checkout switched to another branch with uncommitted edits to the same four status documents while a pull request touching them was open, so the two sets of edits conflicted in two files and duplicated a note in two others._
 
