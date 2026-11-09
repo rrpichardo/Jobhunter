@@ -3,7 +3,8 @@
 Created October 18, 2026; rewritten and re-checked against GitHub and the Sheet on October 19, 2026, about 23:30 UTC;
 PR states in 0.3 updated October 21, 2026 from `main`'s merge history (merged: #40 to #47, #49, #50); #52 reopened the same day;
 `main` (`8c81341`) merged into #48 the same day (integration), then a docs fix for Codex's Haiku-note finding; #48 merged (`fc77f2f`).
-Later on October 21: #52's own work re-cut onto `main` as `claude/mba-2027-main` (cycle 4; PR #53). October 22: Codex found five more problems in #53 (review 5606618473); the cloud session fixed them (cycle 5) at the user's request and waits for a Codex review of the new head. **Update November 8, 2026 (checked against GitHub): PR #53 was merged into `main` on October 23, 2026 (`d28732b`) after a Codex exact-head review of `b41a214` with no actionable findings and green Linux and Windows checks; PR #52 was closed the same day.**
+Later on October 21: #52's own work re-cut onto `main` as `claude/mba-2027-main` (cycle 4; PR #53). October 22: Codex found five more problems in #53 (review 5606618473); the cloud session fixed them (cycle 5) at the user's request.
+**Checked against GitHub on November 8, 2026:** #53 merged October 23 (`d28732b`) after Codex's exact-head review of `b41a214` found nothing (cycles 5 to 9 are in `docs/ATTEMPTS.md` and on the PR); #52 closed unmerged the same day; PR #54 (Codex's offline search-coverage audit, draft, opened October 27) is open and unreviewed. No code has reached `main` since October 23 (only documentation: PR #55 on November 8). The Sheet was not re-read on November 8; the sections below that describe it are as of October 19.
 When the user asks "what is pending", "what do you need from me" or "where are we", Claude reads section 0 first,
 checks it against GitHub, answers in plain language, and fixes this file if it is out of date. Nothing here is a claim
 that work exists unless its status says so.
@@ -21,7 +22,7 @@ column. Fill it in (or answer in chat); Claude copies each answer back here. The
 | --- | --- | --- | --- |
 | A18 | **LinkedIn: what now?** The first live run was refused at login on its first search (`social_login_failed`, a redirect loop). A fresh cookie fixes only one possible cause, so nothing guarantees it works next time. Options: (a) read your LinkedIn job-alert emails through Gmail (needs B1); (b) rely on JSearch and Jooble, which already bring LinkedIn listings into the Sheet; (c) one diagnostic try: Claude first makes the collector say what page it was sent to, then you refresh the cookie; (d) run the LinkedIn collector on your own computer (your home internet and browser) instead of the cloud; (e) drop the LinkedIn collectors (close #43 and #48); (f) your own proposal. | (a) plus (b) now; keep #43 and #48 open but on hold; remove `LINKEDIN_LI_AT` from JobHunterEnv until you decide, so the daily routine does not knock with a bad cookie. | open |
 | A3 | **Create the daily routine?** First look at the new rows the first run added to the Sheet (505 jobs, 94 of them X leads) and say whether they are useful. Then Claude creates `JobHunter Daily` (06:07 New York, 3-day window, Haiku reads, LinkedIn off unless A18 says otherwise). | Yes, after you look at the Sheet; better after A22 and A25 too, so it runs with the MBA rule and the right sources. | open (needs your look at the Sheet) |
-| A12 | **Codex "go".** Done for #40 to #50 (all merged October 21). The re-cut of #52 (PR #53) got a clean Codex review of its exact head `b41a214` and merged October 23 (`d28732b`). Open PRs #51 (Codex-authored) and #54 (Codex coverage audit) are not part of this. | Go. | done for #53 |
+| A12 | **Codex "go".** Done for #40 to #50 (all merged October 21). The re-cut of #52 (#53) got a clean Codex review of its exact head `b41a214` and merged October 23. No Claude-written PR is waiting on Codex now. | Go. | done (November 8) |
 | A16 | **X posts that name no company** (E8). 39 facts from 34 X posts were rejected only because the company was empty (a person posting "we are hiring a Chief of Staff, DM me"). | Fill the company with the poster's `@handle` in code (not by the AI) and show the row as a lead; needs a PR and Codex. | open |
 | A17 | **Pay written like `$190k-$220k`** (E7). The pay filter reads `USD 50,000 per year` but not plain `$Nk-$Mk`, so those jobs are kept as "pay unresolved" and the floors ($140k US, $70k Latin America) rarely act on X and Hacker News posts. | Count `$Nk-$Mk` as annual USD when no hourly or monthly word or other currency is next to it; anything else stays "unresolved". | open |
 | A13 | **Plural titles** ("Product Managers"). Today the plural is dropped and the singular collected; it also keeps such posts from being read at all on Hacker News. | Yes, accept plurals. | open |
@@ -29,7 +30,7 @@ column. Fill it in (or answer in chat); Claude copies each answer back here. The
 | A7 | **X search wording after the first run.** The 10 searches gave 178 posts; some results are off-target listings from aggregator accounts (for example Ugandan, Kenyan and Indian job pages). | Keep the wording for a week of daily runs, then revise with numbers; first record which search found each post (E10). | open |
 | A20 | **More tracing** (E5, E6, E10): keep the rejection reasons in the Sheet (E5), print why job boards drop jobs (E6), record which search found each social post (E10). | Yes to E10 and E5; E6 later. | open |
 | A21 | **Order of the bigger deliverables** (E1 README, E2 control page, E3 one editable settings file). | E3 first, then E1, then E2. | open |
-| A22 | **Erase the existing rows that are not for MBA graduates of 2027?** You said yes. A one-time dry run on October 21 (`docs/MBA_CLEANUP_DRYRUN.md`; historical, not re-run since the rule changed): 1 row clearly for MBA 2027, 3 are 2027 new-grad roles without an MBA, 164 read in full and are not, 542 cannot be judged because only 300 characters were stored. Nothing was changed. | After the MBA rule is merged: re-run the dry run read-only and show you the list; then, on your "go", back up the Jobs tab, copy the rows to an archive tab and remove them from Jobs (reversible). Or erase only the rows read in full. | open (needs your "go" on a fresh list) |
+| A22 | **Erase the existing rows that are not for MBA graduates of 2027?** You said yes. A one-time dry run on October 21 (`docs/MBA_CLEANUP_DRYRUN.md`; historical, not re-run since the rule changed): 1 row clearly for MBA 2027, 3 are 2027 new-grad roles without an MBA, 164 read in full and are not, 542 cannot be judged because only 300 characters were stored. Nothing was changed. | Now that the MBA rule is merged: re-run the dry run read-only and show you the list; then, on your "go", back up the Jobs tab, copy the rows to an archive tab and remove them from Jobs (reversible). Or erase only the rows read in full. | open (needs your "go" on a fresh list) |
 | A23 | **2027 new-grad roles that do not mention an MBA** (for example Databricks "Associate Product Manager, New Grad (2027 Start)", which asks for a bachelor's or master's in computer science). 38 of 6,812 board postings on October 21. | Keep them out (they are dropped with the reason `class_2027_without_mba`, so you can see the count in every run). | open |
 | A24 | **Roles outside the title list that are explicitly for MBA 2027**, for example Sierra "Strategist, Agent Development (MBA Grad 2027)". Today the title list decides first, so this one is dropped. | Accept any full-time business (non-engineering) role whose text says it is for MBA graduates of 2027. | open |
 | A25 | **Where do MBA 2027 roles come from?** The 24 company boards hold almost none (2 of 6,812 on October 21, one an internship). Candidates: company MBA programs such as General Motors (your offer), school and MBA job sites (B3), Gmail alerts (B1, B2), LinkedIn (A18). | Name the companies and programs you want; Claude finds each program's public page and builds a reader. | open |
@@ -54,18 +55,21 @@ Decisions already made are listed in section 2 so they are not asked again.
 
 ### 0.3 Waiting on Codex (your "go", A12)
 
+**Merged into `main` (October 23):** #53, the MBA 2027 rule, structured pay and blank-column audit (`d28732b`).
+
 **Merged into `main` (October 21):** #42 roles, #44 Work at a Startup, #49 Haiku test, #50 rejection reasons, #40 X collector,
 #41 run modes, #43 LinkedIn post collector (code only; LinkedIn stays on hold, A18), #45 a16z, #46 status and handoff documentation,
 #47 Ali Rohde newsletter (`8c81341`), #48 LinkedIn job listings (`fc77f2f`; code only, held by A18).
 Merging code does not lift a hold: no live LinkedIn request until A18 is answered.
 
-Still open. Each Claude-written PR needs a Codex review of its exact head plus green CI before it may merge. Heads, history and a
+Open on November 8: #52 is closed (above), #53 is merged, and **#54** is Codex-written, so it needs a Claude review of its exact head, not a Codex one. The rows below keep the history. Each Claude-written PR needs a Codex review of its exact head plus green CI before it may merge. Heads, history and a
 ready-to-paste request for each are in `docs/CODEX_REVIEW_QUEUE.md`.
 
 | PR | What | Note |
 | --- | --- | --- |
 | #52 | Claude-written: MBA 2027 rule, pay fix, blank-cell checker, START_HERE | **Closed unmerged October 23** (replaced by #53). Was a frozen review vehicle, never merged as is (it sat on the old unreviewed stack). Three Codex review cycles, then you lifted the cap on October 21 ("dont worrya bout the three cylce limit we need to have 52 well"); history and counters in `docs/ATTEMPTS.md`, not reset. |
 | successor of #52 | Branch `claude/mba-2027-main`, started from `main` `fc77f2f`: only #52's own changes, plus **cycle 4** fixes for the two findings of Codex review 5601000995 (an unrelated "not" no longer excludes a posting; "May 2026 or May 2027" and graduation ranges count). | PR #53. **Cycle 9** (Codex review 5623655972: a leading graduation class outranks a trailing program date) follows cycle 8 (Codex review 5622912780: an MBA-bearing class qualifier; a program date is not the applicants' class) follows cycle 7 (Codex review 5622469373: a denial's class qualifier in either word order and not a program year; a negative contrast cannot lift a global denial) follows cycle 6 and **cycle 5**, whose fixes for Codex review 5606618473 are pushed (denial wording bound to its own clause, benefit versus application eligibility, bare "MBAs", unknown currency no longer assumed USD, minimum-only pay no longer an exact ceiling). **MERGED October 23, 2026 (`d28732b`):** Codex exact-head review of `b41a214` had no actionable findings and the Linux and Windows checks passed. |
+| #54 | Codex-written: isolated offline Python search-coverage audit, no new schedule (branch `codex/coverage-audit-executor-20261027`, draft, opened October 27) | Needs a Claude review of its exact head. Linux/Windows checks and the `claude-review` job show success, but the job badge is not the review (no review or comment is posted on the PR); do not merge on the badge. |
 
 #51 is Codex-authored and excluded from this list (it gets a Claude review, not Codex). Its fixes reached `main` through #40 to
 #50; closing it waits for your go.
@@ -77,7 +81,7 @@ ready-to-paste request for each are in `docs/CODEX_REVIEW_QUEUE.md`.
   CI, in the order and with the conflict recipes in `docs/CLAUDE_HANDOFF.md` ("Merge plan").
 - A16, A17, A13, A19, A20, A21: one small PR each, with tests, then Codex.
 - B9, B3, B10, B11: builds or retests the source with the address or name you give.
-- A22: after the MBA rule merges, re-runs the dry run read-only and waits for your "go" before any Sheet change. A23, A24: one
+- A22: the MBA rule is merged, so re-runs the dry run read-only and waits for your "go" before any Sheet change. A23, A24: one
   small change each, with tests, then Codex.
 
 ## 1. First live run and first manual run: results (October 19, 2026, about 22:17 to 22:36 UTC)
@@ -137,9 +141,9 @@ every command exited 0. The Sheet was backed up first (A15).
 | E9 | X replies: keep them and fix the wrong comment, or filter them | your call (A19) |
 | E10 | Record which search found each social post, so search wording can be tuned with numbers | proposed (A20) |
 | E11 | A Run Log column for the AI queue counts | proposed (part of E5) |
-| E12 | Only roles for MBA graduates of 2027 (`mba_class_evidence`), with drop reasons printed per source (`dropped=` in the probe table; this also covers E6) | **done: merged in PR #53 (October 23)** |
-| E13 | Pay read from Greenhouse, Ashby and posting text; found by your California/Anthropic observation (October 21: 134 of 170 blank pay cells on job-board rows were pay the employer had published) | built on `claude/mba-2027-main`; new rows only (your answer); **done: merged in PR #53 (October 23)** |
-| E14 | `scripts.field_audit`: flags a source that leaves a column blank far more than it publishes it; `--cross-check` asks the live boards, so it is a live request and runs only with a run's approval | **done: merged in PR #53 (October 23)** |
+| E12 | Only roles for MBA graduates of 2027 (`mba_class_evidence`), with drop reasons printed per source (`dropped=` in the probe table; this also covers E6) | **done: PR #53 merged October 23** |
+| E13 | Pay read from Greenhouse, Ashby and posting text; found by your California/Anthropic observation (October 21: 134 of 170 blank pay cells on job-board rows were pay the employer had published) | **done: PR #53 merged October 23**; new rows only (your answer) |
+| E14 | `scripts.field_audit`: flags a source that leaves a column blank far more than it publishes it; `--cross-check` asks the live boards, so it is a live request and runs only with a run's approval | **done: PR #53 merged October 23** |
 
 ## 4. Work that waits on a decision or task
 
@@ -151,7 +155,8 @@ every command exited 0. The Sheet was backed up first (A15).
 | Work at a Startup logged-in lists (the public page shows only 24 of 241 jobs) | B10 |
 | LinkedIn collectors (#43, #48) | A18 |
 | The daily routine | A3 |
-| Erasing old rows | A22, after the MBA rule is merged and a fresh read-only dry run |
+| Merging PR #54 (search-coverage audit) | A Claude review of its exact head, green CI |
+| Erasing old rows | A22: the MBA rule is merged (October 23); needs a fresh read-only dry run and your "go" |
 | Readers for company MBA programs | A25, B11 |
 | The small rule fixes | A13, A16, A17, A19 |
 

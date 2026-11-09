@@ -36,13 +36,16 @@ after three review cycles, then the user reopened it on October 21 and lifted th
 reset): fix its two open findings first, then request a fresh Codex review of the new head. #51 is Codex-authored (Claude
 reviews it). The table below is the October 19 snapshot, kept as history.
 
+**Update November 8, 2026 (supersedes the October 21 paragraph below):** the successor of #52 is PR #53. Codex reviewed its exact
+head `b41a214` on October 23 with no actionable findings, the checks were green, and it merged as `d28732b`. #52 was closed
+unmerged. Nothing Claude-written is waiting on Codex. Open: #54 (Codex-written, draft, needs a Claude review) and #51
+(Codex-written, repairs already in `main`). The paragraph below and the October 19 table are history.
+
 **Update October 21, later (from `main`'s merge history):** #48 is merged too (`fc77f2f`), so every original PR #40 to #50 is in
 `main`. #52 stays open as a frozen review vehicle (its branch sits on top of the unreviewed combined stack and is never merged
 as is). Its own changes, plus cycle 4 fixes for the two open findings of Codex review 5601000995, were re-cut onto `main` as
 branch `claude/mba-2027-main` (successor PR linked from #52; read its live head from GitHub). That successor needs an exact-head
 Codex review and green CI before it merges. #51 is Codex-authored and excluded from this queue.
-
-**Status November 8, 2026: the successor of #52 is DONE. PR #53 was merged into `main` on October 23, 2026 (`d28732b`) after a Codex exact-head review of `b41a214` with no actionable findings and green Linux and Windows checks; PR #52 was closed the same day. The request below is history.**
 
 **Successor of #52 (`claude/mba-2027-main`)**
 > @codex review <SHA> (base `main`). Re-cut of #52 onto `main`, with cycle 4 fixes for review 5601000995. Check: (1) `mba_class_evidence` in `jobhunter/postings.py`: a negation counts only when it governs the MBA applicant predicate ("not open to", "not recruiting", "except", "... are not eligible to apply", "... should not apply"), so "Experience is not required, open to MBA students graduating in May 2027" qualifies, and a denial covering 2027 (or naming no year) cannot be outweighed by a title or standalone match; (2) every graduation alternative and range is read ("May 2026 or May 2027", "between December 2026 and June 2027", "2026-2028"), while an application, launch, start-elsewhere or fiscal year never sets the class; (3) the earlier #52 rules hold: applicant statements only (not customers, products or "MBA preferred"), drop codes `not_mba_2027`, `class_2027_without_mba`, `mba_other_class_year`, evidence quoted in "More details"; (4) pay from Greenhouse `pay_input_ranges`, Ashby compensation and written ranges stays narrow (yearly USD base only); (5) `scripts/field_audit.py` never prints an unknown Source cell; (6) nothing on `main` was lost: source registry, `SOCIAL` entries (`x-twscrape`, `linkedin-login`, `linkedin-jobs`, `alirohde-rss`), limits, run-window guard and every existing regression test; (7) docs match the code and claim no live run, Sheet read or approval. Review only: do not implement fixes.
