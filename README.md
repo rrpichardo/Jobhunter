@@ -96,11 +96,11 @@ cloud behaviour; only that run did.
 **Not done.** The `JobHunter Daily` routine (06:07 America/New_York) has **not been created**.
 Gmail alert reading needs the owner's forwarding filters (B1). Next Play, school/MBA sites and
 Cosign need URLs from the owner. A single settings file, a command-by-command README and a
-control page are planned (E3, E1, E2). The old Sheet rows that are not for MBA 2027 are still
+control page are planned (E3, E1, E2). The docs (last checked October 21) say the old Sheet rows that are not for MBA 2027 are still
 there; erasing them (A22) waits for the owner's "go" on a fresh list.
 
 **Open pull requests:** #51 (Codex's repair PR; its fixes already reached `main`, closing awaits
-the owner) and #54 (Codex's separate search-coverage audit; adds no schedule).
+the owner) and #54 (Codex's separate search-coverage audit, still a draft; adds no schedule).
 
 **Not re-verified for this write-up:** the live Sheet's current contents, whether GitHub checks
 are green on later branches, and anything that happened after October 23. The docs below carry

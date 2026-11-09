@@ -80,7 +80,7 @@ Merges need no new "go" from you: under your standing rule, Codex merges a Claud
 | **The MBA 2027 work** (MBA rule, pay fix, blank-column checker, tests, these documents) | PR #53 (branch `claude/mba-2027-main`) | **Merged into `main` October 23** (`d28732b`) after a clean Codex review of its final version. |
 | The original MBA PR | **#52** (branch `claude/jobhunter-continuation-d35nmm`) | Closed October 23; kept only as the record of three earlier Codex reviews. Never merged as is. |
 | Codex's repair PR | #51 | Still open. Codex-authored; outside this review. Its fixes already reached `main` through #40 to #50. Closing it waits for your go. |
-| Codex's search-coverage audit | #54 | Open. A separate Python audit with nine offline tests; adds no schedule and changes no source or rule. Not reviewed by this documentation pass. |
+| Codex's search-coverage audit | #54 | Open draft, written by Codex, so it needs a Claude review of its exact head. A separate Python audit with nine offline tests; adds no schedule and changes no source or rule. Not reviewed by this documentation pass. |
 | The old run branch | `claude/combined-live-run` | History only (the October 19 run). Never merged; not used for new runs. |
 
 ## Words used

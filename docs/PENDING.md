@@ -64,7 +64,7 @@ ready-to-paste request for each are in `docs/CODEX_REVIEW_QUEUE.md`.
 
 | PR | What | Note |
 | --- | --- | --- |
-| #52 | Claude-written: MBA 2027 rule, pay fix, blank-cell checker, START_HERE | **Frozen review vehicle**, never merged as is (it sits on the old unreviewed stack). Three Codex review cycles, then you lifted the cap on October 21 ("dont worrya bout the three cylce limit we need to have 52 well"); history and counters in `docs/ATTEMPTS.md`, not reset. |
+| #52 | Claude-written: MBA 2027 rule, pay fix, blank-cell checker, START_HERE | **Closed unmerged October 23** (replaced by #53). Was a frozen review vehicle, never merged as is (it sat on the old unreviewed stack). Three Codex review cycles, then you lifted the cap on October 21 ("dont worrya bout the three cylce limit we need to have 52 well"); history and counters in `docs/ATTEMPTS.md`, not reset. |
 | successor of #52 | Branch `claude/mba-2027-main`, started from `main` `fc77f2f`: only #52's own changes, plus **cycle 4** fixes for the two findings of Codex review 5601000995 (an unrelated "not" no longer excludes a posting; "May 2026 or May 2027" and graduation ranges count). | PR #53. **Cycle 9** (Codex review 5623655972: a leading graduation class outranks a trailing program date) follows cycle 8 (Codex review 5622912780: an MBA-bearing class qualifier; a program date is not the applicants' class) follows cycle 7 (Codex review 5622469373: a denial's class qualifier in either word order and not a program year; a negative contrast cannot lift a global denial) follows cycle 6 and **cycle 5**, whose fixes for Codex review 5606618473 are pushed (denial wording bound to its own clause, benefit versus application eligibility, bare "MBAs", unknown currency no longer assumed USD, minimum-only pay no longer an exact ceiling). **MERGED October 23, 2026 (`d28732b`):** Codex exact-head review of `b41a214` had no actionable findings and the Linux and Windows checks passed. |
 
 #51 is Codex-authored and excluded from this list (it gets a Claude review, not Codex). Its fixes reached `main` through #40 to
@@ -131,7 +131,7 @@ every command exited 0. The Sheet was backed up first (A15).
 | E3 | One editable settings file the program reads for every number (today they are constants in code; all explained in `docs/PARAMETERS.md`) | pending (A21) |
 | E4 | A reason for every rejected fact and every filter drop, printed by each run (`trace:` lines) and mapped in `docs/TRACEABILITY.md` | **done: PR #50 merged October 21** |
 | E5 | Keep the reason counts in the Sheet so they outlive the session | proposed (A20) |
-| E6 | Print why job boards drop jobs (role, place, pay) | counts per reason built with E12 (`dropped=` in the probe note); waits for Codex. Keeping them in the Sheet is E5 (A20) |
+| E6 | Print why job boards drop jobs (role, place, pay) | counts per reason built with E12 (`dropped=` in the probe note); in `main` since PR #53 (October 23). Keeping them in the Sheet is E5 (A20) |
 | E7 | Read pay written like `$190k-$220k` | your call (A17) |
 | E8 | Fill the company of no-company posts with the poster's `@handle` | your call (A16) |
 | E9 | X replies: keep them and fix the wrong comment, or filter them | your call (A19) |
