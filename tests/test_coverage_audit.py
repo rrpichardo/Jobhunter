@@ -227,6 +227,13 @@ class ReviewFixesTest(unittest.TestCase):
         d = base(); d["observations"] = [job("p", req="1", fit="low"), job("s", req="1", fit="medium")]
         self.assertEqual(audit.audit(d)["jobs"][0]["fit"], "medium")
 
+    def test_company_with_no_letters_or_digits_is_rejected_not_pooled_with_others(self):
+        # "---" and "***" both normalise to nothing; without a check two unrelated employers share one company key
+        d = base()
+        d["observations"] = [job("p", req="1"), dict(job("s", req="1"), company="---"), dict(job("f", req="1"), company="***")]
+        with self.assertRaisesRegex(ValueError, "company"):
+            audit.audit(d)
+
 
 if __name__=="__main__":
     unittest.main()

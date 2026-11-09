@@ -135,6 +135,7 @@ def audit(data: dict) -> dict:
             ("application_history", APP_STATES, "unknown"),
         ):
             one_of(o.get(key, default), allowed, f"Observation {i}: invalid {key}")
+        require(normalized_text(o["company"]), f"Observation {i}: company must contain letters or digits")
         require(bool(o.get("source_url") or o.get("official_url")), f"Observation {i}: source_url or official_url required")
         try:
             clean, key = normalized_url(str(o.get("official_url", ""))), link_key(str(o.get("official_url", "")))
