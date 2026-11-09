@@ -34,6 +34,8 @@ fixtures, and these docs. Cycle 4 fixed the two findings of Codex review 5601000
 The successor PR is opened and linked from #52 by the coordinating session; it needs an exact-head Codex review and green CI before
 it merges. #51 is Codex-authored and excluded. Nothing here approves a live run, the Sheet clean-up (A22), the routine (A3) or spending.
 
+**Update November 8, 2026 (checked against GitHub):** PR #53 was merged into `main` on October 23, 2026 (`d28732b`) after a Codex exact-head review of `b41a214` with no actionable findings and green Linux and Windows checks; PR #52 was closed the same day. Open PRs: #51 (Codex-authored) and #54 (Codex search-coverage audit, no new schedule). Not re-checked in this update: the live Sheet, and whether any run happened after October 19.
+
 **Open PRs (all Claude-written; each needs a Codex review of its exact head and green CI before merging; nothing merges without
 the user's "go" for Codex, A12).** Heads at the time of writing (re-read them from GitHub before acting):
 
