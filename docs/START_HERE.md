@@ -1,6 +1,6 @@
 # START HERE: what you answer, what you do, what you approve, what Codex does, what Claude does
 
-Updated November 8, 2026 (checked against GitHub that day). Plain language. This is the short version of `docs/PENDING.md` section 0 (same IDs, kept in step with it).
+Updated November 15, 2026 (checked against GitHub that day; the Sheet was not re-read). Plain language. This is the short version of `docs/PENDING.md` section 0 (same IDs, kept in step with it).
 Your answer sheet is `docs/DECISIONS_FORM.md`, or the Excel version `docs/JobHunter_Questions.xlsx` (questions, tasks, approvals, yellow cells to fill in); you can also just answer in chat.
 
 ## Where we are, in five lines
@@ -56,7 +56,7 @@ Small ones (each has a default if you say "take your recommendations"):
 | Now possible (the MBA rule merged October 23) | **A22**: erasing the old rows, on a fresh list (item 1 above). I will not touch the Sheet without it. |
 | After items 1 and 2 | A **real run** (writes new rows to the Sheet and uses that day's single X attempt). It also proves the run report copies the `trace:` lines, the last unproven piece. |
 | After the real run | **A3**: creating the daily routine. |
-| Later | Closing **PR #51** (Codex's repair PR). Its fixes reached `main` through #40 to #50. Nothing happens to it without your go. |
+| Done November 15 | **PR #51** (Codex's repair PR) was closed at your instruction. Its fixes reached `main` through #40 to #50; its branch is kept. |
 
 Merges need no new "go" from you: under your standing rule, Codex merges a Claude-written PR only after it has reviewed that exact version, every finding is fixed and the automatic checks are green.
 
@@ -64,7 +64,7 @@ Merges need no new "go" from you: under your standing rule, Codex merges a Claud
 
 - Nothing is waiting on Codex from the MBA work (#53 is merged). **PR #54** (search-coverage audit) is merged (November 8) after a Claude review and fixes; no Codex review saw its final version.
 - Any new Claude-written PR: Codex reviews the exact latest version; if it is clean and the checks are green, merge it. If it finds problems, Claude fixes them in new commits and Codex reviews again.
-- #51 (Codex's own repair PR) is not part of this: Codex wrote it, so Codex does not review it.
+- No pull request is open, so nothing is waiting on Codex. (#51, Codex's own repair PR, was closed on November 15.)
 
 ## 5. What CLAUDE does next
 
@@ -80,7 +80,7 @@ Merges need no new "go" from you: under your standing rule, Codex merges a Claud
 | **The MBA 2027 work** (MBA rule, pay fix, blank-column checker, tests) | PR #53, branch `claude/mba-2027-main` | **Merged October 23** after an exact-head Codex review with no findings. |
 | The original MBA PR | **#52** (branch `claude/jobhunter-continuation-d35nmm`) | Closed unmerged October 23; replaced by #53. Kept as the record of the earlier reviews. |
 | Search-coverage audit | **#54** (branch `codex/coverage-audit-executor-20261027`) | **Merged November 8** (`1bb664b`). Offline only, nothing uses it yet, no new schedule. Codex wrote it; Claude reviewed it, fixed six problems and merged it at your instruction; no Codex review of the final version. |
-| Codex's repair PR | #51 | Still open. Codex-authored; outside this review. Its fixes already reached `main` through #40 to #50. Closing it waits for your go. |
+| Codex's repair PR | #51 | **Closed unmerged November 15** at your instruction. Its fixes already reached `main` through #40 to #50. |
 | The old run branch | `claude/combined-live-run` | History only (the October 19 run). Never merged; not used for new runs. |
 
 ## Words used

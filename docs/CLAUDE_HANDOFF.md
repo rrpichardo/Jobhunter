@@ -26,7 +26,7 @@ not fixed yet; the local Claude session owns it, the cloud session was told to h
 LinkedIn step, and every runbook installs the pinned uv 0.13.1 and puts it first on PATH. The table below is the October 19 snapshot.
 
 **Update November 8, 2026 (supersedes the paragraph below):** the re-cut `claude/mba-2027-main` is PR #53, merged October 23
-(`d28732b`) after a clean exact-head Codex review of `b41a214`; #52 is closed unmerged. Open: #51. #54 (Codex-written offline
+(`d28732b`) after a clean exact-head Codex review of `b41a214`; #52 is closed unmerged. #51 was open then and was closed unmerged on November 15 (no PR is open now). #54 (Codex-written offline
 search-coverage audit) was reviewed by Claude, fixed and merged on November 8 without a Codex review of its final head. The only changes to `main` since October 23 are documentation (#55, #56) and #54, and the repository
 shows no real run after October 19. Start with `docs/PENDING.md`.
 
