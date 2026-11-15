@@ -62,7 +62,7 @@ Decisions already made are listed in section 2 so they are not asked again.
 #47 Ali Rohde newsletter (`8c81341`), #48 LinkedIn job listings (`fc77f2f`; code only, held by A18).
 Merging code does not lift a hold: no live LinkedIn request until A18 is answered.
 
-Open on November 8: #52 is closed (above), #53 is merged, and **#54** was merged on November 8 after a Claude review and fixes. The rows below keep the history. Each Claude-written PR needs a Codex review of its exact head plus green CI before it may merge. Heads, history and a
+Open on November 8 (updated November 15: #51 is closed, no PR is open): #52 is closed (above), #53 is merged, and **#54** was merged on November 8 after a Claude review and fixes. The rows below keep the history. Each Claude-written PR needs a Codex review of its exact head plus green CI before it may merge. Heads, history and a
 ready-to-paste request for each are in `docs/CODEX_REVIEW_QUEUE.md`.
 
 | PR | What | Note |
@@ -71,8 +71,8 @@ ready-to-paste request for each are in `docs/CODEX_REVIEW_QUEUE.md`.
 | successor of #52 | Branch `claude/mba-2027-main`, started from `main` `fc77f2f`: only #52's own changes, plus **cycle 4** fixes for the two findings of Codex review 5601000995 (an unrelated "not" no longer excludes a posting; "May 2026 or May 2027" and graduation ranges count). | PR #53. **Cycle 9** (Codex review 5623655972: a leading graduation class outranks a trailing program date) follows cycle 8 (Codex review 5622912780: an MBA-bearing class qualifier; a program date is not the applicants' class) follows cycle 7 (Codex review 5622469373: a denial's class qualifier in either word order and not a program year; a negative contrast cannot lift a global denial) follows cycle 6 and **cycle 5**, whose fixes for Codex review 5606618473 are pushed (denial wording bound to its own clause, benefit versus application eligibility, bare "MBAs", unknown currency no longer assumed USD, minimum-only pay no longer an exact ceiling). **MERGED October 23, 2026 (`d28732b`):** Codex exact-head review of `b41a214` had no actionable findings and the Linux and Windows checks passed. |
 | #54 | Codex-written: isolated offline Python search-coverage audit, no new schedule (branch `codex/coverage-audit-executor-20261027`, opened October 27) | **Merged November 8** (`1bb664b`). Claude reviewed `87578ef` (six problems), fixed them with failing-first tests (`14b3881`) and merged at the user's instruction; no Codex review of the final head. Offline only, unused until a real source of search records exists. |
 
-#51 is Codex-authored and excluded from this list (it gets a Claude review, not Codex). Its fixes reached `main` through #40 to
-#50; closing it waits for your go.
+#51 was Codex-authored and excluded from this list. Its fixes reached `main` through #40 to #50, and **it was closed unmerged on
+November 15 at the user's instruction** (its branch is kept). No pull request is open.
 
 ### 0.4 What Claude does as soon as you answer
 

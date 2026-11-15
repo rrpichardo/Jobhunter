@@ -101,8 +101,8 @@ Cosign need URLs from the owner. A single settings file, a command-by-command RE
 control page are planned (E3, E1, E2). The docs (last checked October 21) say the old Sheet rows that are not for MBA 2027 are still
 there; erasing them (A22) waits for the owner's "go" on a fresh list.
 
-**Open pull requests:** only #51 (Codex's repair PR; its fixes already reached `main`, closing awaits
-the owner). #54 (Codex's search-coverage audit) was reviewed by Claude, fixed and merged on November 8
+**Open pull requests:** none. #51 (Codex's repair PR; its fixes already reached `main`) was closed
+unmerged on November 15 at the owner's instruction. #54 (Codex's search-coverage audit) was reviewed by Claude, fixed and merged on November 8
 under a user-approved exception: no Codex review saw the final version, and it adds no schedule.
 
 **Not re-verified for this write-up:** the live Sheet's current contents, whether GitHub checks
